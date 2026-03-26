@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design Tokens (CSS Custom Properties) ───────────────────── */
+@layer base {
+  :root {
+    /* Surfaces */
+    --color-bg: 250 250 250;          /* gray-50 */
+    --color-surface: 255 255 255;      /* white */
+    --color-surface-raised: 255 255 255;
+    --color-surface-overlay: 255 255 255;
+
+    /* Text */
+    --color-text: 17 24 39;           /* gray-900 */
+    --color-text-secondary: 107 114 128; /* gray-500 */
+    --color-text-muted: 156 163 175;   /* gray-400 */
+
+    /* Borders */
+    --color-border: 229 231 235;      /* gray-200 */
+    --color-border-light: 243 244 246; /* gray-100 */
+
+    /* Brand */
+    --color-primary: 59 130 246;      /* blue-500 */
+    --color-accent: 139 92 246;       /* violet-500 */
+
+    /* Ring offset for focus states */
+    --ring-offset: 250 250 250;
+
+    /* Scrollbar */
+    --scrollbar-thumb: 209 213 219;    /* gray-300 */
+    --scrollbar-track: transparent;
+  }
+
+  .dark {
+    --color-bg: 9 9 11;              /* surface-950 */
+    --color-surface: 28 28 30;       /* surface-800 */
+    --color-surface-raised: 39 39 42; /* surface-700 */
+    --color-surface-overlay: 22 22 24; /* surface-850 */
+
+    --color-text: 244 244 245;       /* gray-100 */
+    --color-text-secondary: 161 161 170; /* gray-400 */
+    --color-text-muted: 113 113 122;  /* gray-500 */
+
+    --color-border: 39 39 42;        /* zinc-800 */
+    --color-border-light: 28 28 30;  /* zinc-900 */
+
+    --color-primary: 96 165 250;     /* blue-400 */
+    --color-accent: 167 139 250;     /* violet-400 */
+
+    --ring-offset: 9 9 11;
+    --scrollbar-thumb: 63 63 70;     /* zinc-700 */
+  }
+
+  /* Smooth color transitions on theme toggle */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: rgb(var(--color-primary) / 0.2);
+    color: rgb(var(--color-text));
+  }
+
+  /* Focus visible */
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+}
+
+/* ── Custom Scrollbar ────────────────────────────────────────── */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--scrollbar-thumb)) var(--scrollbar-track);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--scrollbar-thumb));
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--scrollbar-thumb) / 0.8);
+  }
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────── */
+@layer utilities {
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--color-border-light)) 0%,
+      rgb(var(--color-border)) 50%,
+      rgb(var(--color-border-light)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+}
+
+/* ── Staggered animation delay utility ───────────────────────── */
+@layer utilities {
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 200ms; }
+  .stagger-5 { animation-delay: 250ms; }
+  .stagger-6 { animation-delay: 300ms; }
+  .stagger-7 { animation-delay: 350ms; }
+  .stagger-8 { animation-delay: 400ms; }
+}
+
+/* ── Safe area (mobile notch / home indicator) ──────────────── */
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

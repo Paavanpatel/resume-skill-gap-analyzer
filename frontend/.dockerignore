@@ -1,0 +1,12 @@
+# Frontend .dockerignore - keep production images clean
+node_modules
+.next
+.env
+.env.*
+*.md
+.git
+.gitignore
+coverage
+src/**/__tests__
+src/__mocks__
+jest.config.js

@@ -1,0 +1,14 @@
+# Backend .dockerignore - keep production images clean
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.coverage
+htmlcov
+tests/
+*.md
+.git
+.gitignore
+.env
+.env.*
+storage/

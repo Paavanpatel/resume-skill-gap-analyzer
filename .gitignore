@@ -1,0 +1,56 @@
+# ── Environment ───────────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# ── Node.js ──────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.vercel
+
+# ── IDE ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ── Docker ───────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── TLS Certificates (never commit) ─────────────────────────
+infrastructure/nginx/ssl/*.pem
+infrastructure/nginx/ssl/*.key
+infrastructure/nginx/ssl/*.crt
+
+# ── Storage (uploaded files) ─────────────────────────────────
+backend/storage/uploads/*
+backend/storage/parsed/*
+!backend/storage/uploads/.gitkeep
+!backend/storage/parsed/.gitkeep
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Test / Coverage ──────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/*
+backend/.pytest_cache/*
+coverage/
+.nyc_output/

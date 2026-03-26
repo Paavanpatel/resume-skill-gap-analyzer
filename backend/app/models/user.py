@@ -1,0 +1,42 @@
+"""
+User model.
+
+Stores account credentials and profile information.
+One user can have many resumes and analyses.
+"""
+
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base, TimestampMixin, UUIDMixin
+
+
+class User(Base, UUIDMixin, TimestampMixin):
+    __tablename__ = "users"
+
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # ── Subscription tier ────────────────────────────────────
+    # Controls rate limits, priority queues, and feature access.
+    # "free" = default, "pro" = paid, "enterprise" = custom limits.
+    # Even in MVP, having this column avoids a migration later.
+    tier: Mapped[str] = mapped_column(
+        String(20), default="free", nullable=False
+    )  # free | pro | enterprise
+
+    # ── Relationships ────────────────────────────────────────
+    resumes: Mapped[list["Resume"]] = relationship(
+        "Resume", back_populates="user", cascade="all, delete-orphan"
+    )
+    analyses: Mapped[list["Analysis"]] = relationship(
+        "Analysis", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<User {self.email}>"
