@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
-import { User, Shield, SlidersHorizontal, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { User, Shield, SlidersHorizontal, Trash2, CreditCard } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -12,6 +12,9 @@ import {
   updatePassword,
   updatePreferences,
   updateProfile,
+  getUsageSummary,
+  createPortalSession,
+  type UsageSummary,
 } from "@/lib/api";
 import Tabs, { TabPanel } from "@/components/ui/Tabs";
 import Input from "@/components/ui/Input";
@@ -495,6 +498,114 @@ function AccountTab() {
   );
 }
 
+// ── Billing tab ──────────────────────────────────────────────
+
+function BillingTab() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  useEffect(() => {
+    getUsageSummary().then(setUsage).catch(() => {});
+  }, []);
+
+  async function handlePortal() {
+    setPortalLoading(true);
+    try {
+      const { url } = await createPortalSession();
+      window.location.href = url;
+    } catch (err) {
+      toast(getErrorMessage(err), "error");
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
+  if (!user) return null;
+
+  const tierLabel =
+    user.tier === "free"
+      ? "Free"
+      : user.tier === "pro"
+        ? "Pro — $12/mo"
+        : "Enterprise — $49/mo";
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      {/* Current plan */}
+      <div className="rounded-xl border border-gray-200 dark:border-surface-700 p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          Current plan
+        </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TierBadge tier={user.tier} />
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {tierLabel}
+            </span>
+          </div>
+          {user.tier === "free" ? (
+            <a
+              href="/pricing"
+              className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              Upgrade →
+            </a>
+          ) : (
+            <button
+              onClick={handlePortal}
+              disabled={portalLoading}
+              className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline disabled:opacity-60"
+            >
+              {portalLoading ? "Opening…" : "Manage Subscription →"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Usage chart */}
+      {usage && usage.tier !== "enterprise" && (
+        <div className="rounded-xl border border-gray-200 dark:border-surface-700 p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Usage — {usage.period}
+          </h3>
+          <div>
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+              <span>Analyses</span>
+              <span>
+                {usage.analyses.used} / {usage.analyses.limit}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${
+                  usage.analyses.pct >= 90
+                    ? "bg-danger-500"
+                    : usage.analyses.pct >= 70
+                      ? "bg-warning-500"
+                      : "bg-primary-500"
+                }`}
+                style={{ width: `${Math.min(usage.analyses.pct, 100)}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+              Resets on the 1st of next month.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Enterprise unlimited note */}
+      {usage?.tier === "enterprise" && (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Your Enterprise plan includes unlimited analyses.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────
 
 const TABS = [
@@ -505,11 +616,19 @@ const TABS = [
     label: "Preferences",
     icon: <SlidersHorizontal className="h-4 w-4" />,
   },
+  {
+    id: "billing",
+    label: "Billing",
+    icon: <CreditCard className="h-4 w-4" />,
+  },
   { id: "account", label: "Account", icon: <Trash2 className="h-4 w-4" /> },
 ];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("profile");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") ?? "profile"
+  );
 
   return (
     <div className="space-y-6">
@@ -535,6 +654,9 @@ export default function SettingsPage() {
           </TabPanel>
           <TabPanel id="preferences" activeTab={activeTab}>
             <PreferencesTab />
+          </TabPanel>
+          <TabPanel id="billing" activeTab={activeTab}>
+            <BillingTab />
           </TabPanel>
           <TabPanel id="account" activeTab={activeTab}>
             <AccountTab />

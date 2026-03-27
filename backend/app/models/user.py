@@ -38,12 +38,21 @@ class User(Base, UUIDMixin, TimestampMixin):
         JSONB, nullable=False, default=dict, server_default="{}"
     )
 
+    # ── Stripe customer ID ────────────────────────────────────
+    # Set when the user first initiates a checkout session.
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
+
     # ── Relationships ────────────────────────────────────────
     resumes: Mapped[list["Resume"]] = relationship(
         "Resume", back_populates="user", cascade="all, delete-orphan"
     )
     analyses: Mapped[list["Analysis"]] = relationship(
         "Analysis", back_populates="user", cascade="all, delete-orphan"
+    )
+    usage_records: Mapped[list["UsageRecord"]] = relationship(
+        "UsageRecord", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

@@ -87,6 +87,15 @@ class Settings(BaseSettings):
     storage_backend: str = "local"
     storage_local_path: str = "./storage"
 
+    # ── Stripe Billing ───────────────────────────────────────
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_price_id: str = ""
+    stripe_enterprise_price_id: str = ""
+    # URL where Stripe redirects after checkout
+    frontend_url: str = "http://localhost:3000"
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

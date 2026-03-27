@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import usePageTitle from "@/hooks/usePageTitle";
 import {
@@ -17,10 +17,13 @@ import Input from "@/components/ui/Input";
 import ProgressSteps from "@/components/ui/ProgressSteps";
 import Modal, { ModalFooter } from "@/components/ui/Modal";
 import ResumePicker from "@/components/dashboard/ResumePicker";
+import FileUploadZone from "@/components/dashboard/FileUploadZone";
 import JobDescriptionInput from "@/components/dashboard/JobDescriptionInput";
-import { uploadResume, submitAnalysis, getErrorMessage } from "@/lib/api";
+import { uploadResume, submitAnalysis, getErrorMessage, getUsageSummary } from "@/lib/api";
 import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
+import UsageWidget from "@/components/dashboard/UsageWidget";
 import WizardTransition from "@/components/ui/WizardTransition";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const WIZARD_STEPS = [
@@ -33,6 +36,17 @@ export default function DashboardPage() {
   usePageTitle("New Analysis");
   const router = useRouter();
   const { track } = useAnalysisTracker();
+  const [quotaReached, setQuotaReached] = useState(false);
+
+  // Check quota once on mount
+  useEffect(() => {
+    getUsageSummary().then((u) => {
+      if (u.analyses.used >= u.analyses.limit && u.tier !== "enterprise") {
+        setQuotaReached(true);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Wizard step: 0=upload, 1=describe, 2=review
   const [step, setStep] = useState(0);
@@ -143,8 +157,48 @@ export default function DashboardPage() {
     );
   }
 
+  // Quota-blocked state — show CTA instead of wizard
+  if (quotaReached) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="rounded-2xl border border-warning-200 dark:border-warning-700 bg-warning-50 dark:bg-warning-900/20 p-8 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-warning-100 dark:bg-warning-900/40 mb-4">
+            <Sparkles className="h-8 w-8 text-warning-600 dark:text-warning-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            Monthly Limit Reached
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
+            You&apos;ve used all your analyses for this month. Upgrade to Pro
+            for 50 analyses/month and unlock AI Roadmap, Advisor, and PDF
+            Export.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
+            >
+              <Sparkles className="h-4 w-4" />
+              Upgrade to Pro
+            </Link>
+            <Link
+              href="/history"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-surface-600 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-surface-700 transition-colors"
+            >
+              View History
+            </Link>
+          </div>
+        </div>
+        <UsageWidget />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
+      {/* Usage widget */}
+      <UsageWidget />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
