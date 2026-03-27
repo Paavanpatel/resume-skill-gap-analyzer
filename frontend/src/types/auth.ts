@@ -3,6 +3,13 @@
  * Mirrors backend schemas/user.py.
  */
 
+export interface UserPreferences {
+  theme?: "light" | "dark" | "system";
+  email_notifications?: boolean;
+  ai_provider?: "openai" | "anthropic" | "auto";
+  [key: string]: unknown;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -10,6 +17,7 @@ export interface User {
   is_active: boolean;
   is_verified: boolean;
   tier: "free" | "pro" | "enterprise";
+  preferences: UserPreferences;
   created_at: string;
 }
 

@@ -74,9 +74,9 @@ resume-skill-gap-analyzer/
 
 ## 2. Current Progress
 
-### 2.1 Development Phases (All Complete)
+### 2.1 Development Phases
 
-The project has completed 12 development phases, tracked in `.skill/SKILL.md`:
+The project has completed 17 development phases, tracked in `.skill/SKILL.md`:
 
 | Phase | Name | Status | Key Deliverables |
 |-------|------|--------|-----------------|
@@ -97,6 +97,7 @@ The project has completed 12 development phases, tracked in `.skill/SKILL.md`:
 | 14 | Frontend Enhancement Phase 5 | COMPLETE | History dashboard with stats bar, filters/sort/search, enhanced cards, comparison mode, score trend chart, pagination |
 | 15 | Frontend Enhancement Phase 6 | COMPLETE | PageTransition, ScrollReveal, StaggerChildren, ShakeOnError, PressScale, AnimatedList, WizardTransition + 5 new Tailwind keyframes |
 | 16 | Frontend Enhancement Phase 7 | COMPLETE | ErrorBoundary, SkipToContent, LiveAnnouncer, MobileBottomNav, dynamic imports, SEO metadata, security headers, next.config optimization |
+| 17 | Full-Stack Phase 2 — User Settings & Profile Management | COMPLETE | PATCH /auth/profile, PUT /auth/password, DELETE /auth/account, PATCH /auth/preferences; /settings page (4 tabs: Profile, Security, Preferences, Account); Settings enabled in Navbar + MobileBottomNav |
 
 ### 2.2 Frontend Enhancement Plan — Phase 1 Complete
 
@@ -354,11 +355,43 @@ Phase 7 ("Polish & Performance") delivered error handling, accessibility, perfor
 - `GlobalError.test.tsx` (6 tests)
 - `DashboardError.test.tsx` (5 tests)
 
-### 2.5 Planned Additional Features (8)
+### 2.5 Full-Stack Phase 2 — User Settings & Profile Management (Complete)
+
+**Backend — 4 new endpoints (`/api/v1/auth/...`)**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| PATCH | `/auth/profile` | Update `full_name` and/or `email` with uniqueness check |
+| PUT | `/auth/password` | Verify current password, hash new, triggers client logout |
+| DELETE | `/auth/account` | Soft-delete (`is_active=False`) after password + "DELETE" confirmation |
+| PATCH | `/auth/preferences` | Shallow-merge JSONB preferences blob |
+
+- Migration `005_add_user_preferences`: adds `preferences JSONB NOT NULL DEFAULT '{}'` to `users`
+- `User` model gains `preferences: Mapped[dict]` (SQLAlchemy + PostgreSQL JSONB)
+- New Pydantic schemas: `ProfileUpdateRequest`, `PasswordUpdateRequest`, `AccountDeleteRequest`, `PreferencesUpdateRequest`
+- `UserResponse` now includes `preferences`
+- New service functions: `update_profile`, `update_password`, `delete_account`, `update_preferences`
+
+**Frontend — `/settings` page with 4 tabs**
+
+| Tab | Key Features |
+|-----|-------------|
+| Profile | Name + email form, avatar initials, tier badge, live save |
+| Security | Password change form with `PasswordStrengthMeter`, auto-logout on success |
+| Preferences | Theme buttons (synced with `next-themes`), email notifications toggle, AI provider radio |
+| Account | Account info card, danger zone with `DELETE` confirmation modal |
+
+- New API functions in `lib/api.ts`: `updateProfile`, `updatePassword`, `deleteAccount`, `updatePreferences`
+- `types/auth.ts`: `User` type gains `preferences: UserPreferences`; `UserPreferences` interface added
+- `AuthContext`: `updateUser(user: User)` exposed to allow settings tabs to refresh in-memory state
+- `Navbar.tsx`: Settings dropdown item enabled (navigates to `/settings`)
+- `MobileBottomNav.tsx`: Settings item added as third nav entry
+
+### 2.6 Planned Additional Features
 
 1. ~~**Side-by-side comparison view**~~ — ✅ Implemented in Phase 5D
 2. ~~**Score trend tracking**~~ — ✅ Implemented in Phase 5E
-3. **Settings page** — Profile editing, notification preferences, account management
+3. ~~**Settings page**~~ — ✅ Implemented in Full-Stack Phase 2
 4. **Keyboard shortcuts** — Global shortcut system (Cmd+K command palette)
 5. **Resume versioning** — Track resume iterations with diff view
 6. **Smart notifications** — Real-time toast notifications for analysis completion

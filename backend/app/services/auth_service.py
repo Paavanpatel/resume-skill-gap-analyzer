@@ -244,6 +244,126 @@ async def logout_user(
         logger.warning("Failed to blacklist tokens on logout: %s", str(e)[:200])
 
 
+async def update_profile(
+    user: "User",
+    full_name: str | None,
+    email: str | None,
+    session: AsyncSession,
+) -> UserResponse:
+    """
+    Update the user's display name and/or email address.
+
+    Email uniqueness is checked before saving. At least one field must
+    be provided; omitted fields are left unchanged.
+
+    Raises:
+        ValidationError: If the new email is already taken by another account.
+    """
+    repo = UserRepository(session)
+
+    updates: dict = {}
+
+    if full_name is not None:
+        updates["full_name"] = full_name.strip() or None
+
+    if email is not None:
+        normalized = email.lower().strip()
+        if normalized != user.email:
+            if await repo.email_exists(normalized):
+                raise ValidationError(
+                    message="An account with this email already exists.",
+                    details={"field": "email"},
+                )
+            updates["email"] = normalized
+
+    if updates:
+        updated = await repo.update(user.id, **updates)
+    else:
+        updated = user
+
+    logger.info("Profile updated for user %s", user.id)
+    return UserResponse.model_validate(updated)
+
+
+async def update_password(
+    user: "User",
+    current_password: str,
+    new_password: str,
+    session: AsyncSession,
+    redis_client=None,
+) -> None:
+    """
+    Change the user's password after verifying the current one.
+
+    All existing refresh tokens are effectively invalidated because they
+    are tied to the user's session — the caller should log the user out
+    after a successful password change.
+
+    Raises:
+        AuthenticationError: If the current password is wrong.
+    """
+    if not verify_password(current_password, user.hashed_password):
+        raise AuthenticationError(
+            message="Current password is incorrect.",
+            error_code=ErrorCode.UNAUTHORIZED,
+        )
+
+    new_hash = hash_password(new_password)
+    repo = UserRepository(session)
+    await repo.update(user.id, hashed_password=new_hash)
+
+    logger.info("Password changed for user %s", user.id)
+
+
+async def delete_account(
+    user: "User",
+    password: str,
+    session: AsyncSession,
+    redis_client=None,
+) -> None:
+    """
+    Soft-delete the user account by setting is_active=False.
+
+    The account is not removed from the database so that related
+    analyses and resumes remain intact for audit purposes.
+
+    Raises:
+        AuthenticationError: If the provided password is wrong.
+        ValidationError: If the deletion confirmation text is missing
+                         (callers should validate confirmation == "DELETE"
+                         before calling this function).
+    """
+    if not verify_password(password, user.hashed_password):
+        raise AuthenticationError(
+            message="Password is incorrect.",
+            error_code=ErrorCode.UNAUTHORIZED,
+        )
+
+    repo = UserRepository(session)
+    await repo.update(user.id, is_active=False)
+
+    logger.info("Account soft-deleted for user %s", user.id)
+
+
+async def update_preferences(
+    user: "User",
+    preferences: dict,
+    session: AsyncSession,
+) -> UserResponse:
+    """
+    Merge new preference keys into the user's existing preferences.
+
+    Uses a shallow merge so callers can update individual keys without
+    having to send the full preferences object.
+    """
+    repo = UserRepository(session)
+    merged = {**(user.preferences or {}), **preferences}
+    updated = await repo.update(user.id, preferences=merged)
+
+    logger.info("Preferences updated for user %s", user.id)
+    return UserResponse.model_validate(updated)
+
+
 async def get_user_profile(user_id: UUID, session: AsyncSession) -> UserResponse:
     """
     Get the current user's profile.

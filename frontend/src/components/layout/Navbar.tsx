@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Dropdown from "@/components/ui/Dropdown";
@@ -26,6 +26,7 @@ const navItems = [
 export default function Navbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -46,9 +47,9 @@ export default function Navbar() {
   const handleDropdownSelect = useCallback(
     (id: string) => {
       if (id === "logout") logout();
-      // Future: settings, profile
+      if (id === "settings") router.push("/settings");
     },
-    [logout]
+    [logout, router]
   );
 
   // User initials for avatar
@@ -73,7 +74,6 @@ export default function Navbar() {
       id: "settings",
       label: "Settings",
       icon: <Settings className="h-4 w-4" />,
-      disabled: true,
     },
     { id: "divider-2", label: "", divider: true },
     {

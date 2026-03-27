@@ -139,6 +139,33 @@ export async function getMe(): Promise<User> {
   return res.data;
 }
 
+export async function updateProfile(data: {
+  full_name?: string | null;
+  email?: string;
+}): Promise<User> {
+  const res = await apiClient.patch("/auth/profile", data);
+  return res.data;
+}
+
+export async function updatePassword(data: {
+  current_password: string;
+  new_password: string;
+}): Promise<void> {
+  await apiClient.put("/auth/password", data);
+}
+
+export async function deleteAccount(data: {
+  password: string;
+  confirmation: string;
+}): Promise<void> {
+  await apiClient.delete("/auth/account", { data });
+}
+
+export async function updatePreferences(preferences: Record<string, unknown>): Promise<User> {
+  const res = await apiClient.patch("/auth/preferences", { preferences });
+  return res.data;
+}
+
 // ── Resume API ──────────────────────────────────────────────
 
 export async function uploadResume(file: File): Promise<ResumeUploadResponse> {
