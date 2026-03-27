@@ -17,16 +17,18 @@ In production, user_id comes from the JWT token via get_current_user.
 import json
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.db.session import get_db_session, get_read_db_session
+from app.models.analysis import Analysis
 from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.resume import ResumeParseResponse, ResumeUploadResponse
-from app.services.file_storage import save_upload
+from app.services.file_storage import delete_file, save_upload
 from app.services.file_validator import validate_upload
 from app.services.resume_parser import parse_resume_content
 
@@ -136,6 +138,61 @@ async def get_resume(
         parsed_sections=sections,
         word_count=len((resume.raw_text or "").split()),
     )
+
+
+@router.delete(
+    "/{resume_id}",
+    status_code=204,
+    summary="Delete a resume",
+    responses={
+        409: {"description": "Resume has an analysis currently processing"},
+    },
+)
+async def delete_resume(
+    resume_id: UUID,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Delete a resume and all its associated analyses.
+
+    Returns 409 if any linked analysis is actively processing. The
+    physical file is deleted from storage after the DB row is removed.
+    Cascade on the ORM relationship removes all child analyses.
+    """
+    repo = ResumeRepository(session)
+    resume = await repo.get_by_id(resume_id)
+
+    if resume is None or str(resume.user_id) != str(user.id):
+        raise NotFoundError(
+            message="Resume not found.",
+            resource_type="resume",
+            resource_id=str(resume_id),
+        )
+
+    # Block deletion if any analysis is mid-flight
+    result = await session.execute(
+        select(Analysis)
+        .where(Analysis.resume_id == resume_id)
+        .where(Analysis.status == "processing")
+        .limit(1)
+    )
+    if result.scalar_one_or_none() is not None:
+        raise ConflictError(
+            "This resume has an analysis currently processing. "
+            "Please wait for it to complete before deleting the resume."
+        )
+
+    file_path = resume.file_path
+    await repo.delete(resume_id)
+
+    # Best-effort file deletion (don't fail the request if the file is missing)
+    try:
+        await delete_file(file_path)
+    except Exception:
+        pass
+
+    return Response(status_code=204)
 
 
 @router.get(

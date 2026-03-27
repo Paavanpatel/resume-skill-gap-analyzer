@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  RefreshCw,
   FileSearch,
   FileText,
   Briefcase,
@@ -19,9 +20,10 @@ import {
   MessageSquare,
   Sparkles,
 } from "lucide-react";
-import { getAnalysisResult, getAnalysisStatus, getErrorMessage } from "@/lib/api";
+import { getAnalysisResult, getAnalysisStatus, retryAnalysis, getErrorMessage } from "@/lib/api";
 import type { AnalysisResult, AnalysisStatusResponse } from "@/types/analysis";
 import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
+import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -95,11 +97,14 @@ export default function AnalysisPage() {
   const { analyses: trackedAnalyses, track } = useAnalysisTracker();
   const tracked = trackedAnalyses.find((a) => a.jobId === analysisId);
 
+  const { toast } = useToast();
+
   const [status, setStatus] = useState<AnalysisStatusResponse | null>(
     tracked?.status || null
   );
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
+  const [isRetrying, setIsRetrying] = useState(false);
   const [tipIndex, setTipIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
   const [scoreRevealed, setScoreRevealed] = useState(false);
@@ -282,6 +287,23 @@ export default function AnalysisPage() {
     );
   }
 
+  // ── Retry handler ────────────────────────────────────────────
+
+  async function handleRetry() {
+    setIsRetrying(true);
+    try {
+      await retryAnalysis(analysisId);
+      // Reset to polling state
+      setError("");
+      setStatus(null);
+      toast("Analysis re-queued. Polling for results…", "info");
+    } catch (err) {
+      toast(getErrorMessage(err), "error");
+    } finally {
+      setIsRetrying(false);
+    }
+  }
+
   // ── Error state ─────────────────────────────────────────────
 
   if (error) {
@@ -290,9 +312,22 @@ export default function AnalysisPage() {
         <XCircle className="mx-auto h-12 w-12 text-danger-400" />
         <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">Analysis Failed</h2>
         <p className="mt-2 text-sm text-danger-600 dark:text-danger-400">{error}</p>
-        <Button onClick={() => router.push("/dashboard")} variant="outline" className="mt-6">
-          Try Again
-        </Button>
+        <div className="mt-6 flex justify-center gap-3">
+          <Button
+            onClick={handleRetry}
+            isLoading={isRetrying}
+            variant="primary"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry Analysis
+          </Button>
+          <Button onClick={() => router.push("/dashboard")} variant="outline">
+            New Analysis
+          </Button>
+        </div>
+        <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+          Up to 3 retries allowed per analysis.
+        </p>
       </div>
     );
   }

@@ -40,6 +40,7 @@ class Analysis(Base, UUIDMixin, TimestampMixin):
     )  # queued | processing | completed | failed
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     processing_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # ── AI provider tracking ────────────────────────────────
     # Records which LLM provider was used for this analysis.

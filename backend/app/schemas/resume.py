@@ -15,6 +15,7 @@ class ResumeUploadResponse(BaseModel):
     file_type: str
     file_size_bytes: int
     created_at: datetime
+    last_used_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

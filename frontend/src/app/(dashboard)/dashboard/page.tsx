@@ -16,7 +16,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ProgressSteps from "@/components/ui/ProgressSteps";
 import Modal, { ModalFooter } from "@/components/ui/Modal";
-import FileUploadZone from "@/components/dashboard/FileUploadZone";
+import ResumePicker from "@/components/dashboard/ResumePicker";
 import JobDescriptionInput from "@/components/dashboard/JobDescriptionInput";
 import { uploadResume, submitAnalysis, getErrorMessage } from "@/lib/api";
 import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
@@ -165,20 +165,25 @@ export default function DashboardPage() {
       {/* ── Step Content (with directional transition) ── */}
       <WizardTransition step={step}>
 
-      {/* ── Step 0: Upload Resume ── */}
+      {/* ── Step 0: Choose Resume ── */}
       {step === 0 && (
         <div className="space-y-4" data-testid="step-upload">
           <div className="flex items-center gap-2 mb-2">
             <Upload className="h-5 w-5 text-primary-500" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Upload Resume
+              Choose Resume
             </h2>
           </div>
-          <FileUploadZone
+          <ResumePicker
             onFileAccepted={handleFileAccepted}
-            uploadedFileName={undefined}
+            onSelect={(id, name) => {
+              setResumeId(id);
+              setFileName(name);
+              setStep(1);
+            }}
+            selectedResumeId={resumeId}
             isUploading={isUploading}
-            error={error}
+            uploadError={error}
           />
         </div>
       )}

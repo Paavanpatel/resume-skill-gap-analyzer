@@ -27,6 +27,7 @@ interface HistoryCardProps {
   selected?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onRetry?: (id: string) => void;
   className?: string;
 }
 
@@ -93,6 +94,7 @@ export default function HistoryCard({
   selected = false,
   onSelect,
   onDelete,
+  onRetry,
   className,
 }: HistoryCardProps) {
   const router = useRouter();
@@ -102,7 +104,10 @@ export default function HistoryCard({
 
   const dropdownItems = [
     { id: "view", label: "View Details", icon: <Eye className="h-4 w-4" /> },
-    { id: "reanalyze", label: "Re-analyze", icon: <RefreshCw className="h-4 w-4" /> },
+    ...(item.status === "failed"
+      ? [{ id: "retry", label: "Retry Analysis", icon: <RefreshCw className="h-4 w-4" /> }]
+      : [{ id: "reanalyze", label: "Re-analyze", icon: <RefreshCw className="h-4 w-4" /> }]
+    ),
     { id: "divider-1", label: "", divider: true },
     { id: "delete", label: "Delete", icon: <Trash2 className="h-4 w-4" />, danger: true },
   ];
@@ -111,6 +116,9 @@ export default function HistoryCard({
     switch (id) {
       case "view":
         router.push(`/analysis/${item.id}`);
+        break;
+      case "retry":
+        onRetry?.(item.id);
         break;
       case "reanalyze":
         router.push("/dashboard");

@@ -166,4 +166,5 @@ export interface ResumeUploadResponse {
   file_type: string;
   file_size_bytes: number;
   created_at: string;
+  last_used_at: string | null;
 }

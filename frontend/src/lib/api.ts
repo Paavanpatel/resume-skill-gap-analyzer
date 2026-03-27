@@ -155,6 +155,10 @@ export async function listResumes(): Promise<ResumeUploadResponse[]> {
   return res.data;
 }
 
+export async function deleteResume(resumeId: string): Promise<void> {
+  await apiClient.delete(`/resume/${resumeId}`);
+}
+
 // ── Analysis API ────────────────────────────────────────────
 
 export async function submitAnalysis(
@@ -188,6 +192,15 @@ export async function getAnalysisResult(
 export async function getAnalysisHistory(): Promise<AnalysisHistoryItem[]> {
   const res = await apiClient.get("/analysis/history");
   return res.data.analyses;
+}
+
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  await apiClient.delete(`/analysis/${analysisId}`);
+}
+
+export async function retryAnalysis(analysisId: string): Promise<AnalysisSubmitResponse> {
+  const res = await apiClient.post(`/analysis/${analysisId}/retry`);
+  return res.data;
 }
 
 // ── Insights API (Phase 9) ──────────────────────────────────

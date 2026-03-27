@@ -54,6 +54,7 @@ class ErrorCode(str, Enum):
     # Analysis (Phase 5+)
     AI_PROVIDER_ERROR = "AI_PROVIDER_ERROR"
     QUOTA_EXCEEDED = "QUOTA_EXCEEDED"
+    CONFLICT = "CONFLICT"
 
     # Database
     DB_ERROR = "DB_ERROR"
@@ -240,4 +241,15 @@ class AuthorizationError(AppError):
             message=message,
             error_code=ErrorCode.FORBIDDEN,
             status_code=403,
+        )
+
+
+class ConflictError(AppError):
+    """Resource state conflict (409)."""
+
+    def __init__(self, message: str = "The operation conflicts with the current resource state."):
+        super().__init__(
+            message=message,
+            error_code=ErrorCode.CONFLICT,
+            status_code=409,
         )

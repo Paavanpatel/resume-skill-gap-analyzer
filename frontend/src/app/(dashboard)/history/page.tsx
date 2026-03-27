@@ -31,12 +31,16 @@ const ComparisonView = dynamic(
   () => import("@/components/dashboard/ComparisonView"),
   { ssr: false, loading: () => <div className="h-96 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" /> }
 );
-import { getAnalysisHistory, getErrorMessage } from "@/lib/api";
+import { getAnalysisHistory, deleteAnalysis, retryAnalysis, getErrorMessage } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
 import type { AnalysisHistoryItem } from "@/types/analysis";
 
 export default function HistoryPage() {
   usePageTitle("Analysis History");
   const router = useRouter();
+  const { toast } = useToast();
+  const { track } = useAnalysisTracker();
 
   // Data state
   const [items, setItems] = useState<AnalysisHistoryItem[]>([]);
@@ -142,11 +146,34 @@ export default function HistoryPage() {
     });
   }, []);
 
-  const handleDelete = useCallback((id: string) => {
-    // UI-only removal (backend DELETE not implemented yet)
+  const handleDelete = useCallback(async (id: string) => {
+    // Optimistic update: remove from UI immediately
     setItems((prev) => prev.filter((i) => i.id !== id));
     setSelectedIds((prev) => prev.filter((x) => x !== id));
-  }, []);
+    try {
+      await deleteAnalysis(id);
+      toast("Analysis deleted.", "success");
+    } catch (err) {
+      // Rollback on failure by re-fetching
+      toast(getErrorMessage(err), "error");
+      const data = await getAnalysisHistory().catch(() => null);
+      if (data) setItems(data);
+    }
+  }, [toast]);
+
+  const handleRetry = useCallback(async (id: string) => {
+    try {
+      const result = await retryAnalysis(id);
+      // Mark as queued in UI immediately
+      setItems((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, status: "queued" } : i))
+      );
+      track(result.job_id, "Resume Analysis");
+      toast("Analysis re-queued. We'll notify you when it's ready.", "info");
+    } catch (err) {
+      toast(getErrorMessage(err), "error");
+    }
+  }, [toast, track]);
 
   // Loading state with skeletons
   if (isLoading) {
@@ -306,6 +333,7 @@ export default function HistoryPage() {
                   selected={selectedIds.includes(item.id)}
                   onSelect={handleSelect}
                   onDelete={handleDelete}
+                  onRetry={handleRetry}
                 />
               )}
             />

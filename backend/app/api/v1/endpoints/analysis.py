@@ -18,13 +18,14 @@ ties up a worker thread.
 """
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
@@ -87,6 +88,9 @@ async def submit_analysis(
             message="This resume hasn't been parsed yet or contains too little text. "
                     "Please re-upload.",
         )
+
+    # Stamp resume as recently used (for ResumePicker ordering)
+    await resume_repo.update(resume_id, last_used_at=datetime.now(timezone.utc))
 
     # Create the analysis record
     analysis_repo = AnalysisRepository(session)
@@ -258,4 +262,116 @@ async def get_analysis(
         ai_model=analysis.ai_model,
         ai_tokens_used=analysis.ai_tokens_used,
         created_at=analysis.created_at,
+    )
+
+
+@router.delete(
+    "/{analysis_id}",
+    status_code=204,
+    summary="Delete an analysis",
+    responses={
+        409: {"description": "Analysis is currently processing and cannot be deleted"},
+    },
+)
+async def delete_analysis(
+    analysis_id: UUID,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Delete an analysis record and its associated roadmap.
+
+    Returns 409 if the analysis is actively processing (to prevent
+    deleting a job that Celery is mid-flight on). Cascade is handled
+    by the ORM relationship (roadmap deleted automatically).
+    """
+    analysis_repo = AnalysisRepository(session)
+    analysis = await analysis_repo.get_by_id(analysis_id)
+
+    if analysis is None or str(analysis.user_id) != str(user.id):
+        raise NotFoundError(
+            message="Analysis not found.",
+            resource_type="analysis",
+        )
+
+    if analysis.status == "processing":
+        raise ConflictError(
+            "This analysis is currently processing and cannot be deleted. "
+            "Please wait for it to complete or fail."
+        )
+
+    await analysis_repo.delete(analysis_id)
+    return Response(status_code=204)
+
+
+MAX_RETRIES = 3
+
+
+@router.post(
+    "/{analysis_id}/retry",
+    response_model=AnalysisSubmitResponse,
+    status_code=202,
+    summary="Retry a failed analysis",
+    responses={
+        409: {"description": "Analysis is not in a failed state or max retries exceeded"},
+    },
+)
+async def retry_analysis(
+    analysis_id: UUID,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Re-queue a failed analysis for reprocessing.
+
+    Only analyses with status='failed' can be retried. Maximum 3 retries
+    per analysis. On retry, status is reset to 'queued' and a new Celery
+    task is dispatched.
+    """
+    analysis_repo = AnalysisRepository(session)
+    analysis = await analysis_repo.get_by_id(analysis_id)
+
+    if analysis is None or str(analysis.user_id) != str(user.id):
+        raise NotFoundError(
+            message="Analysis not found.",
+            resource_type="analysis",
+        )
+
+    if analysis.status != "failed":
+        raise ConflictError(
+            f"Only failed analyses can be retried. Current status: {analysis.status}."
+        )
+
+    if analysis.retry_count >= MAX_RETRIES:
+        raise ConflictError(
+            f"This analysis has already been retried {analysis.retry_count} time(s). "
+            f"Maximum of {MAX_RETRIES} retries allowed."
+        )
+
+    # Reset to queued and increment retry counter
+    await analysis_repo.update(
+        analysis_id,
+        status="queued",
+        error_message=None,
+        retry_count=analysis.retry_count + 1,
+    )
+
+    # Re-dispatch the Celery task
+    try:
+        from app.workers.analysis_task import run_skill_gap_analysis
+        run_skill_gap_analysis.delay(str(analysis_id))
+        logger.info("Re-dispatched analysis task for %s (retry %d)", analysis_id, analysis.retry_count + 1)
+    except Exception as e:
+        logger.warning(
+            "Failed to dispatch Celery retry task for analysis %s: %s",
+            analysis_id,
+            str(e)[:200],
+        )
+
+    return AnalysisSubmitResponse(
+        job_id=analysis_id,
+        status="queued",
+        estimated_seconds=15,
+        status_url=f"/api/v1/analysis/{analysis_id}/status",
+        ws_url=f"/ws/analysis/{analysis_id}",
     )

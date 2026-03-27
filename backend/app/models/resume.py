@@ -6,7 +6,9 @@ The actual file lives in object storage (S3/local);
 this table holds the path reference and parsed text cache.
 """
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +34,9 @@ class Resume(Base, UUIDMixin, TimestampMixin):
     parsed_sections: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # JSON string of identified sections (experience, education, etc.)
+
+    # ── Usage tracking ───────────────────────────────────────
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # ── Relationships ────────────────────────────────────────
     user: Mapped["User"] = relationship("User", back_populates="resumes")
