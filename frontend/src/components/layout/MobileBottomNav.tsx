@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, FileText, PlusCircle } from "lucide-react";
+import { BarChart3, FileText, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Analyze", icon: BarChart3 },
   { href: "/history", label: "History", icon: FileText },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function MobileBottomNav() {

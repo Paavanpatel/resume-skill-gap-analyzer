@@ -26,15 +26,28 @@ import redis.asyncio as aioredis
 
 from app.core.config import get_settings
 from app.core.dependencies import CurrentUser, get_redis
-from app.core.exceptions import AuthenticationError, ErrorCode
+from app.core.exceptions import AuthenticationError, ErrorCode, ValidationError
 from app.db.session import get_db_session
-from app.schemas.user import TokenResponse, UserCreate, UserLogin, UserResponse
+from app.schemas.user import (
+    AccountDeleteRequest,
+    PasswordUpdateRequest,
+    PreferencesUpdateRequest,
+    ProfileUpdateRequest,
+    TokenResponse,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+)
 from app.services.auth_service import (
+    delete_account,
     get_user_profile,
     login_user,
     logout_user,
     refresh_tokens,
     register_user,
+    update_password,
+    update_preferences,
+    update_profile,
 )
 
 logger = logging.getLogger(__name__)
@@ -282,3 +295,124 @@ async def get_me(user: CurrentUser):
     - Fetching updated profile data after changes
     """
     return UserResponse.model_validate(user)
+
+
+@router.patch(
+    "/profile",
+    response_model=UserResponse,
+    summary="Update display name and/or email",
+    responses={
+        400: {"description": "Email already in use"},
+    },
+)
+async def update_profile_endpoint(
+    body: ProfileUpdateRequest,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Update the authenticated user's full_name and/or email.
+
+    Only provided fields are changed; omit a field to leave it as-is.
+    Email changes check for uniqueness across all accounts.
+    """
+    return await update_profile(
+        user=user,
+        full_name=body.full_name,
+        email=body.email,
+        session=session,
+    )
+
+
+@router.put(
+    "/password",
+    response_model=MessageResponse,
+    summary="Change password",
+    responses={
+        401: {"description": "Current password is incorrect"},
+    },
+)
+async def update_password_endpoint(
+    body: PasswordUpdateRequest,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
+):
+    """
+    Change the user's password after verifying the current one.
+
+    After a successful password change, the client should log out
+    and prompt the user to log in again (existing tokens remain valid
+    until they expire, but it's good security practice to rotate them).
+    """
+    await update_password(
+        user=user,
+        current_password=body.current_password,
+        new_password=body.new_password,
+        session=session,
+        redis_client=redis_client,
+    )
+    return MessageResponse(message="Password updated successfully.")
+
+
+@router.delete(
+    "/account",
+    response_model=MessageResponse,
+    summary="Delete (deactivate) account",
+    responses={
+        400: {"description": "Confirmation text must be DELETE"},
+        401: {"description": "Password is incorrect"},
+    },
+)
+async def delete_account_endpoint(
+    body: AccountDeleteRequest,
+    response: Response,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
+):
+    """
+    Soft-delete the account by setting is_active=False.
+
+    Requires both the correct password and the confirmation string "DELETE".
+    The account is deactivated but not erased from the database.
+    All tokens are cleared from the client after this call.
+    """
+    if body.confirmation != "DELETE":
+        raise ValidationError(
+            message='Confirmation must be exactly "DELETE".',
+            details={"field": "confirmation"},
+        )
+
+    await delete_account(
+        user=user,
+        password=body.password,
+        session=session,
+        redis_client=redis_client,
+    )
+
+    _clear_refresh_cookie(response)
+    return MessageResponse(message="Account deactivated successfully.")
+
+
+@router.patch(
+    "/preferences",
+    response_model=UserResponse,
+    summary="Update user preferences",
+)
+async def update_preferences_endpoint(
+    body: PreferencesUpdateRequest,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Merge new preference keys into the user's stored preferences.
+
+    Existing keys not present in the request body are preserved.
+    Send only the keys you want to change.
+    """
+    return await update_preferences(
+        user=user,
+        preferences=body.preferences,
+        session=session,
+    )

@@ -6,6 +6,7 @@ One user can have many resumes and analyses.
 """
 
 from sqlalchemy import Boolean, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
@@ -29,6 +30,13 @@ class User(Base, UUIDMixin, TimestampMixin):
     tier: Mapped[str] = mapped_column(
         String(20), default="free", nullable=False
     )  # free | pro | enterprise
+
+    # ── User preferences (JSONB) ─────────────────────────────
+    # Flexible blob for UI/app preferences. Keys added here without migrations.
+    # Expected shape: { theme, email_notifications, ai_provider, ... }
+    preferences: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
 
     # ── Relationships ────────────────────────────────────────
     resumes: Mapped[list["Resume"]] = relationship(

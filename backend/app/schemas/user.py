@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     tier: str  # free | pro | enterprise
+    preferences: dict
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -43,3 +44,28 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int  # seconds until access token expires
+
+
+# ── Profile & settings update schemas ───────────────────────
+
+class ProfileUpdateRequest(BaseModel):
+    """PATCH /auth/profile — update display name and/or email."""
+    full_name: str | None = Field(None, max_length=255)
+    email: EmailStr | None = None
+
+
+class PasswordUpdateRequest(BaseModel):
+    """PUT /auth/password — change password after verifying the current one."""
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class AccountDeleteRequest(BaseModel):
+    """DELETE /auth/account — soft-delete after confirming password."""
+    password: str
+    confirmation: str  # must equal "DELETE"
+
+
+class PreferencesUpdateRequest(BaseModel):
+    """PATCH /auth/preferences — merge provided keys into existing preferences."""
+    preferences: dict
