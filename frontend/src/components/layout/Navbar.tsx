@@ -20,6 +20,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Dropdown from "@/components/ui/Dropdown";
+import StatusIndicator from "@/components/ui/StatusIndicator";
+import { useHealthCheck } from "@/hooks/useHealthCheck";
 
 const navItems = [
   { href: "/dashboard", label: "New Analysis", icon: BarChart3 },
@@ -32,6 +34,7 @@ export default function Navbar() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { status: healthStatus, checks, lastChecked } = useHealthCheck(30_000);
 
   // Glass effect on scroll
   useEffect(() => {
@@ -165,8 +168,14 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Right: Theme + Avatar */}
+          {/* Right: Status + Theme + Avatar */}
           <div className="flex items-center gap-2">
+            <StatusIndicator
+              status={healthStatus}
+              checks={checks}
+              lastChecked={lastChecked}
+              className="hidden sm:flex"
+            />
             <ThemeToggle />
 
             {/* User dropdown (desktop) */}

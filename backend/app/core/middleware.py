@@ -25,6 +25,7 @@ import logging
 import time
 import uuid
 
+import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
@@ -53,14 +54,38 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:16])
         request.state.request_id = request_id
 
+        # Bind request context to structlog so every log line in this request
+        # automatically carries request_id, method, and path without manual passing.
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(
+            request_id=request_id,
+            http_method=request.method,
+            http_path=request.url.path,
+        )
+
         start_time = time.perf_counter()
         response = await call_next(request)
-        duration_ms = (time.perf_counter() - start_time) * 1000
+        duration_s = time.perf_counter() - start_time
+        duration_ms = duration_s * 1000
 
         response.headers["X-Request-ID"] = request_id
 
-        # Log every request with timing. In production, this feeds into
-        # metrics dashboards (Grafana, Datadog, etc.)
+        # Record Prometheus HTTP metrics (import lazily to avoid circular imports
+        # if metrics.py ever imports from middleware in the future)
+        try:
+            from app.core.metrics import http_requests_total, http_request_duration_seconds
+            # Normalise path for high-cardinality routes (e.g. /analysis/{id})
+            path_label = _normalise_path(request.url.path)
+            status_label = str(response.status_code)
+            http_requests_total.labels(
+                method=request.method, path=path_label, status=status_label
+            ).inc()
+            http_request_duration_seconds.labels(
+                method=request.method, path=path_label
+            ).observe(duration_s)
+        except Exception:
+            pass  # Never let metrics recording crash a request
+
         logger.info(
             "%s %s -> %d (%.1fms) [request_id=%s]",
             request.method,
@@ -107,6 +132,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _normalise_path(path: str) -> str:
+    """
+    Replace path segments that look like UUIDs or numeric IDs with a
+    placeholder to prevent unbounded label cardinality in Prometheus.
+
+    Examples:
+      /api/v1/analysis/abc123def456  ->  /api/v1/analysis/{id}
+      /api/v1/resume/42              ->  /api/v1/resume/{id}
+    """
+    import re
+    # UUID-shaped segments (hex, 8-4-4-4-12 or 32 hex chars)
+    path = re.sub(r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "/{id}", path)
+    path = re.sub(r"/[0-9a-f]{32}", "/{id}", path)
+    # Pure numeric segments
+    path = re.sub(r"/\d+", "/{id}", path)
+    return path
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Redis sliding-window rate limiting middleware.
@@ -138,7 +181,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """
 
     # Paths that bypass rate limiting entirely
-    _EXEMPT_PATHS = frozenset({"/api/v1/health", "/docs", "/redoc", "/openapi.json"})
+    _EXEMPT_PATHS = frozenset({
+        "/api/v1/health",
+        "/api/v1/health/live",
+        "/api/v1/health/ready",
+        "/api/v1/metrics",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+    })
 
     # Auth endpoints that get stricter IP-based brute-force protection
     _AUTH_PATHS = frozenset({"/api/v1/auth/login", "/api/v1/auth/register"})

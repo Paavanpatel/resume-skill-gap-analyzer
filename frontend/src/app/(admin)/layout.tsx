@@ -10,6 +10,7 @@ import {
   FileText,
   ArrowLeft,
   Shield,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Skeleton from "@/components/ui/Skeleton";
@@ -20,6 +21,7 @@ const sidebarItems = [
   { href: "/admin", label: "Analytics", icon: BarChart3 },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/analyses", label: "Analyses", icon: FileText },
+  { href: "/admin/system", label: "System", icon: Activity },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

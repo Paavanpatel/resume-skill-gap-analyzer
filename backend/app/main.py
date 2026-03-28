@@ -4,11 +4,10 @@ FastAPI application entry point.
 Creates and configures the FastAPI application with:
 - CORS middleware
 - Security headers middleware
-- Request ID tracking middleware
+- Request ID tracking + Prometheus HTTP metrics middleware
 - Global exception handlers
-- API router mounting
+- API router mounting (includes /health/live, /health/ready, /metrics)
 - Lifespan events (startup/shutdown)
-- Health check endpoint
 """
 
 import logging
@@ -83,56 +82,13 @@ def create_app() -> FastAPI:
     from app.api.v1.websockets import router as ws_router
     app.include_router(ws_router)
 
-    # ── Health Check ──────────────────────────────────────────
-    @app.get("/api/v1/health", tags=["system"])
-    async def health_check():
-        """
-        Production-grade health check.
+    # ── Legacy /health alias — redirects to /health/ready for backward compat ──
+    from fastapi.responses import RedirectResponse
 
-        Returns connectivity status for all dependencies so container
-        orchestrators (Docker, K8s) and load balancers can make
-        informed routing decisions.
-        """
-        import time
-        checks: dict = {}
-
-        # -- Database connectivity --
-        try:
-            import asyncpg
-            conn = await asyncpg.connect(
-                host=settings.postgres_host,
-                port=settings.postgres_port,
-                user=settings.postgres_user,
-                password=settings.postgres_password,
-                database=settings.postgres_db,
-                timeout=5,
-            )
-            await conn.execute("SELECT 1")
-            await conn.close()
-            checks["database"] = "ok"
-        except Exception as exc:
-            checks["database"] = f"error: {type(exc).__name__}"
-
-        # -- Redis connectivity --
-        try:
-            import redis.asyncio as aioredis
-            r = aioredis.from_url(settings.redis_url, socket_connect_timeout=2)
-            await r.ping()
-            await r.aclose()
-            checks["redis"] = "ok"
-        except Exception as exc:
-            checks["redis"] = f"error: {type(exc).__name__}"
-
-        overall = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
-
-        return {
-            "status": overall,
-            "app": settings.app_name,
-            "version": "1.0.0",
-            "environment": settings.app_env,
-            "checks": checks,
-            "timestamp": time.time(),
-        }
+    @app.get("/api/v1/health", tags=["health"], include_in_schema=False)
+    async def health_legacy():
+        """Backward-compat alias for /api/v1/health/ready."""
+        return RedirectResponse(url="/api/v1/health/ready", status_code=307)
 
     return app
 

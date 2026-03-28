@@ -83,10 +83,29 @@ function dispatchRateLimitEvent(retryAfterSeconds: number): void {
   );
 }
 
+/**
+ * Dispatch a DOM CustomEvent so any component can display the request ID
+ * from a failed response without coupling api.ts to the toast context.
+ */
+function dispatchRequestIdEvent(requestId: string, status: number): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("api:request-error", {
+      detail: { requestId, status },
+    })
+  );
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
+
+    // ── Capture X-Request-ID from every error response ───────
+    const requestId = error.response?.headers?.["x-request-id"] as string | undefined;
+    if (requestId && error.response?.status) {
+      dispatchRequestIdEvent(requestId, error.response.status);
+    }
 
     // ── 429 Rate limit handling ──────────────────────────────
     if (error.response?.status === 429) {
@@ -454,6 +473,96 @@ export async function adminGetStorageStats(): Promise<StorageStats> {
   return res.data;
 }
 
+// ── Health check API (Phase 9) ──────────────────────────────
+
+export interface HealthCheck {
+  status: "healthy" | "degraded" | "unhealthy";
+  checks: {
+    database: string;
+    redis: string;
+    celery: string;
+  };
+  app: string;
+  version: string;
+  environment: string;
+  timestamp: number;
+}
+
+export interface LivenessResponse {
+  status: "ok";
+  timestamp: number;
+}
+
+/**
+ * Liveness probe — just confirms the process is alive.
+ * No dependency checks; suitable for frequent polling.
+ */
+export async function getHealthLive(): Promise<LivenessResponse> {
+  const res = await apiClient.get("/health/live");
+  return res.data;
+}
+
+/**
+ * Readiness probe — checks DB, Redis, and Celery.
+ * Returns status 200 for healthy/degraded, 503 for unhealthy.
+ */
+export async function getHealthReady(): Promise<HealthCheck> {
+  // validateStatus so axios doesn't throw on 503
+  const res = await apiClient.get("/health/ready", {
+    validateStatus: (s) => s < 600,
+  });
+  return res.data;
+}
+
+// ── Admin system observability (Phase 9) ────────────────────
+
+export interface MetricsSummary {
+  http: {
+    total_requests?: number;
+    by_status_class?: Record<string, number>;
+    avg_duration_ms?: number;
+  };
+  analyses: {
+    total?: number;
+    by_status?: Record<string, number>;
+  };
+  llm: {
+    total_calls?: number;
+    total_tokens?: number;
+    by_provider?: Record<string, number>;
+  };
+  timestamp: number;
+}
+
+export async function adminGetMetricsSummary(): Promise<MetricsSummary> {
+  const res = await apiClient.get("/admin/system/metrics");
+  return res.data;
+}
+
+export interface LogRecord {
+  ts: number;
+  level: string;
+  logger: string;
+  message: string;
+  request_id?: string;
+  exc?: string;
+}
+
+export interface LogsResponse {
+  records: LogRecord[];
+  count: number;
+  note: string;
+}
+
+export async function adminGetLogs(params: {
+  limit?: number;
+  level?: string;
+  logger_prefix?: string;
+} = {}): Promise<LogsResponse> {
+  const res = await apiClient.get("/admin/system/logs", { params });
+  return res.data;
+}
+
 // ── Error helper ────────────────────────────────────────────
 
 export function getErrorMessage(error: unknown): string {
@@ -462,6 +571,9 @@ export function getErrorMessage(error: unknown): string {
     if (data?.error?.message) return data.error.message;
     if (error.response?.status === 429) return "Too many requests. Please wait a moment.";
     if (error.response?.status === 413) return "File is too large.";
+    // Include request ID in generic errors for easier support triage
+    const reqId = error.response?.headers?.["x-request-id"];
+    if (reqId) return `Something went wrong (ref: ${reqId}). Please try again.`;
   }
   return "Something went wrong. Please try again.";
 }
