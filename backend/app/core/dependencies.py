@@ -172,6 +172,39 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+# ── Role-based access control ────────────────────────────────
+
+# Role hierarchy: super_admin > admin > user
+ROLE_HIERARCHY = {"user": 0, "admin": 1, "super_admin": 2}
+
+
+def require_role(*allowed_roles: str):
+    """
+    Dependency factory that restricts an endpoint to users with one of the
+    specified roles (or higher in the hierarchy).
+
+    Usage:
+        @router.get("/admin-only")
+        async def admin_endpoint(user: User = Depends(require_role("admin"))):
+            ...
+
+    A super_admin always passes any role check. The check is based on
+    hierarchy: if the minimum required level is "admin" (level 1), then
+    both "admin" (1) and "super_admin" (2) pass.
+    """
+    min_level = min(ROLE_HIERARCHY.get(r, 0) for r in allowed_roles)
+
+    async def _guard(user: User = Depends(get_current_user)) -> User:
+        user_level = ROLE_HIERARCHY.get(getattr(user, "role", "user"), 0)
+        if user_level < min_level:
+            raise AuthorizationError(
+                message="You do not have the required role to access this resource.",
+            )
+        return user
+
+    return _guard
+
+
 # ── Tier-aware rate limiter dependency ────────────────────────
 
 class RateLimiter:

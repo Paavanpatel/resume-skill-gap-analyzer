@@ -31,6 +31,13 @@ class User(Base, UUIDMixin, TimestampMixin):
         String(20), default="free", nullable=False
     )  # free | pro | enterprise
 
+    # ── Role-based access ────────────────────────────────────
+    # Controls admin dashboard access and privileged operations.
+    # "user" = default, "admin" = dashboard access, "super_admin" = full control.
+    role: Mapped[str] = mapped_column(
+        String(20), default="user", nullable=False, server_default="user"
+    )  # user | admin | super_admin
+
     # ── User preferences (JSONB) ─────────────────────────────
     # Flexible blob for UI/app preferences. Keys added here without migrations.
     # Expected shape: { theme, email_notifications, ai_provider, ... }

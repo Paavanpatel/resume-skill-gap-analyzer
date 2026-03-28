@@ -314,6 +314,123 @@ export async function createPortalSession(): Promise<{ url: string }> {
   return res.data;
 }
 
+// ── Admin API (Phase 7) ─────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_verified: boolean;
+  tier: string;
+  role: string;
+  created_at: string;
+  analyses_count: number;
+}
+
+export interface AdminUserListResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminAnalysis {
+  id: string;
+  user_id: string;
+  user_email: string;
+  job_title: string | null;
+  job_company: string | null;
+  status: string;
+  match_score: number | null;
+  ats_score: number | null;
+  ai_provider: string | null;
+  ai_model: string | null;
+  ai_tokens_used: number | null;
+  processing_time_ms: number | null;
+  retry_count: number;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface AdminAnalysisListResponse {
+  analyses: AdminAnalysis[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AnalyticsOverview {
+  total_users: number;
+  active_users: number;
+  verified_users: number;
+  total_analyses: number;
+  completed_analyses: number;
+  failed_analyses: number;
+  avg_match_score: number | null;
+  avg_ats_score: number | null;
+  users_by_tier: Record<string, number>;
+  users_by_role: Record<string, number>;
+  analyses_by_status: Record<string, number>;
+  analyses_per_day: { date: string; count: number }[];
+  registrations_per_day: { date: string; count: number }[];
+}
+
+export async function adminGetUsers(params: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  tier?: string;
+  role?: string;
+  is_active?: boolean;
+} = {}): Promise<AdminUserListResponse> {
+  const res = await apiClient.get("/admin/users", { params });
+  return res.data;
+}
+
+export async function adminGetUser(userId: string): Promise<AdminUser> {
+  const res = await apiClient.get(`/admin/users/${userId}`);
+  return res.data;
+}
+
+export async function adminUpdateUser(
+  userId: string,
+  data: { tier?: string; role?: string; is_active?: boolean }
+): Promise<AdminUser> {
+  const res = await apiClient.patch(`/admin/users/${userId}`, data);
+  return res.data;
+}
+
+export async function adminDeactivateUser(userId: string): Promise<{ message: string }> {
+  const res = await apiClient.delete(`/admin/users/${userId}`);
+  return res.data;
+}
+
+export async function adminGetAnalytics(days: number = 30): Promise<AnalyticsOverview> {
+  const res = await apiClient.get("/admin/analytics", { params: { days } });
+  return res.data;
+}
+
+export async function adminGetAnalyses(params: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+  user_id?: string;
+} = {}): Promise<AdminAnalysisListResponse> {
+  const res = await apiClient.get("/admin/analyses", { params });
+  return res.data;
+}
+
+export async function adminRetryAnalysis(analysisId: string): Promise<{ message: string }> {
+  const res = await apiClient.post(`/admin/analyses/${analysisId}/retry`);
+  return res.data;
+}
+
+export async function adminDeleteAnalysis(analysisId: string): Promise<{ message: string }> {
+  const res = await apiClient.delete(`/admin/analyses/${analysisId}`);
+  return res.data;
+}
+
 // ── Error helper ────────────────────────────────────────────
 
 export function getErrorMessage(error: unknown): string {

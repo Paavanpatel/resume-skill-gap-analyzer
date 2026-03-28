@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     tier: str  # free | pro | enterprise
+    role: str  # user | admin | super_admin
     preferences: dict
     created_at: datetime
 

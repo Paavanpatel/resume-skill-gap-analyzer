@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Sparkles,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -46,11 +47,14 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+
   const handleDropdownSelect = useCallback(
     (id: string) => {
       if (id === "logout") logout();
       if (id === "settings") router.push("/settings");
       if (id === "billing") router.push("/settings?tab=billing");
+      if (id === "admin") router.push("/admin");
     },
     [logout, router]
   );
@@ -91,6 +95,17 @@ export default function Navbar() {
       label: "Billing & Usage",
       icon: <CreditCard className="h-4 w-4" />,
     },
+    // Admin link — only visible for admin/super_admin
+    ...(isAdmin
+      ? [
+          { id: "divider-admin", label: "", divider: true },
+          {
+            id: "admin",
+            label: "Admin Dashboard",
+            icon: <Shield className="h-4 w-4" />,
+          },
+        ]
+      : []),
     { id: "divider-2", label: "", divider: true },
     {
       id: "logout",
@@ -264,8 +279,17 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* Theme + Logout */}
+            {/* Admin + Theme + Logout */}
             <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 dark:border-surface-700 space-y-3">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                >
+                  <Shield className="h-5 w-5" />
+                  Admin Dashboard
+                </Link>
+              )}
               <ThemeToggle variant="full" />
               <button
                 onClick={() => {
