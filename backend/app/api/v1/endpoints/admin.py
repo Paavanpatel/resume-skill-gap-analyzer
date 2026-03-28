@@ -18,7 +18,7 @@ import logging
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import cast, func, select, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -480,7 +480,10 @@ async def sweep_stale_analyses_endpoint(
     session: AsyncSession = Depends(get_db_session),
 ):
     """Sweep analyses stuck in queued/processing for >30 minutes."""
-    swept_count = await sweep_stale_analyses(session)
+    try:
+        swept_count = await sweep_stale_analyses(session)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return {
         "swept_count": swept_count,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import usePageTitle from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { forgotPassword, getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";

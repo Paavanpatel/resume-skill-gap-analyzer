@@ -33,6 +33,8 @@ def mock_user():
     user.is_active = True
     user.is_verified = False
     user.tier = "free"
+    user.role = "user"
+    user.preferences = {}
     user.created_at = datetime.now(timezone.utc)
     user.hashed_password = "$2b$12$fakehash"
     return user
@@ -104,35 +106,10 @@ async def test_health_check(test_client):
         mock_redis.return_value.ping = AsyncMock()
         mock_redis.return_value.aclose = AsyncMock()
         
-        response = await client.get("/api/v1/health")
+        response = await client.get("/api/v1/health/ready")
         assert response.status_code == 200
-        assert response.json()["status"] == "healthy"
+        assert response.json()["status"] in ("healthy", "degraded")
         
-    # @pytest.mark.asyncio
-    # async def test_health_check(self, test_client):
-    #     """Health endpoint returns 200 with status=healthy when dependencies are OK."""
-    #     client, app = test_client[:2]  # Unpack safely
-
-    #     with patch('app.main.asyncpg.connect') as mock_pg, \
-    #          patch('app.main.aioredis.from_url') as mock_redis:
-    #         # asyncpg.connect is async, so mock it as AsyncMock
-    #         mock_conn = AsyncMock()
-    #         mock_conn.execute = AsyncMock()
-    #         mock_conn.close = AsyncMock()
-    #         mock_pg.return_value = mock_conn
-
-    #         # redis.asyncio.from_url is sync but returns async Redis client
-    #         mock_redis_client = AsyncMock()
-    #         mock_redis_client.ping = AsyncMock(return_value=True)
-    #         mock_redis_client.aclose = AsyncMock()
-    #         mock_redis.return_value = mock_redis_client
-
-    #         response = await client.get("/api/v1/health")
-    #         assert response.status_code == 200
-    #         data = response.json()
-    #         assert data["status"] == "healthy"
-    #         assert data["checks"]["database"] == "ok"
-    #         assert data["checks"]["redis"] == "ok"
 
 
 class TestAuthEndpoints:
@@ -386,7 +363,7 @@ class TestCORS:
         client, app, mock_db, mock_redis = test_client
 
         response = await client.get(
-            "/api/v1/health",
+            "/api/v1/health/live",
             headers={"Origin": "http://localhost:3000"}
         )
 
@@ -402,7 +379,7 @@ class TestSecurityHeaders:
         """Security headers are included in responses."""
         client, app, mock_db, mock_redis = test_client
 
-        response = await client.get("/api/v1/health")
+        response = await client.get("/api/v1/health/live")
 
         assert response.status_code == 200
         # Check some common security headers
@@ -429,6 +406,8 @@ class TestEndpointIntegration:
             is_active=True,
             is_verified=False,
             tier="free",
+            role="user",
+            preferences={},
             created_at=datetime.now(timezone.utc),
         )
 

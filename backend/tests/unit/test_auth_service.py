@@ -38,6 +38,8 @@ def _make_mock_user(
     user.is_verified = is_verified
     user.tier = tier
     user.full_name = "Test User"
+    user.role = "user"
+    user.preferences = {}
     user.created_at = datetime.now(timezone.utc)
     return user
 
