@@ -77,9 +77,13 @@ async def mock_redis() -> Optional[AsyncMock]:
     mock_redis = AsyncMock(spec=aioredis.Redis)
     mock_redis.get = AsyncMock(return_value=None)
     mock_redis.set = AsyncMock()
+    mock_redis.setex = AsyncMock()
     mock_redis.delete = AsyncMock()
     mock_redis.ping = AsyncMock(return_value=True)
     mock_redis.expire = AsyncMock()
+    mock_redis.incr = AsyncMock(return_value=1)
+    mock_redis.decr = AsyncMock(return_value=0)
+    mock_redis.exists = AsyncMock(return_value=False)
 
     return mock_redis
 
@@ -99,6 +103,8 @@ async def mock_user() -> User:
         is_active=True,
         is_verified=False,
         tier="free",
+        role="user",
+        preferences={},
         created_at=datetime.now(timezone.utc),
     )
     return user

@@ -39,6 +39,13 @@ def _sanitize_filename(filename: str) -> str:
     return safe or "unnamed_file"
 
 
+def _verify_path_within_root(path: Path, root: Path) -> None:
+    """Raise StorageError if `path` escapes `root`."""
+    if not str(path.resolve()).startswith(str(root.resolve())):
+        logger.error("Path traversal attempt: %s escapes root %s", path, root)
+        raise StorageError("Invalid file path.")
+
+
 # ── Protocol ──────────────────────────────────────────────────────────────────
 
 @runtime_checkable
@@ -72,9 +79,7 @@ class LocalStorage:
 
     def _guard(self, path: Path) -> None:
         """Raise StorageError if `path` escapes the storage root."""
-        if not str(path.resolve()).startswith(str(self._base.resolve())):
-            logger.error("Path traversal attempt: %s escapes root %s", path, self._base)
-            raise StorageError("Invalid file path.")
+        _verify_path_within_root(path, self._base)
 
     async def save_upload(
         self, file_content: bytes, user_id: str, original_filename: str
