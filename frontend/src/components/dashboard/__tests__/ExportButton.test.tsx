@@ -7,6 +7,7 @@ jest.mock("@/lib/api", () => ({
   apiClient: {
     get: jest.fn(),
   },
+  getExportUrl: jest.fn(() => new Promise(() => {})),
 }));
 
 describe("ExportButton", () => {

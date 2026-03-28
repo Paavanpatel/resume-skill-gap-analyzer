@@ -1,5 +1,5 @@
 import React, { act } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@/__tests__/test-utils";
 import AnalysisPage from "@/app/(dashboard)/analysis/[id]/page";
 
 const mockPush = jest.fn();
@@ -10,8 +10,13 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/analysis/analysis-123",
 }));
 
+jest.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ user: null }),
+}));
+
 const mockGetAnalysisStatus = jest.fn();
 const mockGetAnalysisResult = jest.fn();
+const mockRetryAnalysis = jest.fn();
 
 jest.mock("@/lib/api", () => ({
   getAnalysisStatus: (...args: any[]) => mockGetAnalysisStatus(...args),
@@ -20,7 +25,15 @@ jest.mock("@/lib/api", () => ({
   generateRoadmap: jest.fn(),
   getRoadmap: jest.fn().mockRejectedValue(new Error("Not found")),
   generateAdvisorRewrites: jest.fn(),
+  retryAnalysis: (...args: any[]) => mockRetryAnalysis(...args),
 }));
+
+// ── Mock ExportButton component ────────────────────────────
+jest.mock("@/components/dashboard/ExportButton", () => {
+  return function MockExportButton({ analysisId }: { analysisId: string }) {
+    return <button data-testid="export-button">Export PDF</button>;
+  };
+});
 
 // ── Mock lucide-react icons ─────────────────────────────────
 jest.mock("lucide-react", () => {
@@ -31,7 +44,7 @@ jest.mock("lucide-react", () => {
     "ChevronDown", "ChevronUp", "X", "Download", "Map", "Wand2",
     "GraduationCap", "ExternalLink", "RefreshCw", "Play", "Copy",
     "Check", "Star", "TrendingUp", "TrendingDown", "Minus",
-    "AlertCircle", "Info", "ArrowRight", "Plus",
+    "AlertCircle", "Info", "ArrowRight", "Plus", "Lock",
   ];
   const mocks: Record<string, any> = {};
   icons.forEach((name) => {
@@ -318,11 +331,24 @@ describe("AnalysisPage", () => {
     render(<AnalysisPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Try Again")).toBeInTheDocument();
+      expect(screen.getByText("Retry Analysis")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("Try Again"));
-    expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    // Setup retry to resolve and resume processing
+    mockRetryAnalysis.mockResolvedValue({ job_id: "analysis-123" });
+    mockGetAnalysisStatus.mockResolvedValue({
+      job_id: "analysis-123",
+      status: "processing",
+      progress: 10,
+      current_step: "Parsing Resume",
+      error_message: null,
+    });
+
+    fireEvent.click(screen.getByText("Retry Analysis"));
+    // Retry button should clear error and go back to processing state, not navigate
+    await waitFor(() => {
+      expect(screen.queryByText("Analysis Failed")).not.toBeInTheDocument();
+    });
   });
 
   it("shows error on network failure", async () => {

@@ -220,7 +220,7 @@ describe("RegisterPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+      expect(mockPush).toHaveBeenCalledWith("/verify-email?email=test%40example.com");
     });
   });
 

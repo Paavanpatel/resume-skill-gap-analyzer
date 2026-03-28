@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@/__tests__/test-utils";
 import HistoryPage from "@/app/(dashboard)/history/page";
 
 const mockPush = jest.fn();
@@ -27,6 +27,17 @@ jest.mock("recharts", () => ({
   Tooltip: () => null,
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
   Legend: () => null,
+}));
+
+jest.mock("@/context/AnalysisTrackerContext", () => ({
+  useAnalysisTracker: () => ({
+    analyses: [],
+    track: jest.fn(),
+    dismiss: jest.fn(),
+    dismissAll: jest.fn(),
+    activeCount: 0,
+    completedCount: 0,
+  }),
 }));
 
 // Mock IntersectionObserver for AnimatedCounter

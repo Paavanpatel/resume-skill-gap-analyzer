@@ -11,6 +11,7 @@ const mockGetAnalysisStatus = jest.fn();
 
 jest.mock("@/lib/api", () => ({
   getAnalysisStatus: (...args: any[]) => mockGetAnalysisStatus(...args),
+  getStoredTokens: jest.fn(() => null),
   getErrorMessage: (err: any) => err?.message || "Something went wrong",
 }));
 
