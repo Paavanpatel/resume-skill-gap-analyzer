@@ -11,11 +11,12 @@ import {
   Target,
   ShieldCheck,
   Activity,
+  HardDrive,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
-import { adminGetAnalytics, getErrorMessage } from "@/lib/api";
-import type { AnalyticsOverview } from "@/lib/api";
+import { adminGetAnalytics, adminGetStorageStats, getErrorMessage } from "@/lib/api";
+import type { AnalyticsOverview, StorageStats } from "@/lib/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Lazy-load recharts to keep bundle small
@@ -98,17 +99,31 @@ function KpiCard({ label, value, icon: Icon, color, sub }: KpiCardProps) {
   );
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 export default function AdminAnalyticsPage() {
   usePageTitle("Admin — Analytics");
   const [data, setData] = useState<AnalyticsOverview | null>(null);
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
 
   useEffect(() => {
     setLoading(true);
-    adminGetAnalytics(days)
-      .then(setData)
+    Promise.all([
+      adminGetAnalytics(days),
+      adminGetStorageStats(),
+    ])
+      .then(([analytics, storage]) => {
+        setData(analytics);
+        setStorageStats(storage);
+      })
       .catch((e) => setError(getErrorMessage(e)))
       .finally(() => setLoading(false));
   }, [days]);
@@ -236,6 +251,42 @@ export default function AdminAnalyticsPage() {
             : undefined}
         />
       </div>
+
+      {/* Storage Stats */}
+      {storageStats && (
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-700">
+              <HardDrive className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                File Storage
+              </h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Backend: <span className="font-medium text-gray-600 dark:text-gray-300">{storageStats.backend.toUpperCase()}</span>
+                {storageStats.bucket && (
+                  <> &mdash; bucket: <span className="font-mono text-gray-600 dark:text-gray-300">{storageStats.bucket}</span></>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-8">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total files</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {storageStats.total_files.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Storage used</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {formatBytes(storageStats.total_bytes)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

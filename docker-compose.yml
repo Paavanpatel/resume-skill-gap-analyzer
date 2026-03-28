@@ -72,6 +72,39 @@ services:
         condition: service_healthy
     command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
 
+  # ── MinIO (S3-compatible object storage for local dev) ────
+  minio:
+    image: minio/minio:latest
+    container_name: rsga-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console  (http://localhost:9001)
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Creates the default bucket on first start
+  minio-init:
+    image: minio/mc:latest
+    container_name: rsga-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin};
+        mc mb --ignore-existing local/$${S3_BUCKET:-rsga-uploads};
+        exit 0;
+      "
+
   # ── Next.js Frontend ───────────────────────────────────────
   frontend:
     build:
@@ -93,3 +126,4 @@ volumes:
   postgres_data:
   redis_data:
   backend_storage:
+  minio_data:

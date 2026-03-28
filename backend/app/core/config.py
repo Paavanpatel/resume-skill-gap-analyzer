@@ -87,6 +87,16 @@ class Settings(BaseSettings):
     storage_backend: str = "local"
     storage_local_path: str = "./storage"
 
+    # ── S3 / MinIO Object Storage ────────────────────────────
+    # Set storage_backend="s3" to use these.
+    # For MinIO (local dev), set s3_endpoint_url to http://minio:9000.
+    s3_bucket: str = "rsga-uploads"
+    s3_region: str = "us-east-1"
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_endpoint_url: str = ""  # Leave empty for AWS S3
+    s3_presigned_url_expiry_seconds: int = 300  # 5 minutes
+
     # ── Email ────────────────────────────────────────────────
     # Set email_backend="smtp" in production. "console" logs to stdout (dev only).
     email_backend: str = "console"  # console | smtp

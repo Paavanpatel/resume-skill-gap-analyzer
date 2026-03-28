@@ -35,9 +35,7 @@ const tierColors = {
 
 function TierBadge({ tier }: { tier: "free" | "pro" | "enterprise" }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tierColors[tier]}`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tierColors[tier]}`}>
       {tier}
     </span>
   );

@@ -34,6 +34,7 @@ from app.schemas.admin import (
     AdminUserResponse,
     AdminUserUpdate,
     AnalyticsOverview,
+    StorageStats,
 )
 from app.repositories.user_repo import UserRepository
 from app.services.stale_sweeper import sweep_stale_analyses
@@ -456,6 +457,19 @@ async def delete_analysis(
     await session.flush()
 
     return {"message": "Analysis deleted."}
+
+
+# ── Storage stats ────────────────────────────────────────────
+
+@router.get("/storage/stats", response_model=StorageStats)
+async def get_storage_stats(
+    admin: User = Depends(_admin),
+):
+    """Return storage backend usage statistics (file count + total bytes)."""
+    from app.services.file_storage import get_storage
+    storage = get_storage()
+    stats = await storage.get_stats()
+    return StorageStats(**stats)
 
 
 # ── Maintenance ──────────────────────────────────────────────

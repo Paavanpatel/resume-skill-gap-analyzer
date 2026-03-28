@@ -291,6 +291,17 @@ export async function generateAdvisorRewrites(analysisId: string): Promise<Advis
   return res.data;
 }
 
+export interface ExportUrlResponse {
+  url: string | null;
+  is_presigned: boolean;
+  expires_in: number | null;
+}
+
+export async function getExportUrl(analysisId: string): Promise<ExportUrlResponse> {
+  const res = await apiClient.get(`/insights/${analysisId}/export-url`);
+  return res.data;
+}
+
 // ── Billing API (Phase 3) ────────────────────────────────────
 
 export interface UsageSummary {
@@ -428,6 +439,18 @@ export async function adminRetryAnalysis(analysisId: string): Promise<{ message:
 
 export async function adminDeleteAnalysis(analysisId: string): Promise<{ message: string }> {
   const res = await apiClient.delete(`/admin/analyses/${analysisId}`);
+  return res.data;
+}
+
+export interface StorageStats {
+  backend: string;
+  total_files: number;
+  total_bytes: number;
+  bucket: string | null;
+}
+
+export async function adminGetStorageStats(): Promise<StorageStats> {
+  const res = await apiClient.get("/admin/storage/stats");
   return res.data;
 }
 

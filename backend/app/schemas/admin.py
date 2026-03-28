@@ -90,3 +90,13 @@ class AnalyticsOverview(BaseModel):
     analyses_by_status: dict[str, int]
     analyses_per_day: list[dict]  # [{date, count}]
     registrations_per_day: list[dict]  # [{date, count}]
+
+
+# ── Storage stats schema ─────────────────────────────────────
+
+class StorageStats(BaseModel):
+    """Storage usage summary for the admin dashboard."""
+    backend: str          # "local" or "s3"
+    total_files: int
+    total_bytes: int
+    bucket: str | None    # S3 bucket name, None for local
