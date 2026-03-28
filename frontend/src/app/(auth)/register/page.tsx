@@ -117,7 +117,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await register(email, password, fullName || undefined);
-      router.push("/dashboard");
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

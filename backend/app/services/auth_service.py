@@ -15,6 +15,9 @@ expired tokens are automatically cleaned up by Redis.
 """
 
 import logging
+import random
+import string
+import uuid as _uuid_mod
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -381,3 +384,206 @@ async def get_user_profile(user_id: UUID, session: AsyncSession) -> UserResponse
         )
 
     return UserResponse.model_validate(user)
+
+
+# ── Email verification ───────────────────────────────────────
+
+_OTP_CHARS = string.digits
+_OTP_TTL = 15 * 60  # 15 minutes
+
+
+def _otp_redis_key(email: str) -> str:
+    return f"otp:verify:{email.lower().strip()}"
+
+
+def _generate_otp() -> str:
+    return "".join(random.choices(_OTP_CHARS, k=6))
+
+
+async def send_verification_otp(
+    email: str,
+    redis_client,
+) -> None:
+    """
+    Generate a 6-digit OTP, store it in Redis (15-min TTL), and send the
+    verification email. Safe to call on registration or resend requests.
+
+    No-ops silently if Redis is unavailable (email never sent; caller should
+    surface a warning in the response).
+    """
+    from app.services.email_service import send_verification_email
+
+    if redis_client is None:
+        logger.warning("Redis unavailable — cannot store OTP for %s", email)
+        return
+
+    otp = _generate_otp()
+    key = _otp_redis_key(email)
+    await redis_client.setex(key, _OTP_TTL, otp)
+    logger.info("OTP stored for %s (key=%s)", email, key)
+
+    await send_verification_email(to_email=email, otp=otp)
+
+
+async def verify_email_otp(
+    email: str,
+    otp: str,
+    session: AsyncSession,
+    redis_client,
+) -> UserResponse:
+    """
+    Verify a submitted OTP. On success, marks the user as verified and
+    deletes the OTP from Redis.
+
+    Raises:
+        ValidationError: If the OTP is missing, expired, or incorrect.
+        AuthenticationError: If no account exists for this email.
+    """
+    if redis_client is None:
+        raise ValidationError(message="Verification service temporarily unavailable. Try again later.")
+
+    key = _otp_redis_key(email)
+    stored_otp = await redis_client.get(key)
+
+    if stored_otp is None:
+        raise ValidationError(
+            message="Verification code has expired or was already used. Request a new one.",
+        )
+
+    if stored_otp != otp:
+        raise ValidationError(message="Incorrect verification code.")
+
+    repo = UserRepository(session)
+    user = await repo.get_by_email(email.lower().strip())
+
+    if user is None:
+        raise AuthenticationError(
+            message="User account not found.",
+            error_code=ErrorCode.UNAUTHORIZED,
+        )
+
+    # Mark verified and remove OTP atomically
+    await redis_client.delete(key)
+    updated = await repo.update(user.id, is_verified=True)
+
+    logger.info("Email verified for user %s (id=%s)", email, user.id)
+    return UserResponse.model_validate(updated)
+
+
+async def resend_verification_otp(
+    email: str,
+    session: AsyncSession,
+    redis_client,
+) -> None:
+    """
+    Re-send an OTP to the given email address.
+
+    Raises:
+        ValidationError: If the account is already verified.
+        AuthenticationError: If no account exists (use same message to avoid enumeration).
+    """
+    repo = UserRepository(session)
+    user = await repo.get_by_email(email.lower().strip())
+
+    if user is None:
+        # Return normally — don't reveal that the email isn't registered
+        logger.info("Resend verification requested for unknown email: %s", email)
+        return
+
+    if user.is_verified:
+        raise ValidationError(message="This email address is already verified.")
+
+    await send_verification_otp(email=email, redis_client=redis_client)
+
+
+# ── Password reset ───────────────────────────────────────────
+
+_RESET_TTL = 60 * 60  # 1 hour
+
+
+def _reset_redis_key(token: str) -> str:
+    return f"reset:token:{token}"
+
+
+async def send_password_reset(
+    email: str,
+    session: AsyncSession,
+    redis_client,
+) -> None:
+    """
+    Generate a UUID reset token, store email→token in Redis (1-hr TTL),
+    and send the reset email.
+
+    Always returns successfully — never reveals whether the email is registered
+    (prevents email enumeration).
+    """
+    from app.core.config import get_settings
+    from app.services.email_service import send_password_reset_email
+
+    repo = UserRepository(session)
+    user = await repo.get_by_email(email.lower().strip())
+
+    if user is None:
+        logger.info("Password reset requested for unknown email: %s", email)
+        return  # Silent — don't leak account existence
+
+    if not user.is_active:
+        logger.info("Password reset requested for inactive account: %s", email)
+        return
+
+    if redis_client is None:
+        logger.warning("Redis unavailable — cannot issue reset token for %s", email)
+        return
+
+    token = str(_uuid_mod.uuid4())
+    key = _reset_redis_key(token)
+    await redis_client.setex(key, _RESET_TTL, email.lower().strip())
+
+    settings = get_settings()
+    reset_url = f"{settings.frontend_url}/reset-password?token={token}"
+
+    logger.info("Password reset token issued for user %s", user.id)
+    await send_password_reset_email(to_email=email, reset_url=reset_url)
+
+
+async def reset_password_with_token(
+    token: str,
+    new_password: str,
+    session: AsyncSession,
+    redis_client,
+) -> None:
+    """
+    Validate the reset token, update the user's password, and invalidate
+    the token.
+
+    Raises:
+        ValidationError: If the token is missing, expired, or invalid.
+        AuthenticationError: If the associated account no longer exists.
+    """
+    if redis_client is None:
+        raise ValidationError(message="Reset service temporarily unavailable. Try again later.")
+
+    key = _reset_redis_key(token)
+    email = await redis_client.get(key)
+
+    if email is None:
+        raise ValidationError(
+            message="This reset link has expired or already been used. Request a new one.",
+        )
+
+    repo = UserRepository(session)
+    user = await repo.get_by_email(email)
+
+    if user is None or not user.is_active:
+        raise AuthenticationError(
+            message="User account not found.",
+            error_code=ErrorCode.UNAUTHORIZED,
+        )
+
+    new_hash = hash_password(new_password)
+    await repo.update(user.id, hashed_password=new_hash)
+
+    # Invalidate the token so it can't be reused
+    await redis_client.delete(key)
+
+    logger.info("Password reset completed for user %s (id=%s)", email, user.id)

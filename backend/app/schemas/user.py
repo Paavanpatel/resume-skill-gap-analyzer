@@ -69,3 +69,27 @@ class AccountDeleteRequest(BaseModel):
 class PreferencesUpdateRequest(BaseModel):
     """PATCH /auth/preferences — merge provided keys into existing preferences."""
     preferences: dict
+
+
+# ── Email verification & password reset schemas ──────────────
+
+class VerifyEmailRequest(BaseModel):
+    """POST /auth/verify-email — submit OTP to verify email address."""
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+
+
+class ResendVerificationRequest(BaseModel):
+    """POST /auth/resend-verification — request a new OTP."""
+    email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    """POST /auth/forgot-password — initiate password reset flow."""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """POST /auth/reset-password — complete reset with token from email link."""
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)

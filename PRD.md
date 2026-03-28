@@ -100,6 +100,29 @@ The project has completed 17 development phases, tracked in `.skill/SKILL.md`:
 | 17 | Full-Stack Phase 2 — User Settings & Profile Management | COMPLETE | PATCH /auth/profile, PUT /auth/password, DELETE /auth/account, PATCH /auth/preferences; /settings page (4 tabs: Profile, Security, Preferences, Account); Settings enabled in Navbar + MobileBottomNav |
 | 18 | Full-Stack Phase 3 — Subscription Tier Enforcement & Billing | COMPLETE | UsageRecord model, usage_service (quota tracking), TierGuard deps (require_tier/enforce_analysis_quota), billing_service (Stripe checkout/portal/webhooks), /billing endpoints, migration 006; Frontend: /pricing page (3-column), UsageWidget, FeatureGate component, Billing tab in /settings, tier badge in Navbar, lock icons + quota CTA in dashboard wizard |
 | 19 | Full-Stack Phase 4 — Rate Limiting & Quota Middleware | COMPLETE | Backend: true sliding-window rate limiter (sorted sets + MULTI/EXEC pipeline), tier-aware RateLimiter dependency, auth brute-force protection (20 req/15 min per IP on login/register), X-RateLimit-* response headers. Frontend: 429 interceptor (Retry-After parsing + CustomEvent), useRateLimit hook (countdown + isLimited), RateLimitBanner component, login page countdown + disabled submit, AnalysisTrackerContext exponential backoff (2.5s base → 30s ceiling, 2× multiplier, respects Retry-After on 429) |
+| 20 | Full-Stack Phase 5 — Email Verification & Password Reset | COMPLETE | Backend: email_service (aiosmtplib + Jinja2 HTML/text templates, console mode for dev), 6-digit OTP in Redis (15-min TTL) for email verification, UUID token in Redis (1-hr TTL) for password reset, 4 new endpoints (POST /auth/verify-email, /resend-verification, /forgot-password, /reset-password), OTP sent on register. Frontend: /verify-email page (6-box OTP input, auto-advance, paste support, 60s resend cooldown), /forgot-password page (email form + success state + resend), /reset-password page (token from URL, PasswordStrengthMeter), login "Forgot password?" wired to /forgot-password, register redirects to /verify-email, VerificationBanner in dashboard layout |
+
+### 2.5 Full-Stack Phase 5 — Email Verification & Password Reset (COMPLETE)
+
+**Backend deliverables:**
+
+- `requirements.txt` — Added `aiosmtplib==3.0.1`, `jinja2==3.1.4`.
+- `app/core/config.py` — Added email settings: `email_backend` (console | smtp), `smtp_host/port/username/password`, `smtp_from_email`, `smtp_from_name`, `smtp_use_tls`. Set `email_backend="smtp"` and fill SMTP credentials in production.
+- `app/services/email_service.py` — Async email dispatcher. In `console` mode, prints OTPs and reset links to the logger (dev-friendly). In `smtp` mode, uses `aiosmtplib.send()`. Ships two email types: `send_verification_email(to_email, otp)` and `send_password_reset_email(to_email, reset_url)`. Templates are inline Jinja2 strings (HTML + plain-text multipart). Never raises — logs errors instead.
+- `app/services/auth_service.py` — Added: `send_verification_otp(email, redis_client)` generates 6-digit OTP, stores in Redis key `otp:verify:{email}` with 15-min TTL, calls email service. `verify_email_otp(email, otp, session, redis_client)` checks Redis, marks `user.is_verified=True`, deletes OTP. `resend_verification_otp(email, session, redis_client)` re-generates and re-sends. `send_password_reset(email, session, redis_client)` generates UUID token, stores in Redis key `reset:token:{token}` with 1-hr TTL, sends reset link. `reset_password_with_token(token, new_password, session, redis_client)` validates token, updates password hash, invalidates token. All functions are enumeration-safe.
+- `app/schemas/user.py` — Added: `VerifyEmailRequest`, `ResendVerificationRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest`.
+- `app/api/v1/endpoints/auth.py` — `POST /register` now calls `send_verification_otp` after creating the user. Added 4 endpoints: `POST /auth/verify-email` (returns updated UserResponse), `POST /auth/resend-verification` (MessageResponse), `POST /auth/forgot-password` (MessageResponse, always 200), `POST /auth/reset-password` (MessageResponse).
+
+**Frontend deliverables:**
+
+- `src/lib/api.ts` — Added `verifyEmail(email, otp)`, `resendVerification(email)`, `forgotPassword(email)`, `resetPassword(token, newPassword)`.
+- `src/app/(auth)/verify-email/page.tsx` — 6-box OTP input with auto-advance on digit entry, backspace-to-previous, paste support, per-box focus ring. 60-second resend cooldown timer. On success, calls `updateUser()` with the returned verified user, shows checkmark state, redirects to `/dashboard`. "Skip for now" link bypasses verification.
+- `src/app/(auth)/forgot-password/page.tsx` — Email form with inline validation. On submit shows success state with obfuscated email, 60-second resend cooldown, and "Back to sign in" link.
+- `src/app/(auth)/reset-password/page.tsx` — Reads `?token=` from URL. Shows invalid-link state if token is missing. New password input + PasswordStrengthMeter + confirm password field. On success shows confirmation + "Sign in" button.
+- `src/app/(auth)/login/page.tsx` — "Forgot password?" wired to `<Link href="/forgot-password">`.
+- `src/app/(auth)/register/page.tsx` — After registration, redirects to `/verify-email?email=...` instead of `/dashboard`.
+- `src/components/ui/VerificationBanner.tsx` — Sticky yellow banner rendered in dashboard layout for unverified users. Contains "Enter code" link to `/verify-email`, inline resend button with 60s cooldown, and dismiss (×) button. Hidden when `user.is_verified === true` or dismissed.
+- `src/app/(dashboard)/layout.tsx` — `<VerificationBanner />` added below `<Navbar />`.
 
 ### 2.4 Full-Stack Phase 4 — Rate Limiting & Quota Middleware (COMPLETE)
 

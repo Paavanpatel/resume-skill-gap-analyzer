@@ -6,6 +6,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import PageTransition from "@/components/ui/PageTransition";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import VerificationBanner from "@/components/ui/VerificationBanner";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -40,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-950">
       <Navbar />
+      <VerificationBanner />
       <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 pb-24 sm:pb-8">
         <ErrorBoundary>
           <PageTransition variant="slide-up" duration={350}>

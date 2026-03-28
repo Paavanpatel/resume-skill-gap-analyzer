@@ -30,13 +30,17 @@ from app.core.exceptions import AuthenticationError, ErrorCode, ValidationError
 from app.db.session import get_db_session
 from app.schemas.user import (
     AccountDeleteRequest,
+    ForgotPasswordRequest,
     PasswordUpdateRequest,
     PreferencesUpdateRequest,
     ProfileUpdateRequest,
+    ResendVerificationRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserCreate,
     UserLogin,
     UserResponse,
+    VerifyEmailRequest,
 )
 from app.services.auth_service import (
     delete_account,
@@ -45,9 +49,14 @@ from app.services.auth_service import (
     logout_user,
     refresh_tokens,
     register_user,
+    resend_verification_otp,
+    reset_password_with_token,
+    send_password_reset,
+    send_verification_otp,
     update_password,
     update_preferences,
     update_profile,
+    verify_email_otp,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,19 +140,24 @@ class MessageResponse(BaseModel):
 async def register(
     body: UserCreate,
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
 ):
     """
     Register a new user with email and password.
 
     The password must be 8-128 characters. The email must be unique.
     The account starts on the 'free' tier with is_verified=False.
+    A 6-digit OTP is sent to the provided email for verification.
     """
-    return await register_user(
+    user = await register_user(
         email=body.email,
         password=body.password,
         full_name=body.full_name,
         session=session,
     )
+    # Fire-and-forget: send OTP (failure is logged, not raised)
+    await send_verification_otp(email=body.email, redis_client=redis_client)
+    return user
 
 
 @router.post(
@@ -416,3 +430,110 @@ async def update_preferences_endpoint(
         preferences=body.preferences,
         session=session,
     )
+
+
+# ── Email verification endpoints ─────────────────────────────
+
+@router.post(
+    "/verify-email",
+    response_model=UserResponse,
+    summary="Verify email address with OTP",
+    responses={
+        400: {"description": "Invalid or expired OTP"},
+    },
+)
+async def verify_email_endpoint(
+    body: VerifyEmailRequest,
+    session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
+):
+    """
+    Submit a 6-digit OTP to verify the user's email address.
+
+    Returns the updated user with is_verified=True on success.
+    The OTP expires after 15 minutes and is consumed on first use.
+    """
+    return await verify_email_otp(
+        email=body.email,
+        otp=body.otp,
+        session=session,
+        redis_client=redis_client,
+    )
+
+
+@router.post(
+    "/resend-verification",
+    response_model=MessageResponse,
+    summary="Resend email verification OTP",
+)
+async def resend_verification_endpoint(
+    body: ResendVerificationRequest,
+    session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
+):
+    """
+    Request a new OTP for email verification.
+
+    Rate-limited by the global middleware. Always returns 200 to prevent
+    email enumeration (even if the address isn't registered).
+    """
+    await resend_verification_otp(
+        email=body.email,
+        session=session,
+        redis_client=redis_client,
+    )
+    return MessageResponse(message="If this email is registered and unverified, a new code has been sent.")
+
+
+# ── Password reset endpoints ──────────────────────────────────
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Initiate password reset",
+)
+async def forgot_password_endpoint(
+    body: ForgotPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
+):
+    """
+    Send a password reset link to the provided email address.
+
+    Always returns 200 regardless of whether the email is registered,
+    to prevent account enumeration.
+    """
+    await send_password_reset(
+        email=body.email,
+        session=session,
+        redis_client=redis_client,
+    )
+    return MessageResponse(message="If an account with this email exists, a reset link has been sent.")
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Complete password reset",
+    responses={
+        400: {"description": "Token expired or invalid"},
+    },
+)
+async def reset_password_endpoint(
+    body: ResetPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis | None = Depends(get_redis),
+):
+    """
+    Reset the user's password using the token from the reset email.
+
+    The token is valid for 1 hour and is consumed on first use.
+    The user must log in again after resetting their password.
+    """
+    await reset_password_with_token(
+        token=body.token,
+        new_password=body.new_password,
+        session=session,
+        redis_client=redis_client,
+    )
+    return MessageResponse(message="Password reset successfully. You can now log in with your new password.")

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import usePageTitle from "@/hooks/usePageTitle";
 import { useAuth } from "@/context/AuthContext";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -162,13 +163,12 @@ export default function LoginPage() {
               >
                 Password
               </label>
-              <button
-                type="button"
-                className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
-                tabIndex={-1}
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 transition-colors"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

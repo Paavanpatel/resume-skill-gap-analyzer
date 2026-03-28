@@ -193,6 +193,23 @@ export async function updatePreferences(preferences: Record<string, unknown>): P
   return res.data;
 }
 
+export async function verifyEmail(email: string, otp: string): Promise<User> {
+  const res = await apiClient.post("/auth/verify-email", { email, otp });
+  return res.data;
+}
+
+export async function resendVerification(email: string): Promise<void> {
+  await apiClient.post("/auth/resend-verification", { email });
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await apiClient.post("/auth/forgot-password", { email });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await apiClient.post("/auth/reset-password", { token, new_password: newPassword });
+}
+
 // ── Resume API ──────────────────────────────────────────────
 
 export async function uploadResume(file: File): Promise<ResumeUploadResponse> {

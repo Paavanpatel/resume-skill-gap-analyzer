@@ -87,6 +87,17 @@ class Settings(BaseSettings):
     storage_backend: str = "local"
     storage_local_path: str = "./storage"
 
+    # ── Email ────────────────────────────────────────────────
+    # Set email_backend="smtp" in production. "console" logs to stdout (dev only).
+    email_backend: str = "console"  # console | smtp
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@skillgap.app"
+    smtp_from_name: str = "SkillGap"
+    smtp_use_tls: bool = True
+
     # ── Stripe Billing ───────────────────────────────────────
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
