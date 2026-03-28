@@ -27,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.tier_guard import require_tier
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
 from app.models.roadmap import Roadmap
@@ -79,6 +80,7 @@ async def _get_completed_analysis(
 async def generate_roadmap_endpoint(
     analysis_id: UUID,
     user: CurrentUser,
+    _tier: None = Depends(require_tier("pro")),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -140,6 +142,7 @@ async def generate_roadmap_endpoint(
 async def get_roadmap_endpoint(
     analysis_id: UUID,
     user: CurrentUser,
+    _tier: None = Depends(require_tier("pro")),
     session: AsyncSession = Depends(get_read_db_session),
 ):
     """Get the learning roadmap for a completed analysis. Returns 404 if none exists."""
@@ -176,6 +179,7 @@ async def get_roadmap_endpoint(
 async def generate_advisor_endpoint(
     analysis_id: UUID,
     user: CurrentUser,
+    _tier: None = Depends(require_tier("pro")),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -251,6 +255,7 @@ async def generate_advisor_endpoint(
 async def export_pdf_endpoint(
     analysis_id: UUID,
     user: CurrentUser,
+    _tier: None = Depends(require_tier("pro")),
     session: AsyncSession = Depends(get_read_db_session),
 ):
     """

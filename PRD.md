@@ -98,6 +98,42 @@ The project has completed 17 development phases, tracked in `.skill/SKILL.md`:
 | 15 | Frontend Enhancement Phase 6 | COMPLETE | PageTransition, ScrollReveal, StaggerChildren, ShakeOnError, PressScale, AnimatedList, WizardTransition + 5 new Tailwind keyframes |
 | 16 | Frontend Enhancement Phase 7 | COMPLETE | ErrorBoundary, SkipToContent, LiveAnnouncer, MobileBottomNav, dynamic imports, SEO metadata, security headers, next.config optimization |
 | 17 | Full-Stack Phase 2 — User Settings & Profile Management | COMPLETE | PATCH /auth/profile, PUT /auth/password, DELETE /auth/account, PATCH /auth/preferences; /settings page (4 tabs: Profile, Security, Preferences, Account); Settings enabled in Navbar + MobileBottomNav |
+| 18 | Full-Stack Phase 3 — Subscription Tier Enforcement & Billing | COMPLETE | UsageRecord model, usage_service (quota tracking), TierGuard deps (require_tier/enforce_analysis_quota), billing_service (Stripe checkout/portal/webhooks), /billing endpoints, migration 006; Frontend: /pricing page (3-column), UsageWidget, FeatureGate component, Billing tab in /settings, tier badge in Navbar, lock icons + quota CTA in dashboard wizard |
+
+### 2.3 Full-Stack Phase 3 — Subscription Tier Enforcement & Billing (COMPLETE)
+
+**Backend deliverables:**
+
+- `app/models/usage.py` — `UsageRecord` model (user_id, period YYYY-MM, analyses_count, advisor_count, export_count). Unique constraint on (user_id, period). FK to users with CASCADE delete.
+- `app/services/usage_service.py` — `current_period()`, `get_or_create_usage()`, `check_analysis_quota()`, `increment_analysis_count()`, `get_usage_summary()`. Tier quotas: free=5, pro=50, enterprise=9999.
+- `app/core/tier_guard.py` — `require_tier(minimum)` FastAPI dependency factory (raises 403 if user.tier is below minimum); `enforce_analysis_quota()` (raises 429 QuotaExceededError if monthly limit exceeded).
+- `app/services/billing_service.py` — Stripe integration: `get_or_create_customer()`, `create_checkout_session()`, `create_portal_session()`, `handle_webhook_event()` (handles `customer.subscription.updated/deleted`, updates user.tier in DB).
+- `app/api/v1/endpoints/billing.py` — `GET /billing/usage`, `POST /billing/checkout/{tier}`, `POST /billing/portal`, `POST /billing/webhook` (Stripe webhook, no auth).
+- Guards applied: `POST /analysis/{resume_id}` calls `enforce_analysis_quota` + `increment_analysis_count`. All four insights endpoints (`POST roadmap`, `GET roadmap`, `POST advisor`, `GET export`) require `require_tier("pro")`.
+- `app/models/user.py` — Added `stripe_customer_id` field and `usage_records` relationship.
+- Migration `006_add_billing.py` — Creates `usage_records` table, adds `stripe_customer_id` to users.
+- `app/core/config.py` — Added Stripe config: `stripe_secret_key`, `stripe_publishable_key`, `stripe_webhook_secret`, `stripe_pro_price_id`, `stripe_enterprise_price_id`, `frontend_url`.
+
+**Frontend deliverables:**
+
+- `src/lib/api.ts` — Added `getUsageSummary()`, `createCheckoutSession()`, `createPortalSession()` + `UsageSummary` type.
+- `src/components/ui/FeatureGate.tsx` — Wraps pro features; renders `UpgradePrompt` (lock icon + upgrade CTA linking to /pricing) for free users.
+- `src/app/pricing/page.tsx` — Public 3-column pricing page (Free/Pro/Enterprise). Stripe Checkout redirect on upgrade. Shows current plan indicator if logged in.
+- `src/components/dashboard/UsageWidget.tsx` — Progress bar widget showing `X / Y analyses used` for current period. Color-coded (yellow/red near limit). Upgrade CTA when ≥80%. Hidden for Enterprise.
+- `src/app/(dashboard)/dashboard/page.tsx` — Added UsageWidget at top. Quota-blocked state: when `used >= limit`, shows a full-page CTA card with upgrade link instead of the wizard. Imports `FileUploadZone` (was missing).
+- `src/app/(dashboard)/settings/page.tsx` — Added `BillingTab` (5th tab): current plan + tier badge, "Manage Subscription" portal link for paid users, monthly usage chart. `useSearchParams` for `?tab=billing` deep-link from Navbar.
+- `src/components/layout/Navbar.tsx` — Tier badge (Pro/Enterprise) next to avatar (desktop) and in mobile drawer user section. "Billing & Usage" dropdown item linking to `/settings?tab=billing`.
+- `src/app/(dashboard)/analysis/[id]/page.tsx` — `ExportButtonGated` (compact locked state with lock icon for free users). `FeatureGate` wrapping `RoadmapSection` and `AdvisorSection` tabs. Lock icon on Roadmap/Advisor tab labels for free tier users. Imports `useAuth`.
+
+**Environment variables needed:**
+```
+STRIPE_SECRET_KEY=sk_...
+STRIPE_PUBLISHABLE_KEY=pk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRO_PRICE_ID=price_...
+STRIPE_ENTERPRISE_PRICE_ID=price_...
+FRONTEND_URL=http://localhost:3000
+```
 
 ### 2.2 Frontend Enhancement Plan — Phase 1 Complete
 

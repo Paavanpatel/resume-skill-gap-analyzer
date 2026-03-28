@@ -11,6 +11,8 @@ import {
   User,
   Settings,
   ChevronDown,
+  Sparkles,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +50,7 @@ export default function Navbar() {
     (id: string) => {
       if (id === "logout") logout();
       if (id === "settings") router.push("/settings");
+      if (id === "billing") router.push("/settings?tab=billing");
     },
     [logout, router]
   );
@@ -62,6 +65,14 @@ export default function Navbar() {
         .slice(0, 2)
     : user?.email?.[0]?.toUpperCase() || "U";
 
+  // Tier badge colours
+  const tierBadgeClass =
+    user?.tier === "pro"
+      ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
+      : user?.tier === "enterprise"
+        ? "bg-warning-100 dark:bg-warning-900/40 text-warning-700 dark:text-warning-300"
+        : "bg-gray-100 dark:bg-surface-700 text-gray-500 dark:text-gray-400";
+
   const dropdownItems = [
     {
       id: "profile",
@@ -74,6 +85,11 @@ export default function Navbar() {
       id: "settings",
       label: "Settings",
       icon: <Settings className="h-4 w-4" />,
+    },
+    {
+      id: "billing",
+      label: "Billing & Usage",
+      icon: <CreditCard className="h-4 w-4" />,
     },
     { id: "divider-2", label: "", divider: true },
     {
@@ -146,6 +162,15 @@ export default function Navbar() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full gradient-primary text-xs font-semibold text-white">
                       {initials}
                     </div>
+                    {/* Tier badge */}
+                    {user?.tier && user.tier !== "free" && (
+                      <span
+                        className={`hidden md:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${tierBadgeClass}`}
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        {user.tier}
+                      </span>
+                    )}
                     <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                   </div>
                 }
@@ -205,6 +230,14 @@ export default function Navbar() {
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {user?.email}
                   </p>
+                  {user?.tier && (
+                    <span
+                      className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${tierBadgeClass}`}
+                    >
+                      {user.tier !== "free" && <Sparkles className="h-3 w-3" />}
+                      {user.tier}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

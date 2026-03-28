@@ -7,7 +7,7 @@ This is the single point where all routes are registered.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import admin, analysis, auth, insights, resume
+from app.api.v1.endpoints import admin, analysis, auth, billing, insights, resume
 
 api_router = APIRouter()
 
@@ -16,6 +16,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(resume.router, prefix="/resume", tags=["resume"])
 api_router.include_router(analysis.router, prefix="/analysis", tags=["analysis"])
 api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
+api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
 api_router.include_router(admin.router, tags=["admin"])
 
 # ── Coming in later phases ────────────────────────────────────

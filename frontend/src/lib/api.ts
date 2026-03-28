@@ -247,6 +247,29 @@ export async function generateAdvisorRewrites(analysisId: string): Promise<Advis
   return res.data;
 }
 
+// ── Billing API (Phase 3) ────────────────────────────────────
+
+export interface UsageSummary {
+  period: string;
+  tier: "free" | "pro" | "enterprise";
+  analyses: { used: number; limit: number; pct: number };
+}
+
+export async function getUsageSummary(): Promise<UsageSummary> {
+  const res = await apiClient.get("/billing/usage");
+  return res.data;
+}
+
+export async function createCheckoutSession(tier: "pro" | "enterprise"): Promise<{ url: string }> {
+  const res = await apiClient.post(`/billing/checkout/${tier}`);
+  return res.data;
+}
+
+export async function createPortalSession(): Promise<{ url: string }> {
+  const res = await apiClient.post("/billing/portal");
+  return res.data;
+}
+
 // ── Error helper ────────────────────────────────────────────
 
 export function getErrorMessage(error: unknown): string {

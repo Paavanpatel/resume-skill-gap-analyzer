@@ -19,7 +19,9 @@ import {
   BookOpen,
   MessageSquare,
   Sparkles,
+  Lock,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { getAnalysisResult, getAnalysisStatus, retryAnalysis, getErrorMessage } from "@/lib/api";
 import type { AnalysisResult, AnalysisStatusResponse } from "@/types/analysis";
 import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
@@ -44,6 +46,7 @@ const AdvisorSection = dynamic(
   { loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" /> }
 );
 import ExportButton from "@/components/dashboard/ExportButton";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { cn } from "@/lib/utils";
 
 // ── Processing stage definitions ────────────────────────────
@@ -79,13 +82,34 @@ const TIPS = [
 ];
 
 // ── Tab definitions for results view ────────────────────────
+// Pro-only tabs show a lock icon when the user is on the free tier.
+
+function ProTabLabel({ label, icon }: { label: string; icon: React.ReactNode }) {
+  const { user } = useAuth();
+  const isPro = user?.tier === "pro" || user?.tier === "enterprise";
+  return (
+    <span className="flex items-center gap-1">
+      {icon}
+      {label}
+      {!isPro && <Lock className="h-3 w-3 text-gray-400 dark:text-gray-600" />}
+    </span>
+  );
+}
 
 const RESULT_TABS = [
   { id: "overview", label: "Overview", icon: <BarChart3 className="h-4 w-4" /> },
   { id: "skills", label: "Skills", icon: <Target className="h-4 w-4" /> },
   { id: "suggestions", label: "Suggestions", icon: <Lightbulb className="h-4 w-4" /> },
-  { id: "roadmap", label: "Roadmap", icon: <BookOpen className="h-4 w-4" /> },
-  { id: "advisor", label: "Advisor", icon: <MessageSquare className="h-4 w-4" /> },
+  {
+    id: "roadmap",
+    label: "Roadmap",
+    icon: <ProTabLabel label="Roadmap" icon={<BookOpen className="h-4 w-4" />} />,
+  },
+  {
+    id: "advisor",
+    label: "Advisor",
+    icon: <ProTabLabel label="Advisor" icon={<MessageSquare className="h-4 w-4" />} />,
+  },
 ];
 
 export default function AnalysisPage() {
@@ -361,7 +385,7 @@ export default function AnalysisPage() {
             )}
           </div>
         </div>
-        <ExportButton analysisId={analysisId} />
+        <ExportButtonGated analysisId={analysisId} />
       </div>
 
       {/* ── Animated Score Cards ── */}
@@ -518,12 +542,16 @@ export default function AnalysisPage() {
 
         {/* Roadmap Tab */}
         <TabPanel id="roadmap" activeTab={activeTab}>
-          <RoadmapSection analysisId={analysisId} />
+          <FeatureGate requiredTier="pro" featureName="Learning Roadmap">
+            <RoadmapSection analysisId={analysisId} />
+          </FeatureGate>
         </TabPanel>
 
         {/* Advisor Tab */}
         <TabPanel id="advisor" activeTab={activeTab}>
-          <AdvisorSection analysisId={analysisId} />
+          <FeatureGate requiredTier="pro" featureName="Resume Advisor">
+            <AdvisorSection analysisId={analysisId} />
+          </FeatureGate>
         </TabPanel>
       </Tabs>
     </div>
@@ -531,6 +559,30 @@ export default function AnalysisPage() {
 }
 
 // ── Helper Components ───────────────────────────────────────
+
+/**
+ * Export button that shows a locked state (links to /pricing) for free users.
+ * Avoids the full-panel FeatureGate in the compact header area.
+ */
+function ExportButtonGated({ analysisId }: { analysisId: string }) {
+  const { user } = useAuth();
+  const isPro = user?.tier === "pro" || user?.tier === "enterprise";
+
+  if (isPro) {
+    return <ExportButton analysisId={analysisId} />;
+  }
+
+  return (
+    <a
+      href="/pricing"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-surface-700 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-surface-700 transition-colors"
+      title="Upgrade to Pro to export PDF"
+    >
+      <Lock className="h-4 w-4" />
+      Export PDF
+    </a>
+  );
+}
 
 function VerdictBadge({ verdict }: { verdict: string }) {
   const v = verdict.toLowerCase();

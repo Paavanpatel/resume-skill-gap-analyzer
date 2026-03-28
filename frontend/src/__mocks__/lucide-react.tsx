@@ -39,3 +39,9 @@ export const ArrowUpDown = createMockIcon("ArrowUpDown");
 export const Search = createMockIcon("Search");
 export const ChevronLeft = createMockIcon("ChevronLeft");
 export const ChevronRight = createMockIcon("ChevronRight");
+// Phase 3 — Billing & Tier Enforcement
+export const Lock = createMockIcon("Lock");
+export const Zap = createMockIcon("Zap");
+export const Sparkles = createMockIcon("Sparkles");
+export const CreditCard = createMockIcon("CreditCard");
+export const Building2 = createMockIcon("Building2");

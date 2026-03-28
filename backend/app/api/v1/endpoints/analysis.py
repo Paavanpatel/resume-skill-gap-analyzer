@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.core.tier_guard import enforce_analysis_quota
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
@@ -89,6 +90,9 @@ async def submit_analysis(
                     "Please re-upload.",
         )
 
+    # Enforce monthly analysis quota before accepting the job
+    await enforce_analysis_quota(user, session)
+
     # Stamp resume as recently used (for ResumePicker ordering)
     await resume_repo.update(resume_id, last_used_at=datetime.now(timezone.utc))
 
@@ -104,6 +108,10 @@ async def submit_analysis(
     )
 
     await session.flush()  # Ensure the ID is generated
+
+    # Increment usage counter for this billing period
+    from app.services.usage_service import increment_analysis_count
+    await increment_analysis_count(user_id=str(user.id), session=session)
 
     # Dispatch Celery task
     try:
