@@ -9,6 +9,12 @@
  *
  * Each tracked analysis goes through: queued → processing → completed | failed
  * Completed/failed entries auto-dismiss after a configurable delay.
+ *
+ * Polling uses exponential backoff to avoid hammering the API when responses
+ * are slow or when a 429 rate-limit response is received:
+ *   - Base interval: 2.5s
+ *   - On 429: back off to min(retryAfter, MAX_INTERVAL), then resume normal cadence
+ *   - On other errors: double the interval up to MAX_INTERVAL, reset on success
  */
 
 import {
@@ -60,8 +66,24 @@ const AnalysisTrackerContext = createContext<AnalysisTrackerContextType | null>(
 
 // ── Constants ───────────────────────────────────────────────
 
-const POLL_INTERVAL_MS = 2500;
-const AUTO_DISMISS_MS = 60_000; // auto-dismiss completed after 60s
+const BASE_POLL_MS = 2500;          // 2.5s — normal polling cadence
+const MAX_POLL_MS = 30_000;         // 30s — ceiling for backoff
+const BACKOFF_MULTIPLIER = 2;       // Double interval on each error
+const AUTO_DISMISS_MS = 60_000;     // Auto-dismiss completed after 60s
+
+// ── Helpers ─────────────────────────────────────────────────
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function isRateLimitError(err: unknown): number | null {
+  const status = (err as any)?.response?.status;
+  if (status !== 429) return null;
+  const header = (err as any)?.response?.headers?.["retry-after"];
+  const body = (err as any)?.response?.data?.error?.details?.retry_after_seconds;
+  return parseInt(String(header ?? body ?? "60"), 10) || 60;
+}
 
 // ── Provider ────────────────────────────────────────────────
 
@@ -71,16 +93,18 @@ export function AnalysisTrackerProvider({
   children: React.ReactNode;
 }) {
   const [analyses, setAnalyses] = useState<TrackedAnalysis[]>([]);
-  const intervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(
-    new Map()
-  );
 
-  // Start polling for a given analysis
-  const startPolling = useCallback((jobId: string) => {
-    // Don't double-poll
-    if (intervalsRef.current.has(jobId)) return;
+  // Each entry: { timeoutId, currentIntervalMs }
+  const pollStateRef = useRef<
+    Map<string, { timeoutId: ReturnType<typeof setTimeout>; intervalMs: number }>
+  >(new Map());
 
-    const poll = async () => {
+  // Schedule the next poll for a given jobId with the given delay
+  const schedulePoll = useCallback((jobId: string, delayMs: number) => {
+    const existing = pollStateRef.current.get(jobId);
+    if (existing) clearTimeout(existing.timeoutId);
+
+    const timeoutId = setTimeout(async () => {
       try {
         const s = await getAnalysisStatus(jobId);
 
@@ -90,36 +114,69 @@ export function AnalysisTrackerProvider({
           )
         );
 
-        // Stop polling when terminal
         if (s.status === "completed" || s.status === "failed") {
-          const interval = intervalsRef.current.get(jobId);
-          if (interval) {
-            clearInterval(interval);
-            intervalsRef.current.delete(jobId);
-          }
+          // Terminal state — stop polling
+          pollStateRef.current.delete(jobId);
+          return;
         }
+
+        // Success: reset interval to base cadence and schedule next poll
+        const nextInterval = BASE_POLL_MS;
+        pollStateRef.current.set(jobId, { timeoutId: 0 as any, intervalMs: nextInterval });
+        schedulePoll(jobId, nextInterval);
+
       } catch (err) {
         setAnalyses((prev) =>
           prev.map((a) =>
-            a.jobId === jobId
-              ? { ...a, pollError: getErrorMessage(err) }
-              : a
+            a.jobId === jobId ? { ...a, pollError: getErrorMessage(err) } : a
           )
         );
-      }
-    };
 
-    // Immediate first poll
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
-    intervalsRef.current.set(jobId, interval);
+        const state = pollStateRef.current.get(jobId);
+        if (!state) return; // Was stopped externally
+
+        let nextInterval: number;
+        const rateLimitRetry = isRateLimitError(err);
+
+        if (rateLimitRetry !== null) {
+          // 429: wait the full Retry-After duration (capped at MAX_POLL_MS)
+          nextInterval = clamp(rateLimitRetry * 1000, BASE_POLL_MS, MAX_POLL_MS);
+        } else {
+          // Other error: exponential backoff up to MAX_POLL_MS
+          nextInterval = clamp(
+            state.intervalMs * BACKOFF_MULTIPLIER,
+            BASE_POLL_MS,
+            MAX_POLL_MS
+          );
+        }
+
+        pollStateRef.current.set(jobId, { timeoutId: 0 as any, intervalMs: nextInterval });
+        schedulePoll(jobId, nextInterval);
+      }
+    }, delayMs);
+
+    // Store the real timeoutId (replaces the placeholder 0)
+    const existing2 = pollStateRef.current.get(jobId);
+    pollStateRef.current.set(jobId, {
+      intervalMs: existing2?.intervalMs ?? delayMs,
+      timeoutId,
+    });
   }, []);
+
+  // Start polling for a given analysis (immediate first poll)
+  const startPolling = useCallback(
+    (jobId: string) => {
+      if (pollStateRef.current.has(jobId)) return; // Don't double-poll
+      pollStateRef.current.set(jobId, { timeoutId: 0 as any, intervalMs: BASE_POLL_MS });
+      schedulePoll(jobId, 0); // First poll immediately
+    },
+    [schedulePoll]
+  );
 
   // Track a new analysis
   const track = useCallback(
     (jobId: string, label: string) => {
       setAnalyses((prev) => {
-        // Don't add duplicates
         if (prev.some((a) => a.jobId === jobId)) return prev;
         return [
           ...prev,
@@ -166,8 +223,6 @@ export function AnalysisTrackerProvider({
           const terminal =
             a.status?.status === "completed" || a.status?.status === "failed";
           if (!terminal) return a;
-          // Check if enough time has passed since completion
-          // (we don't track completion time separately, so use startedAt + processing)
           if (now - a.startedAt > AUTO_DISMISS_MS) {
             return { ...a, dismissed: true };
           }
@@ -186,11 +241,11 @@ export function AnalysisTrackerProvider({
     return () => clearInterval(timer);
   }, []);
 
-  // Cleanup all intervals on unmount
+  // Cleanup all pending timeouts on unmount
   useEffect(() => {
     return () => {
-      intervalsRef.current.forEach((interval) => clearInterval(interval));
-      intervalsRef.current.clear();
+      pollStateRef.current.forEach(({ timeoutId }) => clearTimeout(timeoutId));
+      pollStateRef.current.clear();
     };
   }, []);
 

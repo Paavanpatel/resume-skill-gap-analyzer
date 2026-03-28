@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import usePageTitle from "@/hooks/usePageTitle";
 import { useAuth } from "@/context/AuthContext";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, Lock, AlertCircle, Clock } from "lucide-react";
 
 // Inline eye icons — avoids lucide-react export resolution issues in Docker builds
 function EyeSvg({ className }: { className?: string }) {
@@ -43,13 +43,23 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
 
+  // Track rate limit state — clears the generic error when triggered
+  const { isLimited, secondsRemaining } = useRateLimit(() => {
+    setError("");
+  });
+
   const emailError =
     touched.email && email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
       ? "Please enter a valid email address"
       : undefined;
 
+  // Button is disabled while submitting OR while rate-limited
+  const isSubmitDisabled = isLoading || isLimited;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitDisabled) return;
+
     setError("");
     setIsLoading(true);
 
@@ -57,11 +67,27 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/dashboard");
     } catch (err) {
-      setError(getErrorMessage(err));
+      // 429 errors are handled by the useRateLimit hook via the interceptor event.
+      // We only set a generic error message for non-rate-limit failures.
+      const msg = getErrorMessage(err);
+      const isRateLimit = (err as any)?.response?.status === 429;
+      if (!isRateLimit) {
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
   }
+
+  // Build the countdown label for the submit button
+  const countdownLabel = (() => {
+    if (!isLimited) return null;
+    const mins = Math.floor(secondsRemaining / 60);
+    const secs = secondsRemaining % 60;
+    return mins > 0
+      ? `${mins}m ${secs.toString().padStart(2, "0")}s`
+      : `${secondsRemaining}s`;
+  })();
 
   return (
     <div className="space-y-6">
@@ -108,12 +134,14 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
+                disabled={isLimited}
                 className={cn(
                   "block w-full rounded-lg border pl-10 pr-3 py-2.5 text-sm",
                   "bg-white dark:bg-surface-800",
                   "text-gray-900 dark:text-gray-100",
                   "placeholder:text-gray-400 dark:placeholder:text-gray-500",
                   "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-surface-800",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
                   emailError
                     ? "border-danger-300 dark:border-danger-700 focus:border-danger-500 focus:ring-danger-500"
                     : "border-gray-300 dark:border-surface-700 focus:border-primary-500 focus:ring-primary-500"
@@ -153,12 +181,14 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
+                disabled={isLimited}
                 className={cn(
                   "block w-full rounded-lg border pl-10 pr-10 py-2.5 text-sm",
                   "bg-white dark:bg-surface-800",
                   "text-gray-900 dark:text-gray-100",
                   "placeholder:text-gray-400 dark:placeholder:text-gray-500",
                   "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-surface-800",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
                   "border-gray-300 dark:border-surface-700 focus:border-primary-500 focus:ring-primary-500"
                 )}
               />
@@ -193,8 +223,28 @@ export default function LoginPage() {
             </label>
           </div>
 
-          {/* Error message */}
-          {error && (
+          {/* Rate limit inline error with countdown */}
+          {isLimited && (
+            <div
+              role="alert"
+              className={cn(
+                "flex items-center gap-2 rounded-lg p-3 text-sm",
+                "bg-warning-50 dark:bg-warning-900/30",
+                "text-warning-700 dark:text-warning-300",
+                "border border-warning-200 dark:border-warning-700",
+                "animate-slide-up"
+              )}
+            >
+              <Clock className="h-4 w-4 shrink-0" />
+              <span>
+                Too many attempts. You can try again in{" "}
+                <span className="font-semibold tabular-nums">{countdownLabel}</span>.
+              </span>
+            </div>
+          )}
+
+          {/* Generic error message (non-rate-limit failures) */}
+          {error && !isLimited && (
             <div
               role="alert"
               className={cn(
@@ -210,9 +260,22 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Submit */}
-          <Button type="submit" isLoading={isLoading} size="lg" className="w-full">
-            Sign in
+          {/* Submit — disabled with countdown label while rate-limited */}
+          <Button
+            type="submit"
+            isLoading={isLoading}
+            disabled={isSubmitDisabled}
+            size="lg"
+            className="w-full"
+          >
+            {isLimited ? (
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Try again in {countdownLabel}
+              </span>
+            ) : (
+              "Sign in"
+            )}
           </Button>
         </form>
 

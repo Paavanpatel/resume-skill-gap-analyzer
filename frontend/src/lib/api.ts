@@ -58,7 +58,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Response interceptor: auto-refresh on 401 ───────────────
+// ── Response interceptor: auto-refresh on 401 + rate limit on 429 ──
 
 let isRefreshing = false;
 let failedQueue: { resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = [];
@@ -68,11 +68,38 @@ function processQueue(error: unknown) {
   failedQueue = [];
 }
 
+/**
+ * Dispatch a DOM CustomEvent so React components and hooks can react to
+ * rate limit responses without coupling api.ts to the React context tree.
+ *
+ * Listeners: useRateLimit hook, RateLimitBanner, login page
+ */
+function dispatchRateLimitEvent(retryAfterSeconds: number): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("api:rate-limit", {
+      detail: { retryAfterSeconds },
+    })
+  );
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
 
+    // ── 429 Rate limit handling ──────────────────────────────
+    if (error.response?.status === 429) {
+      // Parse Retry-After from header first, then from response body
+      const headerVal = error.response.headers?.["retry-after"];
+      const bodyVal = (error.response.data as any)?.error?.details?.retry_after_seconds;
+      const retryAfter = parseInt(String(headerVal ?? bodyVal ?? "60"), 10) || 60;
+
+      dispatchRateLimitEvent(retryAfter);
+      return Promise.reject(error);
+    }
+
+    // ── 401 Auto-refresh handling ────────────────────────────
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't retry auth endpoints
       if (originalRequest.url?.includes("/auth/")) {

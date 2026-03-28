@@ -99,6 +99,22 @@ The project has completed 17 development phases, tracked in `.skill/SKILL.md`:
 | 16 | Frontend Enhancement Phase 7 | COMPLETE | ErrorBoundary, SkipToContent, LiveAnnouncer, MobileBottomNav, dynamic imports, SEO metadata, security headers, next.config optimization |
 | 17 | Full-Stack Phase 2 — User Settings & Profile Management | COMPLETE | PATCH /auth/profile, PUT /auth/password, DELETE /auth/account, PATCH /auth/preferences; /settings page (4 tabs: Profile, Security, Preferences, Account); Settings enabled in Navbar + MobileBottomNav |
 | 18 | Full-Stack Phase 3 — Subscription Tier Enforcement & Billing | COMPLETE | UsageRecord model, usage_service (quota tracking), TierGuard deps (require_tier/enforce_analysis_quota), billing_service (Stripe checkout/portal/webhooks), /billing endpoints, migration 006; Frontend: /pricing page (3-column), UsageWidget, FeatureGate component, Billing tab in /settings, tier badge in Navbar, lock icons + quota CTA in dashboard wizard |
+| 19 | Full-Stack Phase 4 — Rate Limiting & Quota Middleware | COMPLETE | Backend: true sliding-window rate limiter (sorted sets + MULTI/EXEC pipeline), tier-aware RateLimiter dependency, auth brute-force protection (20 req/15 min per IP on login/register), X-RateLimit-* response headers. Frontend: 429 interceptor (Retry-After parsing + CustomEvent), useRateLimit hook (countdown + isLimited), RateLimitBanner component, login page countdown + disabled submit, AnalysisTrackerContext exponential backoff (2.5s base → 30s ceiling, 2× multiplier, respects Retry-After on 429) |
+
+### 2.4 Full-Stack Phase 4 — Rate Limiting & Quota Middleware (COMPLETE)
+
+**Backend deliverables:**
+
+- `app/core/middleware.py` — `RateLimitMiddleware` upgraded to true sliding-window using Redis sorted sets + `pipeline(transaction=True)` (MULTI/EXEC). `_check_rate_limit()` now uses `ZREMRANGEBYSCORE` + `ZADD` + `ZCARD` + `EXPIRE` atomically. Added `_get_ip()` helper. Auth brute-force protection: `POST /auth/login` and `POST /auth/register` are additionally rate-limited at 20 requests per 15-minute window per IP (regardless of auth state). `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` headers added to every non-429 response. `Retry-After` header on 429 responses.
+- `app/core/dependencies.py` — Added `RateLimiter` class: tier-aware per-endpoint sliding-window dependency. Instantiated with `free`, `pro`, `enterprise` limits and `window` seconds. Calls `pipeline(transaction=True)` for atomic ZREMRANGEBYSCORE/ZADD/ZCARD/EXPIRE. Raises `RateLimitError` (429) on breach. Fail-open when Redis unavailable. Usage: `Depends(RateLimiter(free=5, pro=50, enterprise=200, scope="roadmap"))`.
+
+**Frontend deliverables:**
+
+- `src/lib/api.ts` — Added 429 interceptor before 401 handling. Parses `Retry-After` from response header (preferred) or body `error.details.retry_after_seconds` (fallback). Dispatches `window.CustomEvent("api:rate-limit", { detail: { retryAfterSeconds } })` so React components can react without coupling to Axios.
+- `src/hooks/useRateLimit.ts` — New hook. Subscribes to `api:rate-limit` DOM event. Maintains `isLimited`, `secondsRemaining`, `retryAfter` state. Runs a `setInterval` countdown that resets `isLimited` to false when `secondsRemaining` reaches 0. Accepts an optional `onLimited` callback. Cleans up event listener and interval on unmount.
+- `src/components/ui/RateLimitBanner.tsx` — New dismissible warning banner component. Uses `useRateLimit` with `onLimited` callback to re-show on each new event. Renders a live countdown (`Xm YYs` or `Zs` format). Styled with warning-color tokens matching existing Toast system. Auto-hides when countdown expires.
+- `src/app/(auth)/login/page.tsx` — Integrates `useRateLimit`. Fields and submit button disabled while `isLimited`. Submit button label changes to "Try again in Xs" with a Clock icon. Inline warning box with countdown replaces generic error during rate-limit. 429 errors from `handleSubmit` are suppressed (handled by the hook) while non-429 errors still show in the existing danger alert.
+- `src/context/AnalysisTrackerContext.tsx` — Replaced `setInterval`-based polling with `setTimeout`-based exponential backoff. Base interval: 2.5s. On error: doubles up to 30s ceiling. On 429: backs off to `min(retryAfterSeconds * 1000, 30_000)`. On success: resets to 2.5s base. `isRateLimitError()` helper parses Retry-After from header or body. All timeouts cleaned up on unmount.
 
 ### 2.3 Full-Stack Phase 3 — Subscription Tier Enforcement & Billing (COMPLETE)
 
