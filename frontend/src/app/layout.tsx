@@ -8,6 +8,7 @@ import FloatingAnalysisTracker from "@/components/ui/FloatingAnalysisTracker";
 import { ToastProvider } from "@/components/ui/Toast";
 import SkipToContent from "@/components/ui/SkipToContent";
 import { LiveAnnouncerProvider } from "@/components/ui/LiveAnnouncer";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${inter.className} ${inter.variable} antialiased`}
       >
+        <OfflineBanner />
         <SkipToContent />
         <ThemeProvider>
           <AuthProvider>

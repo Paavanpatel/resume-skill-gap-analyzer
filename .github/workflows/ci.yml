@@ -1,0 +1,282 @@
+# ==============================================================
+# Resume Skill Gap Analyzer — CI Pipeline
+#
+# Jobs (run on every push/PR to main or develop):
+#   lint-backend   → ruff check + ruff format --check
+#   lint-frontend  → eslint + prettier --check + tsc --noEmit
+#   test-backend   → pytest (70% coverage floor, postgres + redis services)
+#   test-frontend  → jest (80% coverage threshold)
+#   build-docker   → docker buildx bake (both images)
+#   bundle-size    → Next.js bundle analysis vs. 500 kB page budget
+# ==============================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+# ── Backend Lint ───────────────────────────────────────────────
+jobs:
+  lint-backend:
+    name: Lint — Backend (ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install ruff
+        run: pip install ruff==0.6.9
+
+      - name: ruff check (lint)
+        run: ruff check app/
+
+      - name: ruff format (style check)
+        run: ruff format --check app/
+
+# ── Frontend Lint ──────────────────────────────────────────────
+  lint-frontend:
+    name: Lint — Frontend (ESLint + Prettier + tsc)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier check
+        run: npm run format:check
+
+      - name: TypeScript — type check
+        run: npm run type-check
+
+# ── Backend Tests ──────────────────────────────────────────────
+  test-backend:
+    name: Test — Backend (pytest)
+    runs-on: ubuntu-latest
+    needs: lint-backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: skill_gap_analyzer_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: test
+      DEBUG: "true"
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      JWT_SECRET_KEY: ci-test-jwt-key-not-for-production
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: skill_gap_analyzer_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpassword
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/2
+      OPENAI_API_KEY: sk-test-dummy
+      ANTHROPIC_API_KEY: sk-ant-test-dummy
+      STORAGE_BACKEND: local
+      STORAGE_LOCAL_PATH: /tmp/rsga-test-storage
+      EMAIL_BACKEND: console
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run pytest with coverage
+        working-directory: backend
+        run: |
+          pytest \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            -v
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+
+# ── Frontend Tests ─────────────────────────────────────────────
+  test-frontend:
+    name: Test — Frontend (Jest, 80% coverage)
+    runs-on: ubuntu-latest
+    needs: lint-frontend
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Jest — run with coverage
+        run: npm run test:coverage -- --ci --coverageThreshold='{"global":{"lines":80,"functions":80,"branches":70,"statements":80}}'
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+
+# ── Docker Build ───────────────────────────────────────────────
+  build-docker:
+    name: Build — Docker images
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: false
+          tags: rsga-backend:ci-${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          push: false
+          tags: rsga-frontend:ci-${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=/api/v1
+            NEXT_PUBLIC_WS_URL=/ws
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+# ── Bundle Size ────────────────────────────────────────────────
+  bundle-size:
+    name: Bundle Size Check (500 kB page budget)
+    runs-on: ubuntu-latest
+    needs: lint-frontend
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Next.js (production)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: /api/v1
+          NEXT_PUBLIC_WS_URL: /ws
+          NODE_ENV: production
+
+      - name: Check bundle sizes
+        run: |
+          # Fail if any individual JS chunk exceeds 500 kB (uncompressed).
+          BUDGET_BYTES=512000
+          FAILED=0
+          # Use process substitution to avoid subshell variable-scoping issue
+          while IFS= read -r f; do
+            SIZE=$(stat -c%s "$f")
+            if [ "$SIZE" -gt "$BUDGET_BYTES" ]; then
+              echo "OVER BUDGET: $f ($SIZE bytes > $BUDGET_BYTES)"
+              FAILED=1
+            fi
+          done < <(find .next/static/chunks -name "*.js")
+          if [ "$FAILED" -eq 1 ]; then
+            echo "Bundle size budget exceeded. Consider code-splitting large chunks."
+            exit 1
+          fi
+          echo "All chunks within 500 kB budget."

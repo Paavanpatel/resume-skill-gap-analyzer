@@ -36,10 +36,11 @@ FROM python:3.11-slim AS production
 LABEL maintainer="Resume Skill Gap Analyzer Team"
 LABEL description="RSGA Backend API — FastAPI + Gunicorn"
 
-# Runtime system deps (libpq for psycopg2, no gcc needed)
+# Runtime system deps (libpq for psycopg2, postgresql-client for pg_dump backups)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

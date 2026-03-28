@@ -10,6 +10,7 @@ Tasks are auto-discovered from the app.workers package.
 import logging
 
 from celery import Celery
+from celery.schedules import crontab
 from celery.signals import worker_process_init
 
 from app.core.config import get_settings
@@ -32,6 +33,19 @@ celery_app.conf.update(
     task_track_started=True,
     task_acks_late=True,  # Re-deliver if worker crashes mid-task
     worker_prefetch_multiplier=1,  # Fair scheduling under load
+    # ── Celery Beat schedule ──────────────────────────────────
+    beat_schedule={
+        # Daily DB backup at 02:00 UTC
+        "daily-db-backup": {
+            "task": "daily_db_backup",
+            "schedule": crontab(hour=2, minute=0),
+        },
+        # Weekly sweep of stale analyses — every Sunday at 03:00 UTC
+        "weekly-sweep-stale": {
+            "task": "weekly_sweep_stale",
+            "schedule": crontab(hour=3, minute=0, day_of_week=0),
+        },
+    },
 )
 
 
@@ -57,3 +71,4 @@ def on_worker_process_init(**kwargs):
 # and parse_task.py.
 import app.workers.analysis_task  # noqa: F401, E402
 import app.workers.parse_task  # noqa: F401, E402
+import app.workers.backup_task  # noqa: F401, E402

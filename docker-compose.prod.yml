@@ -131,6 +131,38 @@ services:
     networks:
       - backend-net
 
+  # ── Celery Beat Scheduler ─────────────────────────────────
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: rsga-beat
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - APP_ENV=production
+    volumes:
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.workers.celery_app beat
+      --loglevel=info
+      --scheduler celery.beat.PersistentScheduler
+      --schedule /tmp/celerybeat-schedule
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+    networks:
+      - backend-net
+
   # ── Next.js Frontend ───────────────────────────────────────
   frontend:
     build:
