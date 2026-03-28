@@ -59,14 +59,33 @@ async def _run_analysis(analysis_id: str) -> dict:
     """Async implementation that wraps the analysis service."""
     from uuid import UUID
 
+    import redis.asyncio as aioredis
+    from app.core.config import get_settings
     from app.db.session import WriteSession
     from app.services.analysis_service import run_analysis
+
+    settings = get_settings()
+
+    # Connect to Redis for publishing WebSocket progress updates
+    redis_client = None
+    try:
+        redis_client = aioredis.from_url(
+            settings.redis_url,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=2.0,
+        )
+        await redis_client.ping()
+    except Exception as e:
+        logger.warning("Redis unavailable for progress publishing: %s", str(e)[:200])
+        redis_client = None
 
     async with WriteSession() as session:
         try:
             analysis = await run_analysis(
                 analysis_id=UUID(analysis_id),
                 session=session,
+                redis_client=redis_client,
             )
             await session.commit()
 
@@ -81,3 +100,6 @@ async def _run_analysis(analysis_id: str) -> dict:
         except Exception:
             await session.rollback()
             raise
+        finally:
+            if redis_client:
+                await redis_client.aclose()

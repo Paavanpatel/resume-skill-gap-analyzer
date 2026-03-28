@@ -10,7 +10,7 @@ import type { ResumeUploadResponse } from "@/types/analysis";
 
 interface ResumePickerProps {
   /** Called when user drops/selects a file to upload (Upload New tab) */
-  onFileAccepted: (file: File) => void;
+  onFileAccepted: (file: File) => Promise<void>;
   /** Called when the user picks an existing resume */
   onSelect: (resumeId: string, fileName: string) => void;
   /** Currently active resume id (to highlight the selected card) */

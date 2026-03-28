@@ -30,4 +30,27 @@ declare module "lucide-react" {
   export const Sparkles: LucideIcon;
   export const CreditCard: LucideIcon;
   export const Building2: LucideIcon;
+
+  // Phase 5 — Email Verification & Password Reset
+  export const Mail: LucideIcon;
+  export const AlertCircle: LucideIcon;
+  export const CheckCircle: LucideIcon;
+  export const MailWarning: LucideIcon;
+
+  // Dashboard & History components
+  export const GitCompareArrows: LucideIcon;
+  export const ArrowUp: LucideIcon;
+  export const ArrowDown: LucideIcon;
+  export const Minus: LucideIcon;
+  export const File: LucideIcon;
+  export const MoreVertical: LucideIcon;
+  export const Eye: LucideIcon;
+  export const Search: LucideIcon;
+  export const ArrowUpDown: LucideIcon;
+  export const ChevronLeft: LucideIcon;
+  export const ChevronRight: LucideIcon;
+  export const BarChart: LucideIcon;
+  export const Trophy: LucideIcon;
+  export const Calendar: LucideIcon;
+  export const ClipboardPaste: LucideIcon;
 }

@@ -11,6 +11,7 @@
  *  - Minimized: small pill showing active count + spinning indicator
  *  - Expanded: card with list of tracked analyses
  *  - Auto-collapses when all analyses are dismissed
+ *  - Connection status dot per analysis (green=WS live, yellow=polling/connecting, red=error)
  */
 
 import { useState } from "react";
@@ -29,6 +30,7 @@ import {
   useAnalysisTracker,
   type TrackedAnalysis,
 } from "@/context/AnalysisTrackerContext";
+import { cn } from "@/lib/utils";
 
 export default function FloatingAnalysisTracker() {
   const { isAuthenticated } = useAuth();
@@ -121,6 +123,46 @@ export default function FloatingAnalysisTracker() {
   );
 }
 
+// ── Connection status dot ────────────────────────────────────
+
+function ConnectionDot({ analysis }: { analysis: TrackedAnalysis }) {
+  const isActive =
+    !analysis.status ||
+    (analysis.status.status !== "completed" && analysis.status.status !== "failed");
+
+  if (!isActive) return null;
+
+  let dotColor: string;
+  let title: string;
+
+  if (analysis.transport === "websocket") {
+    switch (analysis.wsStatus) {
+      case "connected":
+        dotColor = "bg-success-500";
+        title = "Live connection";
+        break;
+      case "connecting":
+        dotColor = "bg-warning-400 animate-pulse";
+        title = "Connecting...";
+        break;
+      default:
+        dotColor = "bg-danger-400";
+        title = "Connection error - using fallback";
+        break;
+    }
+  } else {
+    dotColor = "bg-warning-400";
+    title = "Using polling";
+  }
+
+  return (
+    <span
+      className={cn("inline-block h-1.5 w-1.5 rounded-full shrink-0", dotColor)}
+      title={title}
+    />
+  );
+}
+
 // ── Individual analysis item ──────────────────────────────────
 
 function AnalysisItem({
@@ -143,6 +185,9 @@ function AnalysisItem({
   const elapsedLabel =
     elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
 
+  // Progress percentage
+  const progress = s?.progress ?? 0;
+
   return (
     <div className="border-b border-gray-50 dark:border-surface-700/50 px-4 py-3 last:border-b-0">
       <div className="flex items-start justify-between gap-2">
@@ -158,11 +203,23 @@ function AnalysisItem({
             {isFailed && <XCircle className="h-4 w-4 text-danger-500" />}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-              {analysis.label}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                {analysis.label}
+              </p>
+              <ConnectionDot analysis={analysis} />
+            </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {isActive && (s?.current_step || "Starting analysis...")}
+              {isActive && (
+                <>
+                  {s?.current_step || "Starting analysis..."}
+                  {progress > 0 && (
+                    <span className="ml-1 font-medium text-primary-500">
+                      {Math.round(progress)}%
+                    </span>
+                  )}
+                </>
+              )}
               {isCompleted && `Completed in ${elapsedLabel}`}
               {isFailed &&
                 (s?.error_message
@@ -199,8 +256,8 @@ function AnalysisItem({
       {isActive && s && (
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-700 ease-out"
-            style={{ width: `${Math.max(s.progress, 5)}%` }}
+            className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-1000 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{ width: `${Math.max(progress, 5)}%` }}
           />
         </div>
       )}

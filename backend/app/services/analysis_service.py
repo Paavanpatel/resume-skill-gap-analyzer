@@ -37,6 +37,7 @@ from app.services.section_parser import parse_sections
 from app.services.skill_extractor import extract_skills, ExtractionResult
 from app.services.skill_normalizer import build_taxonomy_index
 from app.services.suggestion_engine import generate_suggestions
+from app.api.v1.websockets import publish_progress
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +206,12 @@ async def run_analysis(
     await analysis_repo.update(analysis_id, status="processing")
     await session.flush()  # Make status visible to polling queries
 
+    # Publish initial progress via WebSocket
+    await publish_progress(
+        redis_client, str(analysis_id),
+        status="processing", progress=0, current_step="Parsing resume",
+    )
+
     try:
         # 2. Load the resume's parsed text
         resume = await resume_repo.get_by_id(analysis.resume_id)
@@ -224,6 +231,12 @@ async def run_analysis(
         # 3. Load skill taxonomy (with Redis caching)
         taxonomy = await _load_taxonomy(session, redis_client)
 
+        # Publish: parsing done, extracting skills
+        await publish_progress(
+            redis_client, str(analysis_id),
+            status="processing", progress=25, current_step="Extracting skills",
+        )
+
         logger.info(
             "Starting skill extraction for analysis %s (resume=%s, taxonomy_size=%d)",
             analysis_id,
@@ -242,12 +255,24 @@ async def run_analysis(
         match_score = _compute_match_score(extraction)
         ats_score = _compute_ats_score(extraction)
 
+        # Publish: extraction done, matching and scoring
+        await publish_progress(
+            redis_client, str(analysis_id),
+            status="processing", progress=50, current_step="Matching skills and scoring",
+        )
+
         # 6. Run gap analysis (Phase 6)
         gap_result = analyze_gap(extraction, match_score, ats_score)
 
         # 7. Run ATS formatting checks (Phase 6)
         parsed_resume = parse_sections(resume_text)
         ats_result = check_ats_compatibility(parsed_resume)
+
+        # Publish: gap analysis done, generating suggestions
+        await publish_progress(
+            redis_client, str(analysis_id),
+            status="processing", progress=75, current_step="Generating suggestions and insights",
+        )
 
         # 8. Generate improvement suggestions (Phase 6)
         suggestions = await generate_suggestions(
@@ -286,6 +311,12 @@ async def run_analysis(
 
         updated_analysis = await analysis_repo.update(analysis_id, **update_data)
 
+        # Publish completion via WebSocket
+        await publish_progress(
+            redis_client, str(analysis_id),
+            status="completed", progress=100, current_step="Analysis complete",
+        )
+
         logger.info(
             "Analysis %s completed: match=%.1f%%, ats=%.1f%%, format=%.1f%%, "
             "skills=%d/%d matched, suggestions=%d, time=%dms, tokens=%d, provider=%s",
@@ -313,6 +344,13 @@ async def run_analysis(
             status="failed",
             error_message=error_msg,
             processing_time_ms=elapsed_ms,
+        )
+
+        # Publish failure via WebSocket
+        await publish_progress(
+            redis_client, str(analysis_id),
+            status="failed", progress=0, current_step="Analysis failed",
+            error_message=error_msg,
         )
 
         logger.error(

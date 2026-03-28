@@ -24,7 +24,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { getAnalysisResult, getAnalysisStatus, retryAnalysis, getErrorMessage } from "@/lib/api";
 import type { AnalysisResult, AnalysisStatusResponse } from "@/types/analysis";
-import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
+import { useAnalysisTracker, type TransportMode } from "@/context/AnalysisTrackerContext";
+import type { WsConnectionStatus } from "@/hooks/useAnalysisWebSocket";
 import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -120,6 +121,10 @@ export default function AnalysisPage() {
   // Check if this analysis is already being tracked globally
   const { analyses: trackedAnalyses, track } = useAnalysisTracker();
   const tracked = trackedAnalyses.find((a) => a.jobId === analysisId);
+
+  // Connection info from tracker
+  const transportMode: TransportMode = tracked?.transport ?? "polling";
+  const wsConnectionStatus: WsConnectionStatus = tracked?.wsStatus ?? "disconnected";
 
   const { toast } = useToast();
 
@@ -236,6 +241,8 @@ export default function AnalysisPage() {
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               This usually takes 10-20 seconds. Feel free to navigate away — we&apos;ll track progress for you.
             </p>
+            {/* Connection status indicator */}
+            <ConnectionIndicator transport={transportMode} wsStatus={wsConnectionStatus} />
           </div>
 
           {/* Stage indicators */}
@@ -294,7 +301,7 @@ export default function AnalysisPage() {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-700 ease-out"
+                className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-1000 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 style={{ width: `${Math.max(progress, 3)}%` }}
               />
             </div>
@@ -615,6 +622,47 @@ function EmptyTabState({
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
         {description}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Connection status indicator (green/yellow/red dot) shown during processing.
+ */
+function ConnectionIndicator({
+  transport,
+  wsStatus,
+}: {
+  transport: TransportMode;
+  wsStatus: WsConnectionStatus;
+}) {
+  let color: string;
+  let label: string;
+
+  if (transport === "websocket") {
+    switch (wsStatus) {
+      case "connected":
+        color = "bg-success-500";
+        label = "Live";
+        break;
+      case "connecting":
+        color = "bg-warning-400 animate-pulse";
+        label = "Connecting";
+        break;
+      default:
+        color = "bg-danger-400";
+        label = "Reconnecting";
+        break;
+    }
+  } else {
+    color = "bg-warning-400";
+    label = "Polling";
+  }
+
+  return (
+    <div className="mt-2 flex items-center justify-center gap-1.5">
+      <span className={cn("inline-block h-2 w-2 rounded-full", color)} />
+      <span className="text-xs text-gray-400 dark:text-gray-500">{label}</span>
     </div>
   );
 }

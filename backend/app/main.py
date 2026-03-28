@@ -79,6 +79,10 @@ def create_app() -> FastAPI:
     from app.api.v1.router import api_router
     app.include_router(api_router, prefix="/api/v1")
 
+    # ── WebSocket routes (no /api/v1 prefix — ws_url is /ws/analysis/{id}) ──
+    from app.api.v1.websockets import router as ws_router
+    app.include_router(ws_router)
+
     # ── Health Check ──────────────────────────────────────────
     @app.get("/api/v1/health", tags=["system"])
     async def health_check():
