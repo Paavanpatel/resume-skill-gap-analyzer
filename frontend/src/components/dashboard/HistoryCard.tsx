@@ -104,7 +104,7 @@ export default function HistoryCard({
 
   const dropdownItems = [
     { id: "view", label: "View Details", icon: <Eye className="h-4 w-4" /> },
-    ...(item.status === "failed"
+    ...(item.status === "failed" || item.status === "queued"
       ? [{ id: "retry", label: "Retry Analysis", icon: <RefreshCw className="h-4 w-4" /> }]
       : [{ id: "reanalyze", label: "Re-analyze", icon: <RefreshCw className="h-4 w-4" /> }]
     ),
@@ -141,7 +141,7 @@ export default function HistoryCard({
     <>
       <div
         className={cn(
-          "group relative overflow-hidden rounded-xl border transition-all duration-200",
+          "group relative rounded-xl border transition-all duration-200",
           "bg-white dark:bg-surface-800",
           selected
             ? "border-primary-500 ring-2 ring-primary-500/20 shadow-md"
@@ -153,7 +153,7 @@ export default function HistoryCard({
         {/* Left gradient accent */}
         <div
           className={cn(
-            "absolute left-0 top-0 h-full w-1 bg-gradient-to-b",
+            "absolute left-0 top-0 h-full w-1 rounded-l-xl bg-gradient-to-b",
             accentColor
           )}
           data-testid="score-accent"

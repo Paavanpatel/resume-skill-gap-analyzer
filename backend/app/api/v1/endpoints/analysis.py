@@ -321,7 +321,7 @@ MAX_RETRIES = 3
     status_code=202,
     summary="Retry a failed analysis",
     responses={
-        409: {"description": "Analysis is not in a failed state or max retries exceeded"},
+        409: {"description": "Analysis is not in a retryable state (must be failed or queued) or max retries exceeded"},
     },
 )
 async def retry_analysis(
@@ -330,11 +330,11 @@ async def retry_analysis(
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Re-queue a failed analysis for reprocessing.
+    Re-queue a failed or stuck queued analysis for reprocessing.
 
-    Only analyses with status='failed' can be retried. Maximum 3 retries
-    per analysis. On retry, status is reset to 'queued' and a new Celery
-    task is dispatched.
+    Analyses with status='failed' or status='queued' (stuck/never picked up)
+    can be retried. Maximum 3 retries per analysis. On retry, status is
+    reset to 'queued' and a new Celery task is dispatched.
     """
     analysis_repo = AnalysisRepository(session)
     analysis = await analysis_repo.get_by_id(analysis_id)
@@ -345,9 +345,9 @@ async def retry_analysis(
             resource_type="analysis",
         )
 
-    if analysis.status != "failed":
+    if analysis.status not in ("failed", "queued"):
         raise ConflictError(
-            f"Only failed analyses can be retried. Current status: {analysis.status}."
+            f"Only failed or stuck queued analyses can be retried. Current status: {analysis.status}."
         )
 
     if analysis.retry_count >= MAX_RETRIES:
