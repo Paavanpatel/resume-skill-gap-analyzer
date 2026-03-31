@@ -20,6 +20,14 @@ class ResumeUploadResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PaginatedResumeResponse(BaseModel):
+    """Paginated list of resumes with total count."""
+    resumes: list[ResumeUploadResponse]
+    total: int
+    skip: int
+    limit: int
+
+
 class ResumeParseResponse(BaseModel):
     """Returned after parsing a resume's text content."""
     id: UUID

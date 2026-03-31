@@ -19,6 +19,8 @@ interface ResumePickerProps {
   uploadError?: string;
 }
 
+const PAGE_SIZE = 5;
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -54,35 +56,40 @@ export default function ResumePicker({
 }: ResumePickerProps) {
   const [activeTab, setActiveTab] = useState("upload");
   const [resumes, setResumes] = useState<ResumeUploadResponse[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState("");
 
-  const loadResumes = useCallback(async () => {
-    setIsLoadingResumes(true);
+  const loadResumes = useCallback(async (skip: number, append: boolean) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoadingResumes(true);
+    }
     setLoadError("");
     try {
-      const data = await listResumes();
-      // Sort by last_used_at desc, then created_at desc as fallback
-      data.sort((a, b) => {
-        const aTime = a.last_used_at ?? a.created_at;
-        const bTime = b.last_used_at ?? b.created_at;
-        return new Date(bTime).getTime() - new Date(aTime).getTime();
-      });
-      setResumes(data);
+      const data = await listResumes(skip, PAGE_SIZE);
+      setResumes((prev) => (append ? [...prev, ...data.resumes] : data.resumes));
+      setTotal(data.total);
     } catch (err) {
       setLoadError(getErrorMessage(err));
     } finally {
       setIsLoadingResumes(false);
+      setIsLoadingMore(false);
     }
   }, []);
 
-  // Load resumes when tab is switched to "existing"
+  // Load first page when tab is switched to "existing"
   useEffect(() => {
     if (activeTab === "existing") {
-      loadResumes();
+      setResumes([]);
+      setTotal(0);
+      loadResumes(0, false);
     }
   }, [activeTab, loadResumes]);
 
+  const hasMore = resumes.length < total;
 
   return (
     <div className="space-y-4">
@@ -126,62 +133,91 @@ export default function ResumePicker({
               </button>
             </div>
           ) : (
-            <ul className="space-y-2" role="listbox" aria-label="Select an existing resume">
-              {resumes.map((resume) => {
-                const isSelected = resume.id === selectedResumeId;
-                return (
-                  <li key={resume.id}>
-                    <button
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => onSelect(resume.id, resume.original_filename)}
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3 text-left transition-all duration-150",
-                        "flex items-center gap-3",
-                        isSelected
-                          ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-2 ring-primary-500/20"
-                          : "border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800",
-                        "hover:border-primary-400 hover:shadow-sm"
-                      )}
-                    >
-                      {/* File type icon */}
-                      <div
+            <div className="space-y-3">
+              <ul className="space-y-2" role="listbox" aria-label="Select an existing resume">
+                {resumes.map((resume) => {
+                  const isSelected = resume.id === selectedResumeId;
+                  return (
+                    <li key={resume.id}>
+                      <button
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => onSelect(resume.id, resume.original_filename)}
                         className={cn(
-                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold uppercase",
-                          resume.file_type === "pdf"
-                            ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                            : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                          "w-full rounded-xl border px-4 py-3 text-left transition-all duration-150",
+                          "flex items-center gap-3",
+                          isSelected
+                            ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-2 ring-primary-500/20"
+                            : "border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800",
+                          "hover:border-primary-400 hover:shadow-sm"
                         )}
                       >
-                        {resume.file_type}
-                      </div>
-
-                      {/* File info */}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {resume.original_filename}
-                        </p>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                          <span>{formatFileSize(resume.file_size_bytes)}</span>
-                          <span>·</span>
-                          <Clock className="h-3 w-3" />
-                          <span>
-                            {resume.last_used_at
-                              ? `Used ${formatRelativeTime(resume.last_used_at)}`
-                              : `Uploaded ${formatRelativeTime(resume.created_at)}`}
-                          </span>
+                        {/* File type icon */}
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold uppercase",
+                            resume.file_type === "pdf"
+                              ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                              : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                          )}
+                        >
+                          {resume.file_type}
                         </div>
-                      </div>
 
-                      {/* Selected indicator */}
-                      {isSelected && (
-                        <CheckCircle2 className="h-5 w-5 shrink-0 text-primary-500" />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                        {/* File info */}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {resume.original_filename}
+                          </p>
+                          <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                            <span>{formatFileSize(resume.file_size_bytes)}</span>
+                            <span>·</span>
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {resume.last_used_at
+                                ? `Used ${formatRelativeTime(resume.last_used_at)}`
+                                : `Uploaded ${formatRelativeTime(resume.created_at)}`}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Selected indicator */}
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 shrink-0 text-primary-500" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Load more / count indicator */}
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Showing {resumes.length} of {total}
+                </p>
+                {hasMore && (
+                  <button
+                    onClick={() => loadResumes(resumes.length, true)}
+                    disabled={isLoadingMore}
+                    className={cn(
+                      "text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "flex items-center gap-1.5"
+                    )}
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Loading…
+                      </>
+                    ) : (
+                      "Load more"
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </TabPanel>
       </Tabs>

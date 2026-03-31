@@ -13,6 +13,7 @@ import type {
   AnalysisResult,
   AnalysisStatusResponse,
   AnalysisSubmitResponse,
+  PaginatedResumeResponse,
   ResumeUploadResponse,
   RoadmapResponse,
 } from "@/types/analysis";
@@ -240,8 +241,11 @@ export async function uploadResume(file: File): Promise<ResumeUploadResponse> {
   return res.data;
 }
 
-export async function listResumes(): Promise<ResumeUploadResponse[]> {
-  const res = await apiClient.get("/resume/");
+export async function listResumes(
+  skip: number = 0,
+  limit: number = 20,
+): Promise<PaginatedResumeResponse> {
+  const res = await apiClient.get("/resume/", { params: { skip, limit } });
   return res.data;
 }
 

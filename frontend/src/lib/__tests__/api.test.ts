@@ -189,9 +189,11 @@ describe("Resume API functions", () => {
     expect(result).toEqual(mockResp);
   });
 
-  it("listResumes calls GET /resume/", async () => {
+  it("listResumes calls GET /resume/ with pagination params", async () => {
     await listResumes();
-    expect(apiClient.get).toHaveBeenCalledWith("/resume/");
+    expect(apiClient.get).toHaveBeenCalledWith("/resume/", {
+      params: { skip: 0, limit: 20 },
+    });
   });
 });
 
