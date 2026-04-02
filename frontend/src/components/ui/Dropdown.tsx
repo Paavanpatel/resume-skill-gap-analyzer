@@ -151,6 +151,7 @@ export default function Dropdown({
     <div
       ref={menuRef}
       role="menu"
+      data-align={align}
       style={{ ...menuStyle, position: "absolute" }}
       className={cn(
         "z-[9999] min-w-[180px] rounded-xl",

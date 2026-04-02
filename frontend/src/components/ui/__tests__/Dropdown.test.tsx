@@ -375,7 +375,7 @@ describe("Dropdown", () => {
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
       const menu = screen.getByRole("menu");
-      expect(menu.className).toContain("right-0");
+      expect(menu).toHaveAttribute("data-align", "right");
     });
 
     it("supports left alignment", () => {
@@ -391,7 +391,7 @@ describe("Dropdown", () => {
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
       const menu = screen.getByRole("menu");
-      expect(menu.className).toContain("left-0");
+      expect(menu).toHaveAttribute("data-align", "left");
     });
   });
 
