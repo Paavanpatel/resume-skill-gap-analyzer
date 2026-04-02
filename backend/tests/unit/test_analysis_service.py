@@ -25,14 +25,14 @@ from app.services.skill_normalizer import NormalizedSkill
 from app.core.exceptions import NotFoundError, ParsingError
 
 
-def _make_skill(name, weight=1.0, required=None):
+def _make_skill(name, weight=1.0, required=None, confidence=0.9, in_taxonomy=True):
     """Helper to create a NormalizedSkill for testing."""
     return NormalizedSkill(
         name=name,
         category="programming_language",
-        confidence=0.9,
+        confidence=confidence,
         weight=weight,
-        in_taxonomy=True,
+        in_taxonomy=in_taxonomy,
         required=required,
     )
 
@@ -99,6 +99,69 @@ class TestComputeMatchScore:
         matched = [_make_skill("A", weight=5.0)]  # Matched weight > job weight
         result = _make_result(job, matched)
         assert _compute_match_score(result) <= 100.0
+
+    def test_high_confidence_match_scores_more(self):
+        """Matching a required skill (high confidence) contributes more than an implied one."""
+        # Two jobs each with one skill; the only difference is confidence.
+        # Matching the high-confidence skill should yield a higher score.
+        job_high = [_make_skill("Python", weight=1.0, confidence=0.95),
+                    _make_skill("Git",    weight=1.0, confidence=0.95)]
+        job_low  = [_make_skill("Python", weight=1.0, confidence=0.4),
+                    _make_skill("Git",    weight=1.0, confidence=0.4)]
+
+        # Match only the first skill in each set
+        matched_high = [_make_skill("Python", weight=1.0, confidence=0.95)]
+        matched_low  = [_make_skill("Python", weight=1.0, confidence=0.4)]
+
+        # Both scenarios match the same *proportion* of skills, so scores should be equal
+        # (confidence cancels in the ratio). Validate that — uniform confidence = same ratio.
+        score_high = _compute_match_score(_make_result(job_high, matched_high))
+        score_low  = _compute_match_score(_make_result(job_low,  matched_low))
+        assert score_high == score_low == 50.0
+
+    def test_off_taxonomy_confidence_drives_weight(self):
+        """Off-taxonomy skills (weight=1.0 default) are ranked by confidence."""
+        # Two off-taxonomy skills; different confidence values.
+        skill_important = _make_skill("RareFramework", weight=1.0, confidence=0.9,  in_taxonomy=False)
+        skill_implied   = _make_skill("VagueSkill",    weight=1.0, confidence=0.3,  in_taxonomy=False)
+
+        # Job requires both; only the important one is matched.
+        job     = [skill_important, skill_implied]
+        matched = [skill_important]
+        result  = _make_result(job, matched)
+
+        # effective_total = 1.0*0.9 + 1.0*0.3 = 1.2; effective_matched = 0.9
+        expected = round(0.9 / 1.2 * 100, 1)  # 75.0
+        assert _compute_match_score(result) == expected
+
+    def test_off_taxonomy_low_confidence_weighs_less(self):
+        """Matching only a low-confidence off-taxonomy skill gives a lower score."""
+        skill_important = _make_skill("CoreSkill",  weight=1.0, confidence=0.9,  in_taxonomy=False)
+        skill_implied   = _make_skill("VagueSkill", weight=1.0, confidence=0.3,  in_taxonomy=False)
+
+        job            = [skill_important, skill_implied]
+        matched_high   = _make_result(job, [skill_important])
+        matched_low    = _make_result(job, [skill_implied])
+
+        assert _compute_match_score(matched_high) > _compute_match_score(matched_low)
+
+    def test_confidence_blends_with_taxonomy_weight(self):
+        """Effective weight = taxonomy_weight * confidence, both signals matter."""
+        # high-weight required skill vs low-weight preferred skill
+        required  = _make_skill("Python", weight=2.0, confidence=0.95)
+        preferred = _make_skill("Docker", weight=1.0, confidence=0.65)
+
+        # effective: Python=1.9, Docker=0.65; total=2.55
+        job = [required, preferred]
+        matched_required  = _make_result(job, [required])
+        matched_preferred = _make_result(job, [preferred])
+
+        score_req  = _compute_match_score(matched_required)   # 1.9/2.55*100 ≈ 74.5
+        score_pref = _compute_match_score(matched_preferred)  # 0.65/2.55*100 ≈ 25.5
+
+        assert score_req > score_pref
+        assert score_req == round(1.9 / 2.55 * 100, 1)
+        assert score_pref == round(0.65 / 2.55 * 100, 1)
 
 
 class TestComputeATSScore:

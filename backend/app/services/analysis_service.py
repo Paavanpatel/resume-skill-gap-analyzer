@@ -110,24 +110,35 @@ def _compute_match_score(result: ExtractionResult) -> float:
     The score considers:
     - How many job skills the candidate has (base match)
     - Skill weights from the taxonomy (higher-weight skills matter more)
-    - Required vs preferred distinction (missing required skills penalize more)
+    - LLM-assigned confidence (required skills score higher than implied ones)
+
+    Effective weight formula:
+        effective_weight = skill.weight * skill.confidence
+
+    Examples:
+    - Required (confidence=0.95) + taxonomy weight 2.0 → effective 1.9
+    - Preferred (confidence=0.7) + taxonomy weight 1.5 → effective 1.05
+    - Implied (confidence=0.4) + off-taxonomy default weight 1.0 → effective 0.4
+
+    For off-taxonomy skills (weight defaults to 1.0) this means confidence
+    alone drives importance, which correctly prioritises "must-haves" the LLM
+    identified with high certainty over vague implied skills.
 
     Score formula:
-        matched_weight / total_job_weight * 100
+        matched_effective / total_effective * 100
 
     This gives a 0-100 percentage where:
     - 100 = candidate has every skill the job asks for
     - 0 = no overlap at all
-    - Weighted so core skills (Python, AWS) count more than nice-to-haves
     """
     if not result.job_skills:
         return 0.0
 
-    total_weight = sum(s.weight for s in result.job_skills)
+    total_weight = sum(s.weight * s.confidence for s in result.job_skills)
     if total_weight == 0:
         return 0.0
 
-    matched_weight = sum(s.weight for s in result.matched_skills)
+    matched_weight = sum(s.weight * s.confidence for s in result.matched_skills)
     score = (matched_weight / total_weight) * 100
 
     return round(min(score, 100.0), 1)
