@@ -24,6 +24,7 @@ from app.services.ats_checker import (
     _check_resume_length,
     _check_summary_section,
     _check_date_formats,
+    _TOTAL_CHECKS,
 )
 from app.services.section_parser import ParsedResume, ParsedSection
 
@@ -293,3 +294,42 @@ class TestATSCheckIntegration:
         assert "issues" in d
         assert "format_score" in d
         assert isinstance(d["issues"], list)
+
+    def test_passed_checks_equals_total_when_no_failures(self):
+        """When no checks fail, passed_checks == total_checks == 6."""
+        text = (
+            "John Doe\njohn@example.com\n(555) 123-4567\n\n"
+            + " ".join(["word"] * 500)
+        )
+        resume = _make_resume(text, [
+            ("summary", "Experienced software engineer"),
+            ("experience", "Software Engineer\nJan 2020 - Present\nBuilt APIs"),
+            ("education", "BS Computer Science"),
+            ("skills", "Python, Docker, AWS"),
+        ])
+        result = check_ats_compatibility(resume)
+
+        assert result.total_checks == 6
+        assert result.passed_checks == result.total_checks
+        assert result.passed_checks == _TOTAL_CHECKS
+
+    def test_passed_checks_when_most_checks_fail(self):
+        """passed_checks == 1 when 5 of 6 checks fail.
+
+        _check_summary_section only ever emits 'info' severity, so it always
+        counts as passed. All other 5 checks fail with this crafted resume:
+        - _check_essential_sections: missing education + skills (warnings)
+        - _check_contact_info: no email (error) + no phone (warning)
+        - _check_resume_length: 80 words < 150 threshold (error)
+        - _check_formatting_issues: table characters > 1% ratio (warning)
+        - _check_date_formats: experience section has no recognisable dates (warning)
+        """
+        # "Name │ Role │ Company\n" x20 = 80 words, │ ratio ≈ 8% → triggers table warning
+        table_text = "Name │ Role │ Company\n" * 20
+        resume = _make_resume(table_text, [
+            ("experience", "Software Engineer at Acme\nBuilt various systems"),
+        ])
+        result = check_ats_compatibility(resume)
+
+        assert result.total_checks == _TOTAL_CHECKS
+        assert result.passed_checks == 1

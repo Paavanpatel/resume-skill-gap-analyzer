@@ -314,8 +314,15 @@ def _check_date_formats(resume: ParsedResume) -> list[ATSIssue]:
 # ── Main entry point ─────────────────────────────────────────────
 
 
-# Total number of checks we run (for the score calculation)
-_TOTAL_CHECKS = 8
+_CHECK_FUNCTIONS = [
+    _check_essential_sections,
+    _check_contact_info,
+    _check_resume_length,
+    _check_summary_section,
+    _check_formatting_issues,
+    _check_date_formats,
+]
+_TOTAL_CHECKS = len(_CHECK_FUNCTIONS)
 
 
 def check_ats_compatibility(resume: ParsedResume) -> ATSCheckResult:
@@ -340,14 +347,7 @@ def check_ats_compatibility(resume: ParsedResume) -> ATSCheckResult:
     # both Experience and Education), but it still counts as one failed check.
     checks_failed = 0
 
-    for check_fn in [
-        _check_essential_sections,
-        _check_contact_info,
-        _check_resume_length,
-        _check_summary_section,
-        _check_formatting_issues,
-        _check_date_formats,
-    ]:
+    for check_fn in _CHECK_FUNCTIONS:
         issues = check_fn(resume)
         all_issues.extend(issues)
         if any(i.severity in ("error", "warning") for i in issues):
