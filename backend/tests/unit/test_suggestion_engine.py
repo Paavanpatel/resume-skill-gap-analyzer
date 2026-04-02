@@ -11,10 +11,14 @@ Covers:
 """
 
 import pytest
+from unittest.mock import patch, AsyncMock
 
 from app.services.suggestion_engine import (
     Suggestion,
+    MAX_RULE_SUGGESTIONS,
+    MAX_TOTAL_SUGGESTIONS,
     generate_rule_based_suggestions,
+    generate_suggestions,
     _missing_skill_suggestions,
     _category_gap_suggestions,
     _ats_issue_suggestions,
@@ -264,8 +268,8 @@ class TestGenerateRuleBasedSuggestions:
             numeric = [priority_values.get(p, 3) for p in priorities]
             assert numeric == sorted(numeric)
 
-    def test_capped_at_10(self):
-        """Total suggestions are capped at 10."""
+    def test_capped_at_rule_max(self):
+        """Rule suggestions are capped at MAX_RULE_SUGGESTIONS."""
         missing = [_skill(f"Skill{i}", required=True, weight=2.0) for i in range(15)]
         extraction = _extraction(missing)
 
@@ -288,7 +292,7 @@ class TestGenerateRuleBasedSuggestions:
         ats = _ats_result(ats_issues)
 
         suggestions = generate_rule_based_suggestions(extraction, gap, ats)
-        assert len(suggestions) <= 10
+        assert len(suggestions) <= MAX_RULE_SUGGESTIONS
 
     def test_deduplication(self):
         """Duplicate suggestions are removed."""
@@ -367,3 +371,139 @@ class TestSuggestionPromptBuilder:
         assert d["section"] == "skills"
         assert d["priority"] == "high"
         assert d["source"] == "rule"
+
+
+def _make_heavy_inputs():
+    """Build inputs that produce MAX_RULE_SUGGESTIONS rule suggestions."""
+    missing = [_skill(f"Skill{i}", required=True, weight=2.0) for i in range(5)]
+    extraction = _extraction(missing)
+    breakdowns = [
+        CategoryBreakdown(
+            category=f"cat{i}", display_name=f"Cat {i}",
+            total_job_skills=1, matched_count=0, missing_count=1,
+            match_percentage=0.0,
+            matched_skills=[], missing_skills=[f"S{i}"],
+            priority="critical",
+        )
+        for i in range(5)
+    ]
+    gap = _gap_result(breakdowns)
+    ats_issues = [ATSIssue(
+        severity="error", category="structure",
+        title=f"Issue {i}", description="...", fix=f"Fix {i}",
+    ) for i in range(5)]
+    ats = _ats_result(ats_issues)
+    return extraction, gap, ats
+
+
+class TestLLMSuggestionsMerging:
+    """LLM suggestions must not be silently discarded."""
+
+    async def test_llm_suggestions_appear_when_rule_cap_was_previously_full(self):
+        """When rule suggestions would have filled the old 10-slot cap, LLM results still appear."""
+        extraction, gap, ats = _make_heavy_inputs()
+
+        llm_result = [
+            Suggestion(section="summary", current="missing", suggested=f"LLM suggestion {i}",
+                       reason="Helps", priority="medium", source="llm")
+            for i in range(3)
+        ]
+
+        with patch(
+            "app.services.suggestion_engine.generate_llm_suggestions",
+            new=AsyncMock(return_value=llm_result),
+        ):
+            result = await generate_suggestions(
+                resume_text="test",
+                job_description="test",
+                match_score=50.0,
+                extraction=extraction,
+                gap_analysis=gap,
+                ats_check=ats,
+                include_llm=True,
+            )
+
+        llm_in_result = [s for s in result if s["source"] == "llm"]
+        assert len(llm_in_result) >= 1, "LLM suggestions were discarded"
+        assert len(result) <= MAX_TOTAL_SUGGESTIONS
+
+    async def test_llm_high_priority_sorts_before_medium_rule_suggestions(self):
+        """A high-priority LLM suggestion should appear before medium-priority rule suggestions."""
+        # Only medium-priority rule suggestions
+        missing = [_skill("Git", "tool", required=True, weight=1.0)]
+        extraction = _extraction(missing)
+        gap = _gap_result()
+        ats = _ats_result()
+
+        llm_result = [
+            Suggestion(
+                section="experience", current="missing",
+                suggested="Add a critical missing skill from LLM",
+                reason="Critical gap", priority="high", source="llm",
+            )
+        ]
+
+        with patch(
+            "app.services.suggestion_engine.generate_llm_suggestions",
+            new=AsyncMock(return_value=llm_result),
+        ):
+            result = await generate_suggestions(
+                resume_text="test",
+                job_description="test",
+                match_score=40.0,
+                extraction=extraction,
+                gap_analysis=gap,
+                ats_check=ats,
+                include_llm=True,
+            )
+
+        priority_order = {"high": 0, "medium": 1, "low": 2}
+        numeric = [priority_order.get(s["priority"], 3) for s in result]
+        assert numeric == sorted(numeric), "Results are not sorted by priority"
+
+        # The high-priority LLM suggestion must appear before any medium-priority entries
+        high_indices = [i for i, s in enumerate(result) if s["priority"] == "high"]
+        medium_indices = [i for i, s in enumerate(result) if s["priority"] == "medium"]
+        if high_indices and medium_indices:
+            assert max(high_indices) < min(medium_indices)
+
+
+class TestLLMPriorityParsing:
+    """LLM suggestions respect the priority field from the JSON response."""
+
+    async def test_valid_priority_values_are_preserved(self):
+        """high/medium/low from LLM JSON are accepted as-is."""
+        from app.services.suggestion_engine import generate_llm_suggestions
+        from unittest.mock import MagicMock
+
+        mock_response = MagicMock()
+        mock_response.parse_json.return_value = {
+            "suggestions": [
+                {"section": "skills", "suggested": "Add Docker", "reason": "r", "priority": "high"},
+                {"section": "summary", "suggested": "Rewrite it", "reason": "r", "priority": "low"},
+                {"section": "experience", "suggested": "Add project", "reason": "r"},  # missing → default
+            ]
+        }
+        with patch("app.services.llm_client.call_llm", new=AsyncMock(return_value=mock_response)):
+            suggestions = await generate_llm_suggestions("resume", "jd", 50.0, _extraction([]))
+
+        priorities = {s.suggested: s.priority for s in suggestions}
+        assert priorities["Add Docker"] == "high"
+        assert priorities["Rewrite it"] == "low"
+        assert priorities["Add project"] == "medium"  # default fallback
+
+    async def test_invalid_priority_falls_back_to_medium(self):
+        """An unrecognised priority value from the LLM falls back to 'medium'."""
+        from app.services.suggestion_engine import generate_llm_suggestions
+        from unittest.mock import MagicMock
+
+        mock_response = MagicMock()
+        mock_response.parse_json.return_value = {
+            "suggestions": [
+                {"section": "skills", "suggested": "Add Rust", "reason": "r", "priority": "critical"},
+            ]
+        }
+        with patch("app.services.llm_client.call_llm", new=AsyncMock(return_value=mock_response)):
+            suggestions = await generate_llm_suggestions("resume", "jd", 50.0, _extraction([]))
+
+        assert suggestions[0].priority == "medium"

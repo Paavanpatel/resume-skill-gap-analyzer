@@ -34,6 +34,9 @@ from app.services.skill_normalizer import NormalizedSkill
 
 logger = logging.getLogger(__name__)
 
+MAX_RULE_SUGGESTIONS = 7   # cap on rule-based suggestions before merging with LLM
+MAX_TOTAL_SUGGESTIONS = 15  # cap on combined rule + LLM suggestions
+
 
 @dataclass
 class Suggestion:
@@ -83,7 +86,7 @@ def generate_rule_based_suggestions(
     # 3. ATS structural issues -> fix formatting/sections
     suggestions.extend(_ats_issue_suggestions(ats_check))
 
-    # Deduplicate by (section, suggested) tuple and cap at 10
+    # Deduplicate by (section, suggested) tuple and cap at MAX_RULE_SUGGESTIONS
     seen = set()
     unique = []
     for s in suggestions:
@@ -96,7 +99,7 @@ def generate_rule_based_suggestions(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     unique.sort(key=lambda s: priority_order.get(s.priority, 3))
 
-    return unique[:10]
+    return unique[:MAX_RULE_SUGGESTIONS]
 
 
 def _missing_skill_suggestions(extraction: ExtractionResult) -> list[Suggestion]:
@@ -233,6 +236,7 @@ For each suggestion, provide:
 - "current": what's currently in the resume (quote a brief snippet or say "missing")
 - "suggested": the specific change to make
 - "reason": why this change improves the resume for this specific job
+- "priority": importance of this change — "high" (critical gap), "medium" (would help), or "low" (nice to have)
 
 Respond with this exact JSON structure:
 {{
@@ -241,7 +245,8 @@ Respond with this exact JSON structure:
       "section": "skills",
       "current": "Python, JavaScript, React",
       "suggested": "Python, JavaScript, React, AWS, Docker, Kubernetes",
-      "reason": "The job requires cloud/DevOps skills. Adding these keywords will improve ATS matching."
+      "reason": "The job requires cloud/DevOps skills. Adding these keywords will improve ATS matching.",
+      "priority": "high"
     }}
   ]
 }}"""
@@ -306,15 +311,18 @@ async def generate_llm_suggestions(
         raw_suggestions = data.get("suggestions", [])
 
         suggestions = []
+        valid_priorities = {"high", "medium", "low"}
         for s in raw_suggestions:
             if not s.get("section") or not s.get("suggested"):
                 continue
+            raw_priority = s.get("priority", "medium")
+            priority = raw_priority if raw_priority in valid_priorities else "medium"
             suggestions.append(Suggestion(
                 section=s.get("section", "general"),
                 current=s.get("current", ""),
                 suggested=s.get("suggested", ""),
                 reason=s.get("reason", ""),
-                priority="medium",  # LLM suggestions default to medium
+                priority=priority,
                 source="llm",
             ))
 
@@ -356,7 +364,7 @@ async def generate_suggestions(
         include_llm: Whether to generate LLM-powered suggestions.
 
     Returns:
-        List of suggestion dicts, sorted by priority, capped at 10.
+        List of suggestion dicts, sorted by priority, capped at MAX_TOTAL_SUGGESTIONS.
     """
     # Rule-based suggestions (always run)
     rule_suggestions = generate_rule_based_suggestions(
@@ -391,4 +399,4 @@ async def generate_suggestions(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     unique.sort(key=lambda s: priority_order.get(s.priority, 3))
 
-    return [s.to_dict() for s in unique[:10]]
+    return [s.to_dict() for s in unique[:MAX_TOTAL_SUGGESTIONS]]
