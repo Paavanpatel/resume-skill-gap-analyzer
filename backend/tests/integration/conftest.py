@@ -58,6 +58,7 @@ async def mock_db_session() -> AsyncMock:
     # Execute method returns an AsyncMock that can be chained
     mock_execute = AsyncMock()
     mock_execute.scalar_one_or_none = MagicMock(return_value=None)
+    mock_execute.scalar_one = MagicMock(return_value=0)
     mock_execute.scalar = MagicMock(return_value=None)
     mock_execute.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
 

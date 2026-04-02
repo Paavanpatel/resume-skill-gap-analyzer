@@ -535,6 +535,7 @@ async def test_resume_list(test_client, mock_user, access_token, mock_db_session
     with patch("app.api.v1.endpoints.resume.ResumeRepository") as mock_repo_class:
         mock_repo = MagicMock()
         mock_repo.get_by_user = AsyncMock(return_value=mock_resumes)
+        mock_repo.count_unique_by_user = AsyncMock(return_value=2)
         mock_repo_class.return_value = mock_repo
 
         response = await client.get(
@@ -544,7 +545,7 @@ async def test_resume_list(test_client, mock_user, access_token, mock_db_session
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
+    assert len(data["resumes"]) == 2
 
 
 # ──────────────────────────────────────────────────────────────
