@@ -22,6 +22,7 @@ from app.services.suggestion_engine import (
     _missing_skill_suggestions,
     _category_gap_suggestions,
     _ats_issue_suggestions,
+    _build_condensed_resume,
     build_suggestion_prompt,
 )
 from app.services.ats_checker import ATSCheckResult, ATSIssue
@@ -30,6 +31,7 @@ from app.services.gap_analyzer import (
     GapAnalysisResult,
     ScoreExplanation,
 )
+from app.services.section_parser import ParsedResume, ParsedSection
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
 
@@ -50,6 +52,19 @@ def _extraction(missing_skills, matched_skills=None):
         missing_skills=missing_skills,
         provider="openai", model="gpt-4o",
         total_tokens=500, extraction_time_ms=100,
+    )
+
+
+def _make_parsed_resume(sections=None, raw_text="") -> ParsedResume:
+    """Create a ParsedResume for testing."""
+    parsed_sections = [
+        ParsedSection(name=name, content=content, line_start=0, line_end=10)
+        for name, content in (sections or [])
+    ]
+    return ParsedResume(
+        sections=parsed_sections,
+        raw_text=raw_text,
+        word_count=len(raw_text.split()),
     )
 
 
@@ -320,22 +335,24 @@ class TestGenerateRuleBasedSuggestions:
 class TestSuggestionPromptBuilder:
     """Test the LLM suggestion prompt builder."""
 
-    def test_contains_resume_text(self):
-        """Resume text is included in prompt."""
+    def test_contains_resume_sections(self):
+        """Parsed section content is included in the prompt."""
+        parsed_resume = _make_parsed_resume([("skills", "Python, Docker")])
         prompt = build_suggestion_prompt(
-            resume_text="I know Python and Docker",
+            parsed_resume=parsed_resume,
             job_description="Need AWS experience",
             match_score=50.0,
             matched_skills=[_skill("Python")],
             missing_skills=[_skill("AWS", "devops")],
         )
-        assert "I know Python and Docker" in prompt
-        assert "<resume_text>" in prompt
+        assert "Python, Docker" in prompt
+        assert "<resume_sections>" in prompt
 
     def test_contains_gap_summary(self):
         """Gap summary with scores and skills is included."""
+        parsed_resume = _make_parsed_resume([("skills", "Python")], raw_text="test")
         prompt = build_suggestion_prompt(
-            resume_text="test",
+            parsed_resume=parsed_resume,
             job_description="test",
             match_score=72.5,
             matched_skills=[_skill("Python")],
@@ -345,17 +362,23 @@ class TestSuggestionPromptBuilder:
         assert "Python" in prompt  # matched
         assert "AWS" in prompt  # missing
 
-    def test_truncates_long_text(self):
-        """Long resume text is truncated to save tokens."""
-        long_text = "word " * 5000  # way over 3000 chars
+    def test_experience_truncated_skills_preserved(self):
+        """Long experience is capped at 2,000 chars; skills section is always included."""
+        long_experience = "Lead developer. " * 500  # ~8,000 chars
+        skills_content = "Python, FastAPI, PostgreSQL, Redis"
+        parsed_resume = _make_parsed_resume([
+            ("experience", long_experience),
+            ("skills", skills_content),
+        ])
         prompt = build_suggestion_prompt(
-            resume_text=long_text,
+            parsed_resume=parsed_resume,
             job_description="test",
             match_score=50.0,
             matched_skills=[], missing_skills=[],
         )
-        # prompt should be shorter than the full text
-        assert len(prompt) < len(long_text)
+        assert skills_content in prompt
+        # Experience must have been truncated — the raw text is ~8k but prompt is much less
+        assert len(prompt) < len(long_experience)
 
     def test_suggestion_serialization(self):
         """Suggestion.to_dict() produces correct format."""
@@ -371,6 +394,63 @@ class TestSuggestionPromptBuilder:
         assert d["section"] == "skills"
         assert d["priority"] == "high"
         assert d["source"] == "rule"
+
+
+class TestBuildCondensedResume:
+    """Test that _build_condensed_resume always surfaces critical sections."""
+
+    def test_skills_after_3000_chars_are_included(self):
+        """Skills section content is present even when it starts after char 3,000."""
+        # A realistic chronological resume: 4,000 chars of contact + experience first,
+        # then a Skills section that would be invisible to a blind [:3000] slice.
+        long_experience = "x" * 4000
+        skills_content = "Python, FastAPI, PostgreSQL, Redis, Docker, Kubernetes"
+        parsed_resume = _make_parsed_resume([
+            ("experience", long_experience),
+            ("skills", skills_content),
+        ], raw_text=long_experience + "\nSkills\n" + skills_content)
+
+        result = _build_condensed_resume(parsed_resume)
+
+        assert skills_content in result, (
+            "Skills section was not included — LLM would have missed these keywords"
+        )
+
+    def test_summary_and_education_always_included(self):
+        """Summary and education sections are included regardless of length."""
+        long_experience = "Senior Engineer at BigCorp. " * 200  # ~5,600 chars
+        parsed_resume = _make_parsed_resume([
+            ("experience", long_experience),
+            ("summary", "Experienced backend engineer with 8 years in Python."),
+            ("education", "B.Sc. Computer Science, MIT, 2016"),
+            ("skills", "Python, Go, Rust"),
+        ])
+
+        result = _build_condensed_resume(parsed_resume)
+
+        assert "Experienced backend engineer" in result
+        assert "B.Sc. Computer Science" in result
+        assert "Python, Go, Rust" in result
+
+    def test_experience_is_capped_at_2000_chars(self):
+        """Experience longer than 2,000 chars is truncated in the output."""
+        long_experience = "A" * 5000
+        parsed_resume = _make_parsed_resume([("experience", long_experience)])
+
+        result = _build_condensed_resume(parsed_resume)
+
+        # The full 5,000-char block must not appear verbatim
+        assert long_experience not in result
+        assert len(result) < len(long_experience)
+
+    def test_fallback_when_no_sections_parsed(self):
+        """Falls back to raw_text[:3000] when section parsing produced nothing."""
+        raw = "Plain resume text with no headings. " * 200  # ~7,200 chars
+        parsed_resume = _make_parsed_resume(sections=[], raw_text=raw)
+
+        result = _build_condensed_resume(parsed_resume)
+
+        assert result == raw[:3000]
 
 
 def _make_heavy_inputs():
@@ -414,7 +494,7 @@ class TestLLMSuggestionsMerging:
             new=AsyncMock(return_value=llm_result),
         ):
             result = await generate_suggestions(
-                resume_text="test",
+                parsed_resume=_make_parsed_resume(),
                 job_description="test",
                 match_score=50.0,
                 extraction=extraction,
@@ -448,7 +528,7 @@ class TestLLMSuggestionsMerging:
             new=AsyncMock(return_value=llm_result),
         ):
             result = await generate_suggestions(
-                resume_text="test",
+                parsed_resume=_make_parsed_resume(),
                 job_description="test",
                 match_score=40.0,
                 extraction=extraction,
@@ -485,7 +565,7 @@ class TestLLMPriorityParsing:
             ]
         }
         with patch("app.services.llm_client.call_llm", new=AsyncMock(return_value=mock_response)):
-            suggestions = await generate_llm_suggestions("resume", "jd", 50.0, _extraction([]))
+            suggestions = await generate_llm_suggestions(_make_parsed_resume(), "jd", 50.0, _extraction([]))
 
         priorities = {s.suggested: s.priority for s in suggestions}
         assert priorities["Add Docker"] == "high"
@@ -504,6 +584,6 @@ class TestLLMPriorityParsing:
             ]
         }
         with patch("app.services.llm_client.call_llm", new=AsyncMock(return_value=mock_response)):
-            suggestions = await generate_llm_suggestions("resume", "jd", 50.0, _extraction([]))
+            suggestions = await generate_llm_suggestions(_make_parsed_resume(), "jd", 50.0, _extraction([]))
 
         assert suggestions[0].priority == "medium"

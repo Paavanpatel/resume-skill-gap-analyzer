@@ -287,7 +287,7 @@ async def run_analysis(
 
         # 8. Generate improvement suggestions (Phase 6)
         suggestions = await generate_suggestions(
-            resume_text=resume_text,
+            parsed_resume=parsed_resume,
             job_description=analysis.job_description,
             match_score=match_score,
             extraction=extraction,

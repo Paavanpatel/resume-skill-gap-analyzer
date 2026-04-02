@@ -29,6 +29,7 @@ from dataclasses import dataclass
 
 from app.services.ats_checker import ATSCheckResult
 from app.services.gap_analyzer import GapAnalysisResult
+from app.services.section_parser import ParsedResume
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
 
@@ -217,9 +218,9 @@ Provide concrete, specific suggestions. Instead of "add more keywords", say exac
 
 SUGGESTION_PROMPT = """Based on the skill gap analysis, provide 3-5 specific resume improvement suggestions.
 
-<resume_text>
-{resume_text}
-</resume_text>
+<resume_sections>
+{resume_sections}
+</resume_sections>
 
 <job_description>
 {job_description}
@@ -252,8 +253,37 @@ Respond with this exact JSON structure:
 }}"""
 
 
+def _build_condensed_resume(parsed_resume: ParsedResume) -> str:
+    """
+    Build a structured, token-efficient resume representation.
+
+    Skills, summary, and education are always included in full — these
+    sections are often buried past the 3,000-char mark of a chronological
+    resume and are critical for accurate suggestions.
+
+    Experience is included but capped at 2,000 chars to limit token usage.
+    Falls back to raw_text[:3000] if none of the target sections are present
+    (e.g. the section parser found only "awards" or "certifications").
+    """
+    parts = []
+
+    for section_name in ("summary", "skills", "education"):
+        content = parsed_resume.get_section(section_name)
+        if content:
+            parts.append(f"[{section_name.title()}]\n{content}")
+
+    experience = parsed_resume.get_section("experience")
+    if experience:
+        parts.append(f"[Experience]\n{experience[:2000]}")
+
+    if not parts:
+        return parsed_resume.raw_text[:3000]
+
+    return "\n\n".join(parts)
+
+
 def build_suggestion_prompt(
-    resume_text: str,
+    parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     matched_skills: list[NormalizedSkill],
@@ -264,7 +294,7 @@ def build_suggestion_prompt(
     missing_str = ", ".join(s.name for s in missing_skills[:15])
 
     return SUGGESTION_PROMPT.format(
-        resume_text=resume_text[:3000],  # Truncate to save tokens
+        resume_sections=_build_condensed_resume(parsed_resume),
         job_description=job_description[:2000],
         match_score=f"{match_score:.0f}",
         matched_skills=matched_str or "None",
@@ -273,7 +303,7 @@ def build_suggestion_prompt(
 
 
 async def generate_llm_suggestions(
-    resume_text: str,
+    parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     extraction: ExtractionResult,
@@ -293,7 +323,7 @@ async def generate_llm_suggestions(
         from app.services.llm_client import call_llm
 
         prompt = build_suggestion_prompt(
-            resume_text=resume_text,
+            parsed_resume=parsed_resume,
             job_description=job_description,
             match_score=match_score,
             matched_skills=extraction.matched_skills,
@@ -340,7 +370,7 @@ async def generate_llm_suggestions(
 
 
 async def generate_suggestions(
-    resume_text: str,
+    parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     extraction: ExtractionResult,
@@ -355,7 +385,7 @@ async def generate_suggestions(
     into a single prioritized list.
 
     Args:
-        resume_text: The parsed resume text.
+        parsed_resume: The parsed resume with identified sections.
         job_description: The target job description.
         match_score: Computed match score from Phase 5.
         extraction: ExtractionResult from Phase 5.
@@ -377,7 +407,7 @@ async def generate_suggestions(
     llm_suggestions = []
     if include_llm:
         llm_suggestions = await generate_llm_suggestions(
-            resume_text=resume_text,
+            parsed_resume=parsed_resume,
             job_description=job_description,
             match_score=match_score,
             extraction=extraction,
