@@ -15,6 +15,7 @@ LLM doesn't need the other's output to do its extraction.
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 
@@ -33,6 +34,16 @@ from app.services.skill_normalizer import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Strips dot-separated language suffixes so "React.js" == "React", "Node.js" == "Node".
+# Only matches a literal dot followed by the suffix to avoid stripping letters from
+# skill names like "TypeScript" or "express".
+_TECH_SUFFIX_RE = re.compile(r'\.(js|ts|py|rb|go)$', re.IGNORECASE)
+
+
+def _strip_tech_suffix(name: str) -> str:
+    """Return the lowercased skill name with common dot-extension variants removed."""
+    return _TECH_SUFFIX_RE.sub('', name.strip()).lower()
 
 
 @dataclass
@@ -250,15 +261,25 @@ async def extract_skills(
     resume_skills = normalizer.normalize(raw_resume_skills, source="resume")
     job_skills = normalizer.normalize(raw_job_skills, source="job_description")
 
-    # Compare: find matches and gaps
+    # Compare: find matches and gaps.
+    # Two-pass matching:
+    #   1. Exact (case-insensitive) canonical name match.
+    #   2. Fuzzy suffix match: strip dot-extensions (.js, .ts, …) so that
+    #      off-taxonomy variants like "React.js" / "React" or "Node.js" / "Node"
+    #      are treated as the same skill.
     resume_skill_names = {s.name.lower() for s in resume_skills}
+    resume_skill_names_stripped = {_strip_tech_suffix(s.name) for s in resume_skills}
 
-    matched_skills = [
-        s for s in job_skills if s.name.lower() in resume_skill_names
-    ]
-    missing_skills = [
-        s for s in job_skills if s.name.lower() not in resume_skill_names
-    ]
+    matched_skills = []
+    missing_skills = []
+    for s in job_skills:
+        job_lower = s.name.lower()
+        if job_lower in resume_skill_names:
+            matched_skills.append(s)
+        elif _strip_tech_suffix(s.name) in resume_skill_names_stripped:
+            matched_skills.append(s)
+        else:
+            missing_skills.append(s)
 
     elapsed_ms = int((time.perf_counter() - start_time) * 1000)
     total_tokens = resume_response.total_tokens + job_response.total_tokens

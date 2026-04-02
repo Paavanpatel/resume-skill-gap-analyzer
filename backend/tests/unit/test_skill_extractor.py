@@ -18,6 +18,7 @@ import pytest
 from app.services.skill_extractor import (
     ExtractionResult,
     _compute_priority,
+    _strip_tech_suffix,
     extract_skills,
 )
 from app.services.skill_normalizer import NormalizedSkill, TaxonomyEntry
@@ -30,6 +31,7 @@ def sample_taxonomy():
         TaxonomyEntry(name="Python", category="programming_language", weight=2.5, aliases=["py"]),
         TaxonomyEntry(name="JavaScript", category="programming_language", weight=2.0, aliases=["js"]),
         TaxonomyEntry(name="React", category="framework", weight=1.8, aliases=["reactjs"]),
+        TaxonomyEntry(name="Node.js", category="framework", weight=1.8, aliases=["nodejs", "node"]),
         TaxonomyEntry(name="Docker", category="devops", weight=1.5, aliases=[]),
         TaxonomyEntry(name="PostgreSQL", category="database", weight=1.8, aliases=["postgres"]),
         TaxonomyEntry(name="AWS", category="devops", weight=2.0, aliases=["amazon web services"]),
@@ -304,3 +306,145 @@ class TestExtractSkillsPipeline:
                     job_description="Some job description.",
                     taxonomy=sample_taxonomy,
                 )
+
+
+class TestStripTechSuffix:
+    """Unit tests for the _strip_tech_suffix helper."""
+
+    def test_strips_dot_js(self):
+        assert _strip_tech_suffix("React.js") == "react"
+
+    def test_strips_dot_ts(self):
+        assert _strip_tech_suffix("Something.ts") == "something"
+
+    def test_strips_dot_py(self):
+        assert _strip_tech_suffix("Script.py") == "script"
+
+    def test_no_suffix(self):
+        assert _strip_tech_suffix("React") == "react"
+
+    def test_no_suffix_typescript(self):
+        """'TypeScript' should NOT be stripped — no dot before 'ts'."""
+        assert _strip_tech_suffix("TypeScript") == "typescript"
+
+    def test_case_insensitive(self):
+        assert _strip_tech_suffix("React.JS") == "react"
+
+    def test_whitespace(self):
+        assert _strip_tech_suffix("  React.js  ") == "react"
+
+
+class TestFuzzyVariantMatching:
+    """Test that common skill name variants match correctly (no false negatives)."""
+
+    @pytest.mark.asyncio
+    async def test_react_vs_react_js(self, sample_taxonomy):
+        """Resume 'React' matches job 'React.js' even though .js isn't a taxonomy alias."""
+        resume_response = _make_llm_response([
+            {"name": "React", "confidence": 0.9, "category": "framework"},
+        ])
+        job_response = _make_llm_response([
+            {"name": "React.js", "confidence": 0.9, "category": "framework", "required": True},
+        ])
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Built UIs with React.",
+                job_description="Must know React.js.",
+                taxonomy=sample_taxonomy,
+            )
+
+        assert len(result.matched_skills) == 1
+        assert len(result.missing_skills) == 0
+
+    @pytest.mark.asyncio
+    async def test_node_vs_node_js(self, sample_taxonomy):
+        """Resume 'Node' matches job 'Node.js' via fuzzy suffix stripping."""
+        # Use a taxonomy without Node so both pass through as unknown skills
+        taxonomy_no_node = [
+            e for e in sample_taxonomy if "node" not in e.name.lower()
+        ]
+        resume_response = _make_llm_response([
+            {"name": "Node", "confidence": 0.85, "category": "framework"},
+        ])
+        job_response = _make_llm_response([
+            {"name": "Node.js", "confidence": 0.85, "category": "framework", "required": True},
+        ])
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Built APIs with Node.",
+                job_description="Requires Node.js experience.",
+                taxonomy=taxonomy_no_node,
+            )
+
+        assert len(result.matched_skills) == 1
+        assert len(result.missing_skills) == 0
+
+    @pytest.mark.asyncio
+    async def test_postgresql_vs_postgres(self, sample_taxonomy):
+        """'PostgreSQL' and 'Postgres' both resolve to canonical 'PostgreSQL' via alias."""
+        resume_response = _make_llm_response([
+            {"name": "PostgreSQL", "confidence": 0.9, "category": "database"},
+        ])
+        job_response = _make_llm_response([
+            {"name": "Postgres", "confidence": 0.9, "category": "database", "required": True},
+        ])
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Used PostgreSQL for storage.",
+                job_description="Requires Postgres.",
+                taxonomy=sample_taxonomy,
+            )
+
+        assert len(result.matched_skills) == 1
+        assert result.matched_skills[0].name == "PostgreSQL"
+        assert len(result.missing_skills) == 0
+
+    @pytest.mark.asyncio
+    async def test_no_false_positives_different_skills(self, sample_taxonomy):
+        """Completely different skills still register as missing."""
+        resume_response = _make_llm_response([
+            {"name": "Python", "confidence": 0.95, "category": "programming_language"},
+        ])
+        job_response = _make_llm_response([
+            {"name": "Go", "confidence": 0.9, "category": "programming_language", "required": True},
+            {"name": "Rust", "confidence": 0.8, "category": "programming_language", "required": False},
+        ])
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Python developer.",
+                job_description="Need Go and Rust.",
+                taxonomy=sample_taxonomy,
+            )
+
+        assert len(result.matched_skills) == 0
+        missing_names = {s.name for s in result.missing_skills}
+        assert missing_names == {"Go", "Rust"}
+
+    @pytest.mark.asyncio
+    async def test_vue_js_vs_vue(self, sample_taxonomy):
+        """Off-taxonomy 'Vue' matches off-taxonomy 'Vue.js' via fuzzy matching."""
+        resume_response = _make_llm_response([
+            {"name": "Vue", "confidence": 0.8, "category": "framework"},
+        ])
+        job_response = _make_llm_response([
+            {"name": "Vue.js", "confidence": 0.8, "category": "framework", "required": True},
+        ])
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Built apps with Vue.",
+                job_description="Requires Vue.js.",
+                taxonomy=sample_taxonomy,
+            )
+
+        assert len(result.matched_skills) == 1
+        assert len(result.missing_skills) == 0
