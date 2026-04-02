@@ -58,6 +58,7 @@ class ScoreExplanation:
     strengths: list[str]
     weaknesses: list[str]
     overall_verdict: str  # "strong_match", "moderate_match", "weak_match", "poor_match"
+    missing_required_count: int = 0  # Number of missing required skills (may cap verdict)
 
     def to_dict(self) -> dict:
         return {
@@ -68,6 +69,7 @@ class ScoreExplanation:
             "strengths": self.strengths,
             "weaknesses": self.weaknesses,
             "overall_verdict": self.overall_verdict,
+            "missing_required_count": self.missing_required_count,
         }
 
 
@@ -236,8 +238,17 @@ def explain_scores(
     # Weaknesses (missing required skills)
     weaknesses = _identify_weaknesses(extraction)
 
-    # Overall verdict
-    verdict = _overall_verdict(match_score, ats_score)
+    # Overall verdict (may be capped if required skills are missing)
+    missing_required_count = sum(1 for s in extraction.missing_skills if s.required is True)
+    verdict = _overall_verdict(match_score, ats_score, missing_required_count)
+
+    if missing_required_count >= 2:
+        skill_word = "skills" if missing_required_count != 1 else "skill"
+        weaknesses.append(
+            f"Missing {missing_required_count} required {skill_word} — verdict capped to {verdict}"
+        )
+    elif missing_required_count == 1:
+        weaknesses.append("Missing 1 required skill — verdict capped to moderate_match")
 
     return ScoreExplanation(
         match_score=match_score,
@@ -247,6 +258,7 @@ def explain_scores(
         strengths=strengths,
         weaknesses=weaknesses,
         overall_verdict=verdict,
+        missing_required_count=missing_required_count,
     )
 
 
@@ -328,22 +340,42 @@ def _identify_weaknesses(extraction: ExtractionResult) -> list[str]:
     return weaknesses[:5]  # Cap at 5
 
 
-def _overall_verdict(match_score: float, ats_score: float) -> str:
+def _overall_verdict(
+    match_score: float,
+    ats_score: float,
+    missing_required_count: int = 0,
+) -> str:
     """
     Compute an overall verdict combining both scores.
 
     The match score is weighted more heavily (70%) because it reflects
     actual skill depth, while ATS (30%) reflects keyword presence.
+
+    Missing required skills cap the verdict regardless of numeric score:
+    - >= 2 missing required skills: capped at "weak_match"
+    - == 1 missing required skill:  capped at "moderate_match"
     """
     combined = (match_score * 0.7) + (ats_score * 0.3)
 
     if combined >= 75:
-        return "strong_match"
-    if combined >= 55:
-        return "moderate_match"
-    if combined >= 35:
-        return "weak_match"
-    return "poor_match"
+        raw = "strong_match"
+    elif combined >= 55:
+        raw = "moderate_match"
+    elif combined >= 35:
+        raw = "weak_match"
+    else:
+        raw = "poor_match"
+
+    if missing_required_count >= 2:
+        verdict_rank = {"strong_match": 3, "moderate_match": 2, "weak_match": 1, "poor_match": 0}
+        cap = "weak_match"
+        return cap if verdict_rank[raw] > verdict_rank[cap] else raw
+    if missing_required_count == 1:
+        verdict_rank = {"strong_match": 3, "moderate_match": 2, "weak_match": 1, "poor_match": 0}
+        cap = "moderate_match"
+        return cap if verdict_rank[raw] > verdict_rank[cap] else raw
+
+    return raw
 
 
 # ── Main entry point ─────────────────────────────────────────────
