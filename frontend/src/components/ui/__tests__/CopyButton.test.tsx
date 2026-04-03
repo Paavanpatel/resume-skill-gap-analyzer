@@ -368,6 +368,34 @@ describe("CopyButton", () => {
     });
   });
 
+  describe("Clipboard fallback", () => {
+    it("uses textarea fallback when clipboard API throws", async () => {
+      // Make clipboard.writeText reject to trigger fallback
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: jest.fn().mockRejectedValue(new Error("not allowed")),
+        },
+      });
+
+      // JSDOM doesn't define execCommand, so we add it manually
+      const execCommandMock = jest.fn().mockReturnValue(true);
+      document.execCommand = execCommandMock;
+
+      render(<CopyButton text="fallback text" />);
+      fireEvent.click(screen.getByRole("button"));
+
+      await waitFor(() => {
+        expect(execCommandMock).toHaveBeenCalledWith("copy");
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("icon-check")).toBeInTheDocument();
+      });
+
+      delete (document as any).execCommand;
+    });
+  });
+
   describe("Accessibility", () => {
     it("is a button element", () => {
       render(<CopyButton text="Copy me" />);
