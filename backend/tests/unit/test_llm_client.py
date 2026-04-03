@@ -13,7 +13,7 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
 from app.services.llm_client import (
-    CircuitBreaker, LLMError, LLMResponse,
+    CircuitBreaker, RedisCircuitBreaker, LLMError, LLMResponse,
     _call_openai, _call_anthropic, call_llm, _circuit_breaker,
 )
 from app.services.prompts import (
@@ -115,6 +115,124 @@ class TestCircuitBreaker:
         assert await cb.should_use_fallback() is True
         await asyncio.sleep(0.15)
         assert await cb.should_use_fallback() is False
+
+
+class _FakeRedis:
+    """Minimal in-memory Redis stand-in for unit tests."""
+
+    def __init__(self):
+        self._store: dict[str, str] = {}
+        self._counts: dict[str, int] = {}
+
+    async def incr(self, key: str) -> int:
+        self._counts[key] = self._counts.get(key, 0) + 1
+        return self._counts[key]
+
+    async def expire(self, key: str, ttl: int) -> None:
+        pass  # TTL not simulated; test_recovery uses real sleep or manual deletion
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+        self._store[key] = value
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def delete(self, *keys: str) -> None:
+        for key in keys:
+            self._store.pop(key, None)
+            self._counts.pop(key, None)
+
+
+class TestRedisCircuitBreaker:
+    """Tests for RedisCircuitBreaker with a fake in-memory Redis."""
+
+    def _make_breaker(self, **kwargs) -> tuple["RedisCircuitBreaker", _FakeRedis]:
+        fake = _FakeRedis()
+        cb = RedisCircuitBreaker(**kwargs)
+        # Inject fake Redis by patching _get_redis on this instance
+        async def _fake_get_redis():
+            return fake
+        cb._get_redis = _fake_get_redis
+        return cb, fake
+
+    @pytest.mark.asyncio
+    async def test_starts_closed(self):
+        cb, _ = self._make_breaker()
+        assert await cb.should_use_fallback() is False
+
+    @pytest.mark.asyncio
+    async def test_trips_after_threshold_failures(self):
+        """After failure_threshold failures the Redis breaker opens."""
+        cb, _ = self._make_breaker(failure_threshold=3)
+        await cb.record_failure()
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is False  # still closed at 2
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is True   # open at 3
+
+    @pytest.mark.asyncio
+    async def test_recovery_after_timeout(self):
+        """After the TTL expires (simulated by deleting the state key), breaker closes."""
+        cb, fake = self._make_breaker(failure_threshold=1)
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is True
+
+        # Simulate Redis TTL expiry: remove the state key
+        await fake.delete(cb._state_key())
+        assert await cb.should_use_fallback() is False
+
+    @pytest.mark.asyncio
+    async def test_success_resets(self):
+        cb, _ = self._make_breaker(failure_threshold=2)
+        await cb.record_failure()
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is True
+        await cb.record_success()
+        assert await cb.should_use_fallback() is False
+
+    @pytest.mark.asyncio
+    async def test_redis_unavailable_falls_back_to_in_process(self):
+        """When Redis is down, falls back to in-process CircuitBreaker."""
+        cb = RedisCircuitBreaker(failure_threshold=3)
+
+        # _get_redis returns None → Redis unavailable
+        async def _no_redis():
+            return None
+        cb._get_redis = _no_redis
+
+        await cb.record_failure()
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is False  # in-process: 2 < threshold
+
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is True   # in-process: 3 >= threshold
+
+    @pytest.mark.asyncio
+    async def test_redis_error_falls_back_to_in_process(self):
+        """Redis raising an exception is treated the same as unavailable."""
+        cb = RedisCircuitBreaker(failure_threshold=2)
+
+        class _BrokenRedis:
+            async def incr(self, key):
+                raise ConnectionError("Redis is gone")
+            async def expire(self, key, ttl):
+                raise ConnectionError("Redis is gone")
+            async def set(self, key, value, ex=None):
+                raise ConnectionError("Redis is gone")
+            async def get(self, key):
+                raise ConnectionError("Redis is gone")
+            async def delete(self, *keys):
+                raise ConnectionError("Redis is gone")
+
+        async def _broken_redis():
+            return _BrokenRedis()
+
+        cb._get_redis = _broken_redis
+
+        # Failures fall through to in-process breaker
+        await cb.record_failure()
+        await cb.record_failure()
+        assert await cb.should_use_fallback() is True
 
 
 class TestCallOpenAI:

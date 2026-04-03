@@ -136,6 +136,24 @@ class ParsedResume:
             "word_count": self.word_count,
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "ParsedResume":
+        """Reconstruct a ParsedResume from a dict produced by to_dict()."""
+        sections = [
+            ParsedSection(
+                name=s["name"],
+                content=s["content"],
+                line_start=s["line_start"],
+                line_end=s["line_end"],
+            )
+            for s in data.get("sections", [])
+        ]
+        return cls(
+            sections=sections,
+            raw_text=data.get("raw_text", ""),
+            word_count=data.get("word_count", 0),
+        )
+
     def get_section(self, name: str) -> str | None:
         """Get the content of a named section, or None if not found."""
         for section in self.sections:

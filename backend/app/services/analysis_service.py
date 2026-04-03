@@ -33,7 +33,7 @@ from app.repositories.resume_repo import ResumeRepository
 from app.repositories.skill_repo import SkillRepository
 from app.services.ats_checker import check_ats_compatibility
 from app.services.gap_analyzer import analyze_gap
-from app.services.section_parser import parse_sections
+from app.services.section_parser import parse_sections, ParsedResume
 from app.services.skill_extractor import extract_skills, ExtractionResult
 from app.services.skill_normalizer import build_taxonomy_index
 from app.services.suggestion_engine import generate_suggestions
@@ -276,7 +276,13 @@ async def run_analysis(
         gap_result = analyze_gap(extraction, match_score, ats_score)
 
         # 7. Run ATS formatting checks (Phase 6)
-        parsed_resume = parse_sections(resume_text)
+        # Use stored parsed_sections from upload to avoid double-parsing and
+        # ensure consistency (the upload and analysis always use the same parse).
+        # Fall back to re-parsing for legacy records that pre-date this field.
+        if resume.parsed_sections:
+            parsed_resume = ParsedResume.from_dict(json.loads(resume.parsed_sections))
+        else:
+            parsed_resume = parse_sections(resume_text)
         ats_result = check_ats_compatibility(parsed_resume)
 
         # Publish: gap analysis done, generating suggestions

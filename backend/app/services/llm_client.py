@@ -142,8 +142,102 @@ class CircuitBreaker:
             return True  # Still in cooldown, use fallback
 
 
-# Module-level circuit breaker (shared across requests)
-_circuit_breaker = CircuitBreaker()
+class RedisCircuitBreaker:
+    """
+    Redis-backed circuit breaker shared across all Celery workers / processes.
+
+    Solves the per-process isolation problem: with a plain in-memory
+    CircuitBreaker, each worker has its own state, so worker-1 can trip
+    while workers 2–4 keep hammering the failing provider. This class
+    stores state in Redis so every worker sees the same picture.
+
+    Redis key layout (per provider name):
+      circuit_breaker:{provider}:failures  — INCR counter; auto-expires
+      circuit_breaker:{provider}:state     — "open" string with TTL = recovery_timeout
+        → when TTL expires the key disappears, which is the auto-recovery signal
+
+    Graceful degradation: if Redis is unavailable (down, network issue),
+    all operations fall through to an in-process CircuitBreaker so LLM
+    calls are never blocked by a Redis failure.
+    """
+
+    def __init__(
+        self,
+        provider: str = "primary",
+        failure_threshold: int = 3,
+        recovery_timeout_seconds: float = 60.0,
+    ):
+        self._provider = provider
+        self._failure_threshold = failure_threshold
+        self._recovery_timeout = recovery_timeout_seconds
+        # In-process fallback used when Redis is unavailable
+        self._fallback = CircuitBreaker(failure_threshold, recovery_timeout_seconds)
+
+    def _failures_key(self) -> str:
+        return f"circuit_breaker:{self._provider}:failures"
+
+    def _state_key(self) -> str:
+        return f"circuit_breaker:{self._provider}:state"
+
+    async def _get_redis(self):
+        """Lazily resolve the Redis client; returns None if unavailable."""
+        try:
+            from app.core.dependencies import get_redis  # lazy to avoid circular import
+            return await get_redis()
+        except Exception:
+            return None
+
+    async def record_success(self) -> None:
+        """Reset circuit breaker: delete both Redis keys and the in-process fallback."""
+        redis = await self._get_redis()
+        if redis is not None:
+            try:
+                await redis.delete(self._failures_key(), self._state_key())
+            except Exception as e:
+                logger.warning("RedisCircuitBreaker.record_success failed: %s", e)
+        # Always reset the in-process fallback so its state stays consistent
+        # if Redis was previously unavailable and accumulated failures.
+        await self._fallback.record_success()
+
+    async def record_failure(self) -> None:
+        """Increment failure count; trip to open state when threshold reached."""
+        redis = await self._get_redis()
+        if redis is not None:
+            try:
+                count = await redis.incr(self._failures_key())
+                # Keep failures key alive 3× longer than the open window for diagnostics
+                await redis.expire(self._failures_key(), int(self._recovery_timeout * 3))
+                if count >= self._failure_threshold:
+                    await redis.set(
+                        self._state_key(), "open", ex=int(self._recovery_timeout)
+                    )
+                    logger.warning(
+                        "Circuit breaker TRIPPED (Redis) after %d failures. "
+                        "Switching to fallback provider for %ds.",
+                        count,
+                        self._recovery_timeout,
+                    )
+                return
+            except Exception as e:
+                logger.warning("RedisCircuitBreaker.record_failure failed: %s", e)
+        await self._fallback.record_failure()
+
+    async def should_use_fallback(self) -> bool:
+        """Return True if the state key exists and equals 'open' in Redis."""
+        redis = await self._get_redis()
+        if redis is not None:
+            try:
+                state = await redis.get(self._state_key())
+                return state == "open"
+            except Exception as e:
+                logger.warning("RedisCircuitBreaker.should_use_fallback failed: %s", e)
+        return await self._fallback.should_use_fallback()
+
+
+# Module-level circuit breaker — shared across requests in this process.
+# RedisCircuitBreaker additionally shares state across all Celery worker
+# processes via Redis, eliminating the per-process isolation problem.
+_circuit_breaker = RedisCircuitBreaker()
 
 
 async def _call_openai(

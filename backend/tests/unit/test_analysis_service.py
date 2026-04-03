@@ -413,6 +413,7 @@ class TestRunAnalysis:
 
         mock_resume = MagicMock()
         mock_resume.raw_text = "Experienced Python developer with 5 years of experience building web applications and REST APIs. " * 3
+        mock_resume.parsed_sections = None
 
         extraction = self._make_mock_extraction()
 
@@ -534,6 +535,7 @@ class TestRunAnalysis:
 
         mock_resume = MagicMock()
         mock_resume.raw_text = "Python developer with extensive experience in building web applications and REST APIs. " * 3
+        mock_resume.parsed_sections = None
 
         extraction = self._make_mock_extraction()
 
@@ -565,3 +567,94 @@ class TestRunAnalysis:
             await run_analysis(analysis_id, mock_session, redis_client=mock_redis)
 
         mock_load.assert_called_once_with(mock_session, mock_redis)
+
+    @pytest.mark.asyncio
+    async def test_uses_stored_parsed_sections_when_available(self):
+        """run_analysis uses resume.parsed_sections and does NOT call parse_sections."""
+        mock_session = AsyncMock()
+        mock_session.flush = AsyncMock()
+        analysis_id = uuid4()
+
+        mock_analysis = MagicMock()
+        mock_analysis.resume_id = uuid4()
+        mock_analysis.job_description = "Python developer needed"
+
+        mock_resume = MagicMock()
+        mock_resume.raw_text = "Python developer with extensive experience in building web applications. " * 3
+        mock_resume.parsed_sections = json.dumps({
+            "sections": [{"name": "skills", "content": "Python", "line_start": 0, "line_end": 1}],
+            "word_count": 50,
+        })
+
+        extraction = self._make_mock_extraction()
+        mock_gap_result = MagicMock()
+        mock_gap_result.category_breakdowns = []
+        mock_gap_result.score_explanation = MagicMock()
+        mock_gap_result.score_explanation.to_dict.return_value = {}
+        mock_ats_result = MagicMock()
+        mock_ats_result.format_score = 80.0
+        mock_ats_result.to_dict.return_value = {}
+
+        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
+             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo, \
+             patch("app.services.analysis_service._load_taxonomy", new_callable=AsyncMock, return_value=[]), \
+             patch("app.services.analysis_service.extract_skills", new_callable=AsyncMock, return_value=extraction), \
+             patch("app.services.analysis_service.analyze_gap", return_value=mock_gap_result), \
+             patch("app.services.analysis_service.parse_sections") as mock_parse, \
+             patch("app.services.analysis_service.check_ats_compatibility", return_value=mock_ats_result), \
+             patch("app.services.analysis_service.generate_suggestions", new_callable=AsyncMock, return_value=[]):
+
+            analysis_repo = MockAnalysisRepo.return_value
+            analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
+            analysis_repo.update = AsyncMock(return_value=MagicMock())
+
+            resume_repo = MockResumeRepo.return_value
+            resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
+
+            await run_analysis(analysis_id, mock_session)
+
+        mock_parse.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_parse_sections_when_stored_sections_missing(self):
+        """run_analysis calls parse_sections when resume.parsed_sections is None."""
+        mock_session = AsyncMock()
+        mock_session.flush = AsyncMock()
+        analysis_id = uuid4()
+
+        mock_analysis = MagicMock()
+        mock_analysis.resume_id = uuid4()
+        mock_analysis.job_description = "Python developer needed"
+
+        mock_resume = MagicMock()
+        mock_resume.raw_text = "Python developer with extensive experience in building web applications. " * 3
+        mock_resume.parsed_sections = None
+
+        extraction = self._make_mock_extraction()
+        mock_gap_result = MagicMock()
+        mock_gap_result.category_breakdowns = []
+        mock_gap_result.score_explanation = MagicMock()
+        mock_gap_result.score_explanation.to_dict.return_value = {}
+        mock_ats_result = MagicMock()
+        mock_ats_result.format_score = 80.0
+        mock_ats_result.to_dict.return_value = {}
+
+        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
+             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo, \
+             patch("app.services.analysis_service._load_taxonomy", new_callable=AsyncMock, return_value=[]), \
+             patch("app.services.analysis_service.extract_skills", new_callable=AsyncMock, return_value=extraction), \
+             patch("app.services.analysis_service.analyze_gap", return_value=mock_gap_result), \
+             patch("app.services.analysis_service.parse_sections", return_value=MagicMock()) as mock_parse, \
+             patch("app.services.analysis_service.check_ats_compatibility", return_value=mock_ats_result), \
+             patch("app.services.analysis_service.generate_suggestions", new_callable=AsyncMock, return_value=[]):
+
+            analysis_repo = MockAnalysisRepo.return_value
+            analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
+            analysis_repo.update = AsyncMock(return_value=MagicMock())
+
+            resume_repo = MockResumeRepo.return_value
+            resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
+
+            await run_analysis(analysis_id, mock_session)
+
+        mock_parse.assert_called_once_with(mock_resume.raw_text)
