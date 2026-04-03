@@ -283,7 +283,7 @@ async def test_refresh_with_cookie(test_client, mock_user, mock_db_session):
         # Send refresh token via cookie
         response = await client.post(
             "/api/v1/auth/refresh",
-            cookies={"refresh_token": "old_refresh_token"},
+            headers={"Cookie": "refresh_token=old_refresh_token"},
         )
 
     assert response.status_code == 200
@@ -322,7 +322,7 @@ async def test_refresh_invalid_token(test_client):
 
         response = await client.post(
             "/api/v1/auth/refresh",
-            cookies={"refresh_token": "invalid_token"},
+            headers={"Cookie": "refresh_token=invalid_token"},
         )
 
     assert response.status_code == 401
@@ -340,8 +340,10 @@ async def test_logout(test_client, mock_user, access_token):
 
         response = await client.post(
             "/api/v1/auth/logout",
-            headers={"Authorization": f"Bearer {access_token}"},
-            cookies={"refresh_token": "refresh_token_value"},
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Cookie": "refresh_token=refresh_token_value",
+            },
         )
 
     assert response.status_code == 200

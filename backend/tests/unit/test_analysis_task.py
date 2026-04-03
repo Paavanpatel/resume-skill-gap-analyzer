@@ -12,7 +12,7 @@ avoids the need for a broker while still exercising the actual task body.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.core.exceptions import NotFoundError, ParsingError, ValidationError
 from app.workers.analysis_task import run_skill_gap_analysis, NON_RETRIABLE
@@ -53,7 +53,7 @@ class TestNonRetriableErrors:
     def test_fails_immediately(self, exc_class):
         exc = exc_class("test") if exc_class is KeyError else exc_class("test error")
 
-        with patch("app.workers.analysis_task.asyncio.run", side_effect=exc):
+        with patch("app.workers.analysis_task._run_analysis", new=AsyncMock(side_effect=exc)):
             mock_retry, raised = _run_task("some-analysis-id")
 
         assert type(raised) is exc_class
@@ -62,7 +62,7 @@ class TestNonRetriableErrors:
     def test_not_found_error_no_retry(self):
         exc = NotFoundError("Analysis record not found", resource_type="Analysis")
 
-        with patch("app.workers.analysis_task.asyncio.run", side_effect=exc):
+        with patch("app.workers.analysis_task._run_analysis", new=AsyncMock(side_effect=exc)):
             mock_retry, raised = _run_task("missing-id")
 
         assert isinstance(raised, NotFoundError)
@@ -71,7 +71,7 @@ class TestNonRetriableErrors:
     def test_parsing_error_no_retry(self):
         exc = ParsingError("Resume PDF could not be parsed")
 
-        with patch("app.workers.analysis_task.asyncio.run", side_effect=exc):
+        with patch("app.workers.analysis_task._run_analysis", new=AsyncMock(side_effect=exc)):
             mock_retry, raised = _run_task("some-analysis-id")
 
         assert isinstance(raised, ParsingError)
@@ -84,7 +84,7 @@ class TestRetriableErrors:
     def test_connection_error_retries(self):
         exc = ConnectionError("LLM API unreachable")
 
-        with patch("app.workers.analysis_task.asyncio.run", side_effect=exc):
+        with patch("app.workers.analysis_task._run_analysis", new=AsyncMock(side_effect=exc)):
             mock_retry, raised = _run_task("some-analysis-id", retries=0)
 
         # retry() itself raises (our mock raises "Retry"), so raised should be that
@@ -97,7 +97,7 @@ class TestRetriableErrors:
     def test_os_error_retries(self):
         exc = OSError("Temporary I/O failure")
 
-        with patch("app.workers.analysis_task.asyncio.run", side_effect=exc):
+        with patch("app.workers.analysis_task._run_analysis", new=AsyncMock(side_effect=exc)):
             mock_retry, raised = _run_task("some-analysis-id", retries=0)
 
         mock_retry.assert_called_once()
@@ -106,7 +106,7 @@ class TestRetriableErrors:
         """On the second attempt (retries=1), countdown should be 2x the first."""
         exc = ConnectionError("Still unreachable")
 
-        with patch("app.workers.analysis_task.asyncio.run", side_effect=exc):
+        with patch("app.workers.analysis_task._run_analysis", new=AsyncMock(side_effect=exc)):
             mock_retry, _ = _run_task("some-analysis-id", retries=1)
 
         _, kwargs = mock_retry.call_args

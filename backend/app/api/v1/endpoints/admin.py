@@ -15,7 +15,7 @@ Endpoints:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -238,7 +238,7 @@ async def get_analytics(
     days: int = Query(30, ge=1, le=365),
 ):
     """Aggregated KPIs for the admin dashboard."""
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
 
     # User counts
     total_users = (await session.execute(select(func.count()).select_from(User))).scalar_one()
@@ -487,6 +487,6 @@ async def sweep_stale_analyses_endpoint(
 
     return {
         "swept_count": swept_count,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "message": f"Marked {swept_count} stale analyses as failed.",
     }
