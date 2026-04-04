@@ -1,8 +1,12 @@
-# ── Environment ───────────────────────────────────────────────
+# ── Environment (never commit secrets) ────────────────────────
 .env
-.env.local
-.env.production
-package*.json
+.env.*
+!.env.example
+!.env.production.example
+
+# ── Root dev-only package files ──────────────────────────────
+/package.json
+/package-lock.json
 
 # ── Python ───────────────────────────────────────────────────
 __pycache__/
@@ -29,6 +33,7 @@ out/
 *.swo
 *~
 .DS_Store
+Thumbs.db
 
 # ── Docker ───────────────────────────────────────────────────
 docker-compose.override.yml
@@ -51,10 +56,12 @@ logs/
 # ── Test / Coverage ──────────────────────────────────────────
 .coverage
 htmlcov/
-.pytest_cache/*
-backend/.pytest_cache/*
+.pytest_cache/
+backend/.pytest_cache/
 coverage/
 .nyc_output/
 
-# ── Test / Coverage ──────────────────────────────────────────
+# ── Internal docs (dev-only) ────────────────────────────────
 BACKEND_*.md
+PRD.md
+nginx/
