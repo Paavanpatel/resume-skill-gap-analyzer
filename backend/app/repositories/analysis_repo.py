@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models.analysis import Analysis
-from app.models.roadmap import Roadmap
 from app.repositories.base import BaseRepository
 
 

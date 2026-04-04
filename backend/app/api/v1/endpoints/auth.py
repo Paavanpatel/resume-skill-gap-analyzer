@@ -18,7 +18,7 @@ Design decisions:
 
 import logging
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,7 +36,6 @@ from app.schemas.user import (
     ProfileUpdateRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
-    TokenResponse,
     UserCreate,
     UserLogin,
     UserResponse,
@@ -44,7 +43,6 @@ from app.schemas.user import (
 )
 from app.services.auth_service import (
     delete_account,
-    get_user_profile,
     login_user,
     logout_user,
     refresh_tokens,

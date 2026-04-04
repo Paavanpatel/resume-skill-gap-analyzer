@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError, AuthorizationError, ErrorCode, RateLimitError
 from app.core.security import decode_token
-from app.db.session import get_db_session, get_read_db_session
+from app.db.session import get_db_session
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
 

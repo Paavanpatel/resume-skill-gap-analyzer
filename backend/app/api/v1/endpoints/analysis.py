@@ -28,7 +28,6 @@ from app.core.dependencies import CurrentUser
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.tier_guard import enforce_analysis_quota
 from app.db.session import get_db_session, get_read_db_session
-from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.analysis import (

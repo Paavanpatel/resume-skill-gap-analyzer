@@ -126,7 +126,7 @@ async def parse_and_persist(
     resume = await repo.get_by_id(resume_id)
     if resume is None:
         raise NotFoundError(
-            message=f"Resume not found.",
+            message="Resume not found.",
             resource_type="resume",
             resource_id=str(resume_id),
         )

@@ -154,7 +154,7 @@ async def _sweep() -> dict:
     """Async implementation that wraps the existing sweep service."""
     from datetime import timedelta
 
-    from sqlalchemy import and_, select, update
+    from sqlalchemy import and_, update
 
     from app.db.session import WriteSession
     from app.models.analysis import Analysis, AnalysisStatus

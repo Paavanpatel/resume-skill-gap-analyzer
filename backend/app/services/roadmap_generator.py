@@ -19,7 +19,7 @@ app" -- it personalizes the path based on what the candidate already knows.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from math import ceil
 from uuid import UUID
 

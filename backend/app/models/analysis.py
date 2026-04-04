@@ -8,11 +8,20 @@ The matched_skills, missing_skills, and suggestions fields use JSONB
 to store variable-structure data without needing extra join tables.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.resume import Resume
+    from app.models.roadmap import Roadmap
+    from app.models.user import User
 
 
 class Analysis(Base, UUIDMixin, TimestampMixin):

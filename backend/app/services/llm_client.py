@@ -21,7 +21,7 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -69,7 +69,7 @@ class LLMResponse:
         if text.startswith("```"):
             lines = text.split("\n")
             # Remove first line (```json) and last line (```)
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [line for line in lines if not line.strip().startswith("```")]
             text = "\n".join(lines).strip()
 
         try:
@@ -77,7 +77,7 @@ class LLMResponse:
         except json.JSONDecodeError as e:
             logger.warning("Failed to parse LLM JSON response: %s", e)
             raise LLMError(
-                f"AI returned invalid JSON. This is usually transient -- please retry."
+                "AI returned invalid JSON. This is usually transient -- please retry."
             ) from e
 
 
@@ -385,8 +385,6 @@ async def call_llm(
             (settings.ai_fallback_provider, None),
         ]
 
-    last_error: Exception | None = None
-
     for provider_name, _ in providers:
         try:
             if provider_name == "openai":
@@ -429,7 +427,6 @@ async def call_llm(
             # API errors (status codes, bad JSON) SHOULD try fallback.
             if "not configured" in str(e):
                 raise
-            last_error = e
             await _circuit_breaker.record_failure()
             logger.warning(
                 "LLM provider '%s' returned error: %s. Trying fallback...",
@@ -438,7 +435,6 @@ async def call_llm(
             )
             continue
         except Exception as e:
-            last_error = e
             await _circuit_breaker.record_failure()
             logger.warning(
                 "LLM provider '%s' failed: %s. Trying fallback...",

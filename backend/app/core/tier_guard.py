@@ -15,14 +15,10 @@ Usage in endpoints:
         ...
 """
 
-from typing import Annotated
-
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
-from app.core.exceptions import AuthorizationError, ErrorCode, AppError
-from app.db.session import get_db_session
+from app.core.exceptions import ErrorCode, AppError
 from app.models.user import User
 
 # ── Tier ordering ─────────────────────────────────────────────

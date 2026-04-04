@@ -5,11 +5,20 @@ Stores account credentials and profile information.
 One user can have many resumes and analyses.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.analysis import Analysis
+    from app.models.resume import Resume
+    from app.models.usage import UsageRecord
 
 
 class User(Base, UUIDMixin, TimestampMixin):

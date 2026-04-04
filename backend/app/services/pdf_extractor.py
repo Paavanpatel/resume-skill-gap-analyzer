@@ -13,7 +13,6 @@ That's out of scope for the MVP but the architecture supports adding
 Tesseract OCR as a fallback later.
 """
 
-import io
 import logging
 
 import fitz  # PyMuPDF

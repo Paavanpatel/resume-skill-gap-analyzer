@@ -24,7 +24,6 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.exceptions import (
     AppError,
-    DatabaseError,
     ErrorCode,
     ErrorDetail,
     ErrorResponse,

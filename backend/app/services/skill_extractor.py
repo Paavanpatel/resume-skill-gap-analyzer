@@ -30,7 +30,6 @@ from app.services.skill_normalizer import (
     NormalizedSkill,
     SkillNormalizer,
     TaxonomyEntry,
-    build_taxonomy_index,
 )
 
 logger = logging.getLogger(__name__)

@@ -21,7 +21,7 @@ full resume text as context.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.services.gap_analyzer import GapAnalysisResult
 from app.services.skill_extractor import ExtractionResult

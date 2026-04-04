@@ -22,10 +22,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
-from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
-from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.resume import PaginatedResumeResponse, ResumeParseResponse, ResumeUploadResponse
 from app.services.file_storage import delete_file, save_upload

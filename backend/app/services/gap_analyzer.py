@@ -12,7 +12,7 @@ This makes it fast, deterministic, and trivially testable.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
@@ -205,7 +205,6 @@ def explain_scores(
     # Match score explanation
     total_job = len(extraction.job_skills)
     total_matched = len(extraction.matched_skills)
-    total_missing = len(extraction.missing_skills)
 
     match_summary = (
         f"Your resume matches {total_matched} of {total_job} skills "

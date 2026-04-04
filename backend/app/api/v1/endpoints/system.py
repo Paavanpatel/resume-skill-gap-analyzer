@@ -15,7 +15,7 @@ import logging
 import time
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import PlainTextResponse
 
 from app.core.dependencies import require_role
 from app.core.log_buffer import LogBuffer

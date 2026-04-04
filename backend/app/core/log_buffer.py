@@ -16,7 +16,6 @@ Limitations:
 - No persistence; not a replacement for production log shipping
 """
 
-import json
 import logging
 import threading
 import time

@@ -23,13 +23,11 @@ from uuid import UUID
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import decode_token
 from app.db.session import ReadSession
 from app.repositories.analysis_repo import AnalysisRepository
-from app.repositories.user_repo import UserRepository
 
 logger = logging.getLogger(__name__)
 

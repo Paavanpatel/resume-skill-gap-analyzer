@@ -8,11 +8,18 @@ The phases field uses JSONB to store the week-by-week learning plan
 with variable structure (different numbers of weeks, objectives, resources).
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.analysis import Analysis
 
 
 class Roadmap(Base, UUIDMixin, TimestampMixin):

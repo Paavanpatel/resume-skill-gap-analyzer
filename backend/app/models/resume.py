@@ -6,13 +6,20 @@ The actual file lives in object storage (S3/local);
 this table holds the path reference and parsed text cache.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.analysis import Analysis
+    from app.models.user import User
 
 
 class Resume(Base, UUIDMixin, TimestampMixin):
