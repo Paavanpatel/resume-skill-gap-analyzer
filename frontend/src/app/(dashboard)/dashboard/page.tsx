@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import usePageTitle from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import {
   Upload,
   FileText,
@@ -40,12 +40,13 @@ export default function DashboardPage() {
 
   // Check quota once on mount
   useEffect(() => {
-    getUsageSummary().then((u) => {
-      if (u.analyses.used >= u.analyses.limit && u.tier !== "enterprise") {
-        setQuotaReached(true);
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    getUsageSummary()
+      .then((u) => {
+        if (u.analyses.used >= u.analyses.limit && u.tier !== "enterprise") {
+          setQuotaReached(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Wizard step: 0=upload, 1=describe, 2=review
@@ -82,8 +83,7 @@ export default function DashboardPage() {
   }, []);
 
   // ── Step validation ──
-  const canAdvanceToReview =
-    resumeId && jobDescription.length >= 50;
+  const canAdvanceToReview = resumeId && jobDescription.length >= 50;
 
   // ── Submit ──
   async function handleConfirmSubmit() {
@@ -92,12 +92,7 @@ export default function DashboardPage() {
     setError("");
     setIsSubmitting(true);
     try {
-      const result = await submitAnalysis(
-        resumeId,
-        jobDescription,
-        jobTitle,
-        jobCompany
-      );
+      const result = await submitAnalysis(resumeId, jobDescription, jobTitle, jobCompany);
       track(result.job_id, jobTitle || fileName || "Resume Analysis");
       setSubmittedJobId(result.job_id);
       setStep(3); // submitted state
@@ -138,13 +133,11 @@ export default function DashboardPage() {
             Analysis Submitted!
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
-            Your analysis is processing in the background. The floating tracker
-            in the bottom-right will notify you when results are ready.
+            Your analysis is processing in the background. The floating tracker in the bottom-right
+            will notify you when results are ready.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button
-              onClick={() => router.push(`/analysis/${submittedJobId}`)}
-            >
+            <Button onClick={() => router.push(`/analysis/${submittedJobId}`)}>
               <ArrowRight className="h-4 w-4" />
               View Progress
             </Button>
@@ -169,9 +162,8 @@ export default function DashboardPage() {
             Monthly Limit Reached
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
-            You&apos;ve used all your analyses for this month. Upgrade to Pro
-            for 50 analyses/month and unlock AI Roadmap, Advisor, and PDF
-            Export.
+            You&apos;ve used all your analyses for this month. Upgrade to Pro for 50 analyses/month
+            and unlock AI Roadmap, Advisor, and PDF Export.
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <Link
@@ -201,93 +193,188 @@ export default function DashboardPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          New Analysis
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">New Analysis</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Upload your resume and paste a job description to see how well you
-          match.
+          Upload your resume and paste a job description to see how well you match.
         </p>
       </div>
 
       {/* Progress stepper */}
-      <ProgressSteps
-        steps={WIZARD_STEPS}
-        currentStep={step}
-      />
+      <ProgressSteps steps={WIZARD_STEPS} currentStep={step} />
 
       {/* ── Step Content (with directional transition) ── */}
       <WizardTransition step={step}>
-
-      {/* ── Step 0: Choose Resume ── */}
-      {step === 0 && (
-        <div className="space-y-4" data-testid="step-upload">
-          <div className="flex items-center gap-2 mb-2">
-            <Upload className="h-5 w-5 text-primary-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Choose Resume
-            </h2>
-          </div>
-          <ResumePicker
-            onFileAccepted={handleFileAccepted}
-            onSelect={(id, name) => {
-              setResumeId(id);
-              setFileName(name);
-              setStep(1);
-            }}
-            selectedResumeId={resumeId}
-            isUploading={isUploading}
-            uploadError={error}
-          />
-        </div>
-      )}
-
-      {/* ── Step 1: Describe the Job ── */}
-      {step === 1 && (
-        <div className="space-y-6" data-testid="step-describe">
-          {/* Uploaded file summary */}
-          <FileUploadZone
-            onFileAccepted={handleFileAccepted}
-            uploadedFileName={fileName}
-            isUploading={false}
-            onRemove={() => {
-              setStep(0);
-              setResumeId(null);
-              setFileName("");
-            }}
-          />
-
-          {/* Job details */}
-          <div className="space-y-4">
+        {/* ── Step 0: Choose Resume ── */}
+        {step === 0 && (
+          <div className="space-y-4" data-testid="step-upload">
             <div className="flex items-center gap-2 mb-2">
-              <Briefcase className="h-5 w-5 text-primary-500" />
+              <Upload className="h-5 w-5 text-primary-500" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Job Description
+                Choose Resume
+              </h2>
+            </div>
+            <ResumePicker
+              onFileAccepted={handleFileAccepted}
+              onSelect={(id, name) => {
+                setResumeId(id);
+                setFileName(name);
+                setStep(1);
+              }}
+              selectedResumeId={resumeId}
+              isUploading={isUploading}
+              uploadError={error}
+            />
+          </div>
+        )}
+
+        {/* ── Step 1: Describe the Job ── */}
+        {step === 1 && (
+          <div className="space-y-6" data-testid="step-describe">
+            {/* Uploaded file summary */}
+            <FileUploadZone
+              onFileAccepted={handleFileAccepted}
+              uploadedFileName={fileName}
+              isUploading={false}
+              onRemove={() => {
+                setStep(0);
+                setResumeId(null);
+                setFileName("");
+              }}
+            />
+
+            {/* Job details */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Briefcase className="h-5 w-5 text-primary-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Job Description
+                </h2>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Job title"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g. Senior Backend Engineer"
+                />
+                <Input
+                  label="Company"
+                  value={jobCompany}
+                  onChange={(e) => setJobCompany(e.target.value)}
+                  placeholder="e.g. Acme Corp"
+                />
+              </div>
+
+              <JobDescriptionInput
+                value={jobDescription}
+                onChange={setJobDescription}
+                minLength={50}
+              />
+
+              {/* Error from submission attempt */}
+              {error && (
+                <div
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg p-3 text-sm",
+                    "bg-danger-50 dark:bg-danger-900/30",
+                    "text-danger-700 dark:text-danger-300",
+                    "border border-danger-200 dark:border-danger-700",
+                    "animate-slide-up"
+                  )}
+                >
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setStep(0)}>
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                className="flex-1"
+                size="lg"
+                disabled={!canAdvanceToReview}
+                onClick={() => {
+                  setError("");
+                  setStep(2);
+                }}
+              >
+                Review & Submit
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Review & Confirm ── */}
+        {step === 2 && (
+          <div className="space-y-6" data-testid="step-review">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-primary-500" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Review Your Analysis
               </h2>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="Job title"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="e.g. Senior Backend Engineer"
-              />
-              <Input
-                label="Company"
-                value={jobCompany}
-                onChange={(e) => setJobCompany(e.target.value)}
-                placeholder="e.g. Acme Corp"
-              />
+            {/* Summary card */}
+            <div
+              className={cn(
+                "rounded-xl border border-gray-200 dark:border-surface-700",
+                "bg-white dark:bg-surface-800 p-6 space-y-4"
+              )}
+            >
+              {/* Resume */}
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30">
+                  <FileText className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    Resume
+                  </p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{fileName}</p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-surface-700" />
+
+              {/* Job info */}
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-900/30">
+                  <Briefcase className="h-5 w-5 text-accent-600 dark:text-accent-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    Target Position
+                  </p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {jobTitle || "Not specified"}
+                    {jobCompany ? ` at ${jobCompany}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-surface-700" />
+
+              {/* JD preview */}
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
+                  Job Description Preview
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">
+                  {jobDescription}
+                </p>
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  {jobDescription.length} characters
+                </p>
+              </div>
             </div>
 
-            <JobDescriptionInput
-              value={jobDescription}
-              onChange={setJobDescription}
-              minLength={50}
-            />
-
-            {/* Error from submission attempt */}
+            {/* Error */}
             {error && (
               <div
                 className={cn(
@@ -301,133 +388,25 @@ export default function DashboardPage() {
                 {error}
               </div>
             )}
-          </div>
 
-          {/* Navigation */}
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setStep(0)}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <Button
-              className="flex-1"
-              size="lg"
-              disabled={!canAdvanceToReview}
-              onClick={() => {
-                setError("");
-                setStep(2);
-              }}
-            >
-              Review & Submit
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 2: Review & Confirm ── */}
-      {step === 2 && (
-        <div className="space-y-6" data-testid="step-review">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-5 w-5 text-primary-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Review Your Analysis
-            </h2>
-          </div>
-
-          {/* Summary card */}
-          <div
-            className={cn(
-              "rounded-xl border border-gray-200 dark:border-surface-700",
-              "bg-white dark:bg-surface-800 p-6 space-y-4"
-            )}
-          >
-            {/* Resume */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30">
-                <FileText className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  Resume
-                </p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {fileName}
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 dark:border-surface-700" />
-
-            {/* Job info */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-900/30">
-                <Briefcase className="h-5 w-5 text-accent-600 dark:text-accent-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  Target Position
-                </p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {jobTitle || "Not specified"}
-                  {jobCompany ? ` at ${jobCompany}` : ""}
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 dark:border-surface-700" />
-
-            {/* JD preview */}
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
-                Job Description Preview
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">
-                {jobDescription}
-              </p>
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                {jobDescription.length} characters
-              </p>
+            {/* Navigation */}
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                <ArrowLeft className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button
+                className="flex-1"
+                size="lg"
+                isLoading={isSubmitting}
+                onClick={() => setShowConfirmModal(true)}
+              >
+                <Sparkles className="h-4 w-4" />
+                Analyze My Resume
+              </Button>
             </div>
           </div>
-
-          {/* Error */}
-          {error && (
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-lg p-3 text-sm",
-                "bg-danger-50 dark:bg-danger-900/30",
-                "text-danger-700 dark:text-danger-300",
-                "border border-danger-200 dark:border-danger-700",
-                "animate-slide-up"
-              )}
-            >
-              {error}
-            </div>
-          )}
-
-          {/* Navigation */}
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setStep(1)}>
-              <ArrowLeft className="h-4 w-4" />
-              Edit
-            </Button>
-            <Button
-              className="flex-1"
-              size="lg"
-              isLoading={isSubmitting}
-              onClick={() => setShowConfirmModal(true)}
-            >
-              <Sparkles className="h-4 w-4" />
-              Analyze My Resume
-            </Button>
-          </div>
-        </div>
-      )}
-
+        )}
       </WizardTransition>
 
       {/* ── Confirmation Modal ── */}
@@ -439,8 +418,9 @@ export default function DashboardPage() {
         size="sm"
       >
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Your resume <span className="font-medium text-gray-900 dark:text-gray-100">{fileName}</span> will
-          be analyzed against the{" "}
+          Your resume{" "}
+          <span className="font-medium text-gray-900 dark:text-gray-100">{fileName}</span> will be
+          analyzed against the{" "}
           {jobTitle ? (
             <span className="font-medium text-gray-900 dark:text-gray-100">{jobTitle}</span>
           ) : (
@@ -449,11 +429,7 @@ export default function DashboardPage() {
           job description. The analysis typically takes 10–20 seconds.
         </p>
         <ModalFooter>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowConfirmModal(false)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowConfirmModal(false)}>
             Cancel
           </Button>
           <Button size="sm" onClick={handleConfirmSubmit}>

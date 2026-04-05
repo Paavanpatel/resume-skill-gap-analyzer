@@ -3,15 +3,7 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { cn } from "@/lib/utils";
-import {
-  Upload,
-  FileText,
-  File,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
+import { Upload, FileText, File, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 interface FileUploadZoneProps {
   onFileAccepted: (file: File) => Promise<void>;
@@ -82,9 +74,7 @@ export default function FileUploadZone({
     onDrop,
     accept: {
       "application/pdf": [".pdf"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-        ".docx",
-      ],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
       "text/plain": [".txt"],
     },
     maxFiles: 1,
@@ -191,9 +181,7 @@ export default function FileUploadZone({
           />
         </div>
         <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
-          {isDragActive
-            ? "Drop your resume here"
-            : "Drag and drop your resume, or click to browse"}
+          {isDragActive ? "Drop your resume here" : "Drag and drop your resume, or click to browse"}
         </p>
         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
           PDF, DOCX, or TXT — up to 10 MB

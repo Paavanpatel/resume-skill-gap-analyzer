@@ -33,7 +33,9 @@ function CustomTooltip({ active, payload, label }: any) {
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 px-3 py-2 shadow-lg text-xs">
-      <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">{payload[0]?.payload?.fullDate}</p>
+      <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {payload[0]?.payload?.fullDate}
+      </p>
       {payload.map((entry: any) => (
         <div key={entry.dataKey} className="flex items-center gap-2">
           <span
@@ -57,15 +59,17 @@ export default function ScoreTrendChart({ items, className }: ScoreTrendChartPro
       .filter((i) => i.status === "completed" && i.match_score != null)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-    return completed.map((item): ChartDataPoint => ({
-      date: new Date(item.created_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
-      fullDate: formatDate(item.created_at),
-      matchScore: item.match_score,
-      atsScore: item.ats_score,
-    }));
+    return completed.map(
+      (item): ChartDataPoint => ({
+        date: new Date(item.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        fullDate: formatDate(item.created_at),
+        matchScore: item.match_score,
+        atsScore: item.ats_score,
+      })
+    );
   }, [items]);
 
   // Don't render if fewer than 2 data points

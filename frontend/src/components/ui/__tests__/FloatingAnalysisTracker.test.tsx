@@ -60,6 +60,8 @@ function makeAnalysis(overrides: Partial<TrackedAnalysis> = {}): TrackedAnalysis
     startedAt: Date.now() - 10000,
     dismissed: false,
     pollError: null,
+    transport: "websocket",
+    wsStatus: "connected",
     ...overrides,
   };
 }

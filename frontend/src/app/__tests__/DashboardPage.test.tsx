@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import DashboardPage from "@/app/(dashboard)/dashboard/page";
+import * as api from "@/lib/api";
 
 const mockPush = jest.fn();
 
@@ -15,6 +16,11 @@ const mockSubmitAnalysis = jest.fn();
 jest.mock("@/lib/api", () => ({
   uploadResume: (...args: any[]) => mockUploadResume(...args),
   submitAnalysis: (...args: any[]) => mockSubmitAnalysis(...args),
+  getUsageSummary: jest.fn().mockResolvedValue({
+    period: "monthly",
+    tier: "free",
+    analyses: { used: 1, limit: 10, pct: 10 },
+  }),
   getErrorMessage: (err: any) => err?.message || "Something went wrong",
 }));
 
@@ -64,18 +70,28 @@ jest.mock("lucide-react", () => ({
   ClipboardPaste: (props: any) => <span data-testid="icon-paste" {...props} />,
 }));
 
+jest.mock("@/components/dashboard/UsageWidget", () => ({
+  __esModule: true,
+  default: () => <div data-testid="usage-widget" />,
+}));
+
 const LONG_JD =
   "We need a senior backend engineer with 5+ years of Python experience building scalable web applications.";
 
 describe("DashboardPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (api.getUsageSummary as jest.Mock).mockResolvedValue({
+      period: "monthly",
+      tier: "free",
+      analyses: { used: 1, limit: 10, pct: 10 },
+    });
   });
 
   it("renders the upload step initially with progress stepper", () => {
     render(<DashboardPage />);
     expect(screen.getByText("New Analysis")).toBeInTheDocument();
-    expect(screen.getByText("Upload Resume")).toBeInTheDocument();
+    expect(screen.getByText("Choose Resume")).toBeInTheDocument();
     expect(screen.getByText(/drag and drop/i)).toBeInTheDocument();
     // Progress stepper labels
     expect(screen.getByText("Upload")).toBeInTheDocument();
@@ -121,7 +137,7 @@ describe("DashboardPage", () => {
     fireEvent.click(dropzone!);
 
     await waitFor(() => {
-      expect(screen.getByText("Job Description")).toBeInTheDocument();
+      expect(screen.getByText("resume.pdf")).toBeInTheDocument();
     });
 
     const textarea = screen.getByPlaceholderText(/Paste the full job description/i);
@@ -143,7 +159,7 @@ describe("DashboardPage", () => {
     fireEvent.click(dropzone!);
 
     await waitFor(() => {
-      expect(screen.getByText("Job Description")).toBeInTheDocument();
+      expect(screen.getByText("resume.pdf")).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByPlaceholderText(/Senior Backend/i), {
@@ -181,7 +197,7 @@ describe("DashboardPage", () => {
     fireEvent.click(dropzone!);
 
     await waitFor(() => {
-      expect(screen.getByText("Job Description")).toBeInTheDocument();
+      expect(screen.getByText("resume.pdf")).toBeInTheDocument();
     });
 
     // Fill
@@ -221,7 +237,7 @@ describe("DashboardPage", () => {
     fireEvent.click(dropzone!);
 
     await waitFor(() => {
-      expect(screen.getByText("Job Description")).toBeInTheDocument();
+      expect(screen.getByText("resume.pdf")).toBeInTheDocument();
     });
 
     // Fill with job title
@@ -273,7 +289,7 @@ describe("DashboardPage", () => {
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
 
     await waitFor(() => {
-      expect(screen.getByText("Job Description")).toBeInTheDocument();
+      expect(screen.getByText("resume.pdf")).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
@@ -315,7 +331,7 @@ describe("DashboardPage", () => {
 
     // Full flow
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
 
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
       target: { value: LONG_JD },
@@ -347,7 +363,7 @@ describe("DashboardPage", () => {
 
     // Full flow
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
 
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
       target: { value: LONG_JD },
@@ -381,7 +397,7 @@ describe("DashboardPage", () => {
 
     // Upload
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("my_resume.pdf")).toBeInTheDocument());
 
     // Only fill description (no title)
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
@@ -423,7 +439,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
 
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
       target: { value: LONG_JD },
@@ -453,7 +469,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /back/i }));
 
@@ -469,7 +485,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
 
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
       target: { value: LONG_JD },
@@ -491,7 +507,9 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    await waitFor(() => expect(screen.getByText("Job Description")).toBeInTheDocument());
+
+    // Wait for upload to complete and filename to appear
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
 
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
       target: { value: LONG_JD },

@@ -26,6 +26,7 @@ from uuid import UUID
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.websockets import publish_progress
 from app.core.exceptions import NotFoundError, ParsingError
 from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
@@ -33,8 +34,8 @@ from app.repositories.resume_repo import ResumeRepository
 from app.repositories.skill_repo import SkillRepository
 from app.services.ats_checker import check_ats_compatibility
 from app.services.gap_analyzer import analyze_gap
-from app.services.section_parser import parse_sections
-from app.services.skill_extractor import extract_skills, ExtractionResult
+from app.services.section_parser import ParsedResume, parse_sections
+from app.services.skill_extractor import ExtractionResult, extract_skills
 from app.services.skill_normalizer import build_taxonomy_index
 from app.services.suggestion_engine import generate_suggestions
 
@@ -45,7 +46,9 @@ TAXONOMY_CACHE_KEY = "taxonomy:all"
 TAXONOMY_CACHE_TTL = 3600  # 1 hour
 
 
-async def _load_taxonomy(session: AsyncSession, redis_client: aioredis.Redis | None = None) -> list:
+async def _load_taxonomy(
+    session: AsyncSession, redis_client: aioredis.Redis | None = None
+) -> list:
     """
     Load the skill taxonomy from the database and convert to lookup format.
 
@@ -77,12 +80,14 @@ async def _load_taxonomy(session: AsyncSession, redis_client: aioredis.Redis | N
     # Convert ORM objects to dicts for build_taxonomy_index
     skills_data = []
     for skill in raw_skills:
-        skills_data.append({
-            "name": skill.name,
-            "category": skill.category,
-            "weight": getattr(skill, "weight", 1.0),
-            "aliases": getattr(skill, "aliases", []) or [],
-        })
+        skills_data.append(
+            {
+                "name": skill.name,
+                "category": skill.category,
+                "weight": getattr(skill, "weight", 1.0),
+                "aliases": getattr(skill, "aliases", []) or [],
+            }
+        )
 
     taxonomy = build_taxonomy_index(skills_data)
 
@@ -109,24 +114,35 @@ def _compute_match_score(result: ExtractionResult) -> float:
     The score considers:
     - How many job skills the candidate has (base match)
     - Skill weights from the taxonomy (higher-weight skills matter more)
-    - Required vs preferred distinction (missing required skills penalize more)
+    - LLM-assigned confidence (required skills score higher than implied ones)
+
+    Effective weight formula:
+        effective_weight = skill.weight * skill.confidence
+
+    Examples:
+    - Required (confidence=0.95) + taxonomy weight 2.0 → effective 1.9
+    - Preferred (confidence=0.7) + taxonomy weight 1.5 → effective 1.05
+    - Implied (confidence=0.4) + off-taxonomy default weight 1.0 → effective 0.4
+
+    For off-taxonomy skills (weight defaults to 1.0) this means confidence
+    alone drives importance, which correctly prioritises "must-haves" the LLM
+    identified with high certainty over vague implied skills.
 
     Score formula:
-        matched_weight / total_job_weight * 100
+        matched_effective / total_effective * 100
 
     This gives a 0-100 percentage where:
     - 100 = candidate has every skill the job asks for
     - 0 = no overlap at all
-    - Weighted so core skills (Python, AWS) count more than nice-to-haves
     """
     if not result.job_skills:
         return 0.0
 
-    total_weight = sum(s.weight for s in result.job_skills)
+    total_weight = sum(s.weight * s.confidence for s in result.job_skills)
     if total_weight == 0:
         return 0.0
 
-    matched_weight = sum(s.weight for s in result.matched_skills)
+    matched_weight = sum(s.weight * s.confidence for s in result.matched_skills)
     score = (matched_weight / total_weight) * 100
 
     return round(min(score, 100.0), 1)
@@ -205,6 +221,15 @@ async def run_analysis(
     await analysis_repo.update(analysis_id, status="processing")
     await session.flush()  # Make status visible to polling queries
 
+    # Publish initial progress via WebSocket
+    await publish_progress(
+        redis_client,
+        str(analysis_id),
+        status="processing",
+        progress=0,
+        current_step="Parsing resume",
+    )
+
     try:
         # 2. Load the resume's parsed text
         resume = await resume_repo.get_by_id(analysis.resume_id)
@@ -218,11 +243,20 @@ async def run_analysis(
         if not resume_text or len(resume_text.strip()) < 50:
             raise ParsingError(
                 message="Resume text is too short for meaningful analysis. "
-                        "Please upload a resume with more content.",
+                "Please upload a resume with more content.",
             )
 
         # 3. Load skill taxonomy (with Redis caching)
         taxonomy = await _load_taxonomy(session, redis_client)
+
+        # Publish: parsing done, extracting skills
+        await publish_progress(
+            redis_client,
+            str(analysis_id),
+            status="processing",
+            progress=25,
+            current_step="Extracting skills",
+        )
 
         logger.info(
             "Starting skill extraction for analysis %s (resume=%s, taxonomy_size=%d)",
@@ -242,16 +276,40 @@ async def run_analysis(
         match_score = _compute_match_score(extraction)
         ats_score = _compute_ats_score(extraction)
 
+        # Publish: extraction done, matching and scoring
+        await publish_progress(
+            redis_client,
+            str(analysis_id),
+            status="processing",
+            progress=50,
+            current_step="Matching skills and scoring",
+        )
+
         # 6. Run gap analysis (Phase 6)
         gap_result = analyze_gap(extraction, match_score, ats_score)
 
         # 7. Run ATS formatting checks (Phase 6)
-        parsed_resume = parse_sections(resume_text)
+        # Use stored parsed_sections from upload to avoid double-parsing and
+        # ensure consistency (the upload and analysis always use the same parse).
+        # Fall back to re-parsing for legacy records that pre-date this field.
+        if resume.parsed_sections:
+            parsed_resume = ParsedResume.from_dict(json.loads(resume.parsed_sections))
+        else:
+            parsed_resume = parse_sections(resume_text)
         ats_result = check_ats_compatibility(parsed_resume)
+
+        # Publish: gap analysis done, generating suggestions
+        await publish_progress(
+            redis_client,
+            str(analysis_id),
+            status="processing",
+            progress=75,
+            current_step="Generating suggestions and insights",
+        )
 
         # 8. Generate improvement suggestions (Phase 6)
         suggestions = await generate_suggestions(
-            resume_text=resume_text,
+            parsed_resume=parsed_resume,
             job_description=analysis.job_description,
             match_score=match_score,
             extraction=extraction,
@@ -274,7 +332,9 @@ async def run_analysis(
             "matched_skills": skill_data["matched_skills"],
             "missing_skills": skill_data["missing_skills"],
             "suggestions": suggestions,
-            "category_breakdowns": [b.to_dict() for b in gap_result.category_breakdowns],
+            "category_breakdowns": [
+                b.to_dict() for b in gap_result.category_breakdowns
+            ],
             "score_explanation": gap_result.score_explanation.to_dict(),
             "ats_check": ats_result.to_dict(),
             "ai_provider": extraction.provider,
@@ -285,6 +345,15 @@ async def run_analysis(
         }
 
         updated_analysis = await analysis_repo.update(analysis_id, **update_data)
+
+        # Publish completion via WebSocket
+        await publish_progress(
+            redis_client,
+            str(analysis_id),
+            status="completed",
+            progress=100,
+            current_step="Analysis complete",
+        )
 
         logger.info(
             "Analysis %s completed: match=%.1f%%, ats=%.1f%%, format=%.1f%%, "
@@ -313,6 +382,16 @@ async def run_analysis(
             status="failed",
             error_message=error_msg,
             processing_time_ms=elapsed_ms,
+        )
+
+        # Publish failure via WebSocket
+        await publish_progress(
+            redis_client,
+            str(analysis_id),
+            status="failed",
+            progress=0,
+            current_step="Analysis failed",
+            error_message=error_msg,
         )
 
         logger.error(

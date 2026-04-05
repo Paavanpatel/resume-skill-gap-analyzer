@@ -3,13 +3,15 @@ import { render, screen, act } from "@testing-library/react";
 import { LiveAnnouncerProvider, useLiveAnnouncer } from "@/components/ui/LiveAnnouncer";
 
 // Helper component to trigger announcements
-function AnnounceButton({ message, politeness }: { message: string; politeness?: "polite" | "assertive" }) {
+function AnnounceButton({
+  message,
+  politeness,
+}: {
+  message: string;
+  politeness?: "polite" | "assertive";
+}) {
   const { announce } = useLiveAnnouncer();
-  return (
-    <button onClick={() => announce(message, politeness)}>
-      Announce
-    </button>
-  );
+  return <button onClick={() => announce(message, politeness)}>Announce</button>;
 }
 
 describe("LiveAnnouncerProvider", () => {

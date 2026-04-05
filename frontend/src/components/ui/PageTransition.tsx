@@ -30,6 +30,7 @@ export default function PageTransition({
   useEffect(() => {
     // On route change, briefly hide then show to retrigger animation
     if (prevPathRef.current !== pathname) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVisible(false);
       prevPathRef.current = pathname;
       const timer = setTimeout(() => setIsVisible(true), 20);
@@ -60,11 +61,7 @@ export default function PageTransition({
 
   return (
     <div
-      className={cn(
-        "transition-all ease-out",
-        isVisible ? to : from,
-        className
-      )}
+      className={cn("transition-all ease-out", isVisible ? to : from, className)}
       style={{ transitionDuration: `${duration}ms` }}
       data-testid="page-transition"
     >

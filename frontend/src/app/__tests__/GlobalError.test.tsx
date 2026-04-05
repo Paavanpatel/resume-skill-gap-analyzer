@@ -27,9 +27,7 @@ describe("GlobalError", () => {
 
   it("displays error description", () => {
     render(<GlobalError error={mockError} reset={mockReset} />);
-    expect(
-      screen.getByText(/unexpected error occurred/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/unexpected error occurred/i)).toBeInTheDocument();
   });
 
   it("renders Try Again button", () => {

@@ -4,10 +4,10 @@ Unit tests for admin endpoints (api/v1/endpoints/admin.py).
 Tests admin operations like stale analysis sweeper.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.admin import sweep_stale_analyses_endpoint

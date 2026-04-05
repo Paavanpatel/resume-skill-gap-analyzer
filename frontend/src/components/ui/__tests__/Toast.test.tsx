@@ -5,23 +5,15 @@ import { ToastProvider, useToast } from "@/components/ui/Toast";
 // Mock lucide-react icons
 jest.mock("lucide-react", () => ({
   __esModule: true,
-  CheckCircle2: (props: any) => (
-    <span data-testid="icon-check-circle" {...props} />
-  ),
+  CheckCircle2: (props: any) => <span data-testid="icon-check-circle" {...props} />,
   XCircle: (props: any) => <span data-testid="icon-x-circle" {...props} />,
-  AlertTriangle: (props: any) => (
-    <span data-testid="icon-alert-triangle" {...props} />
-  ),
+  AlertTriangle: (props: any) => <span data-testid="icon-alert-triangle" {...props} />,
   Info: (props: any) => <span data-testid="icon-info" {...props} />,
   X: (props: any) => <span data-testid="icon-x" {...props} />,
 }));
 
 // Test component that uses the toast hook
-function TestComponent({
-  onToastReady,
-}: {
-  onToastReady?: (toast: any) => void;
-}) {
+function TestComponent({ onToastReady }: { onToastReady?: (toast: any) => void }) {
   const toast = useToast();
 
   React.useEffect(() => {
@@ -31,10 +23,7 @@ function TestComponent({
   }, [toast, onToastReady]);
 
   return (
-    <button
-      onClick={() => toast.toast("Test message", "success")}
-      data-testid="trigger-toast"
-    >
+    <button onClick={() => toast.toast("Test message", "success")} data-testid="trigger-toast">
       Show Toast
     </button>
   );
@@ -49,9 +38,7 @@ function OutsideProviderComponent() {
 describe("Toast", () => {
   describe("useToast hook", () => {
     it("throws error when useToast is used outside provider", () => {
-      const consoleSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
       expect(() => {
         render(<OutsideProviderComponent />);

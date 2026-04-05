@@ -168,3 +168,10 @@ export interface ResumeUploadResponse {
   created_at: string;
   last_used_at: string | null;
 }
+
+export interface PaginatedResumeResponse {
+  resumes: ResumeUploadResponse[];
+  total: number;
+  skip: number;
+  limit: number;
+}

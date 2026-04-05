@@ -28,14 +28,13 @@ from app.core.dependencies import CurrentUser
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.tier_guard import enforce_analysis_quota
 from app.db.session import get_db_session, get_read_db_session
-from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.analysis import (
-    AnalysisRequest,
-    AnalysisResponse,
     AnalysisHistoryItem,
     AnalysisHistoryResponse,
+    AnalysisRequest,
+    AnalysisResponse,
     AnalysisStatusResponse,
     AnalysisSubmitResponse,
 )
@@ -87,7 +86,7 @@ async def submit_analysis(
     if not resume.raw_text or len(resume.raw_text.strip()) < 50:
         raise ValidationError(
             message="This resume hasn't been parsed yet or contains too little text. "
-                    "Please re-upload.",
+            "Please re-upload.",
         )
 
     # Enforce monthly analysis quota before accepting the job
@@ -111,11 +110,13 @@ async def submit_analysis(
 
     # Increment usage counter for this billing period
     from app.services.usage_service import increment_analysis_count
+
     await increment_analysis_count(user_id=str(user.id), session=session)
 
     # Dispatch Celery task
     try:
         from app.workers.analysis_task import run_skill_gap_analysis
+
         run_skill_gap_analysis.delay(str(analysis.id))
         logger.info("Dispatched analysis task for %s", analysis.id)
     except Exception as e:
@@ -321,7 +322,9 @@ MAX_RETRIES = 3
     status_code=202,
     summary="Retry a failed analysis",
     responses={
-        409: {"description": "Analysis is not in a failed state or max retries exceeded"},
+        409: {
+            "description": "Analysis is not in a retryable state (must be failed or queued) or max retries exceeded"
+        },
     },
 )
 async def retry_analysis(
@@ -330,11 +333,11 @@ async def retry_analysis(
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Re-queue a failed analysis for reprocessing.
+    Re-queue a failed or stuck queued analysis for reprocessing.
 
-    Only analyses with status='failed' can be retried. Maximum 3 retries
-    per analysis. On retry, status is reset to 'queued' and a new Celery
-    task is dispatched.
+    Analyses with status='failed' or status='queued' (stuck/never picked up)
+    can be retried. Maximum 3 retries per analysis. On retry, status is
+    reset to 'queued' and a new Celery task is dispatched.
     """
     analysis_repo = AnalysisRepository(session)
     analysis = await analysis_repo.get_by_id(analysis_id)
@@ -345,9 +348,9 @@ async def retry_analysis(
             resource_type="analysis",
         )
 
-    if analysis.status != "failed":
+    if analysis.status not in ("failed", "queued"):
         raise ConflictError(
-            f"Only failed analyses can be retried. Current status: {analysis.status}."
+            f"Only failed or stuck queued analyses can be retried. Current status: {analysis.status}."
         )
 
     if analysis.retry_count >= MAX_RETRIES:
@@ -367,8 +370,13 @@ async def retry_analysis(
     # Re-dispatch the Celery task
     try:
         from app.workers.analysis_task import run_skill_gap_analysis
+
         run_skill_gap_analysis.delay(str(analysis_id))
-        logger.info("Re-dispatched analysis task for %s (retry %d)", analysis_id, analysis.retry_count + 1)
+        logger.info(
+            "Re-dispatched analysis task for %s (retry %d)",
+            analysis_id,
+            analysis.retry_count + 1,
+        )
     except Exception as e:
         logger.warning(
             "Failed to dispatch Celery retry task for analysis %s: %s",

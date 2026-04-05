@@ -39,7 +39,12 @@ jest.mock("@/components/ui/ScoreRing", () => {
 
 jest.mock("@/components/ui/AnimatedCounter", () => {
   return function AnimatedCounterMock({ value, suffix }: any) {
-    return <span data-testid="animated-counter">{value}{suffix}</span>;
+    return (
+      <span data-testid="animated-counter">
+        {value}
+        {suffix}
+      </span>
+    );
   };
 });
 
@@ -88,9 +93,7 @@ const mockResultB = {
     { name: "TypeScript", confidence: 0.9, category: "technical" },
     { name: "Go", confidence: 0.7, category: "technical" },
   ],
-  missing_skills: [
-    { name: "Rust", priority: "low", category: "technical" },
-  ],
+  missing_skills: [{ name: "Rust", priority: "low", category: "technical" }],
   ats_check: { issues: [], format_score: 75, passed_checks: 7, total_checks: 8 },
   created_at: "2024-06-20T14:00:00Z",
 };
@@ -104,30 +107,22 @@ describe("ComparisonView", () => {
 
   it("shows loading state while fetching", () => {
     mockGetAnalysisResult.mockImplementation(() => new Promise(() => {}));
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
     expect(screen.getByTestId("comparison-loading")).toBeInTheDocument();
   });
 
   it("shows error on fetch failure", async () => {
     mockGetAnalysisResult.mockRejectedValue(new Error("Fetch failed"));
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
     await waitFor(() => {
       expect(screen.getByText("Fetch failed")).toBeInTheDocument();
     });
   });
 
   it("renders comparison view after loading", async () => {
-    mockGetAnalysisResult
-      .mockResolvedValueOnce(mockResultA)
-      .mockResolvedValueOnce(mockResultB);
+    mockGetAnalysisResult.mockResolvedValueOnce(mockResultA).mockResolvedValueOnce(mockResultB);
 
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("comparison-view")).toBeInTheDocument();
@@ -137,13 +132,9 @@ describe("ComparisonView", () => {
   });
 
   it("shows score deltas", async () => {
-    mockGetAnalysisResult
-      .mockResolvedValueOnce(mockResultA)
-      .mockResolvedValueOnce(mockResultB);
+    mockGetAnalysisResult.mockResolvedValueOnce(mockResultA).mockResolvedValueOnce(mockResultB);
 
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("comparison-view")).toBeInTheDocument();
@@ -157,13 +148,9 @@ describe("ComparisonView", () => {
   });
 
   it("shows skill changes", async () => {
-    mockGetAnalysisResult
-      .mockResolvedValueOnce(mockResultA)
-      .mockResolvedValueOnce(mockResultB);
+    mockGetAnalysisResult.mockResolvedValueOnce(mockResultA).mockResolvedValueOnce(mockResultB);
 
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("skills-diff")).toBeInTheDocument();
@@ -173,13 +160,9 @@ describe("ComparisonView", () => {
   });
 
   it("shows matched and missing skill counts", async () => {
-    mockGetAnalysisResult
-      .mockResolvedValueOnce(mockResultA)
-      .mockResolvedValueOnce(mockResultB);
+    mockGetAnalysisResult.mockResolvedValueOnce(mockResultA).mockResolvedValueOnce(mockResultB);
 
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("comparison-view")).toBeInTheDocument();
@@ -192,13 +175,9 @@ describe("ComparisonView", () => {
   });
 
   it("fetches both analyses", async () => {
-    mockGetAnalysisResult
-      .mockResolvedValueOnce(mockResultA)
-      .mockResolvedValueOnce(mockResultB);
+    mockGetAnalysisResult.mockResolvedValueOnce(mockResultA).mockResolvedValueOnce(mockResultB);
 
-    render(
-      <ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />
-    );
+    render(<ComparisonView analysisIds={["analysis-1", "analysis-2"]} onClose={onClose} />);
 
     await waitFor(() => {
       expect(mockGetAnalysisResult).toHaveBeenCalledWith("analysis-1");

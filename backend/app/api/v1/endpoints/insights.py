@@ -6,10 +6,11 @@ These endpoints build on a completed analysis. They require:
 2. The analysis must have status='completed'
 
 Endpoints:
-  POST /insights/{analysis_id}/roadmap  -- Generate learning roadmap
-  GET  /insights/{analysis_id}/roadmap  -- Get existing roadmap
-  POST /insights/{analysis_id}/advisor  -- Generate resume rewrites
-  GET  /insights/{analysis_id}/export   -- Download PDF report
+  POST /insights/{analysis_id}/roadmap      -- Generate learning roadmap
+  GET  /insights/{analysis_id}/roadmap      -- Get existing roadmap
+  POST /insights/{analysis_id}/advisor      -- Generate resume rewrites
+  GET  /insights/{analysis_id}/export       -- Download PDF report (blob)
+  GET  /insights/{analysis_id}/export-url   -- Get presigned/direct download URL
 
 Why separate from /analysis?
 These are optional, more expensive operations (LLM calls, PDF generation)
@@ -62,7 +63,7 @@ async def _get_completed_analysis(
     if analysis.status != "completed":
         raise ValidationError(
             message=f"Analysis is '{analysis.status}'. Insights are only "
-                    "available for completed analyses.",
+            "available for completed analyses.",
         )
 
     return analysis
@@ -107,9 +108,9 @@ async def generate_roadmap_endpoint(
         )
 
     # Build extraction and gap analysis data from stored analysis
+    from app.services.gap_analyzer import analyze_gap
     from app.services.roadmap_generator import generate_roadmap
     from app.services.skill_extractor import ExtractionResult
-    from app.services.gap_analyzer import analyze_gap
 
     extraction = ExtractionResult.from_analysis(analysis)
     match_score = analysis.match_score or 0.0
@@ -156,7 +157,7 @@ async def get_roadmap_endpoint(
     if roadmap is None:
         raise NotFoundError(
             message="No roadmap has been generated for this analysis yet. "
-                    "POST to generate one.",
+            "POST to generate one.",
             resource_type="roadmap",
         )
 
@@ -201,9 +202,9 @@ async def generate_advisor_endpoint(
             resource_type="resume",
         )
 
+    from app.services.gap_analyzer import analyze_gap
     from app.services.resume_advisor import generate_resume_advice
     from app.services.skill_extractor import ExtractionResult
-    from app.services.gap_analyzer import analyze_gap
 
     extraction = ExtractionResult.from_analysis(analysis)
     match_score = analysis.match_score or 0.0
@@ -220,6 +221,7 @@ async def generate_advisor_endpoint(
 
     # Persist the advisor result to the database
     from app.services.resume_advisor import save_advisor_result
+
     await save_advisor_result(analysis_id, result, session)
     await session.commit()
 
@@ -264,10 +266,45 @@ async def export_pdf_endpoint(
     The report includes scores, skill gaps, category breakdowns,
     suggestions, and learning roadmap (if generated).
     """
-    analysis = await _get_completed_analysis(analysis_id, user.id, session)
+    from app.services.pdf_exporter import generate_pdf_report
 
-    # Build analysis dict for the PDF exporter
-    analysis_data = {
+    analysis = await _get_completed_analysis(analysis_id, user.id, session)
+    analysis_data = _build_analysis_data(analysis)
+
+    # Check for roadmap
+    result = await session.execute(
+        select(Roadmap).where(Roadmap.analysis_id == analysis_id)
+    )
+    roadmap_model = result.scalar_one_or_none()
+    roadmap_data = None
+    if roadmap_model:
+        roadmap_data = {
+            "total_weeks": roadmap_model.total_weeks,
+            "phases": roadmap_model.phases,
+        }
+
+    pdf_bytes = generate_pdf_report(analysis=analysis_data, roadmap=roadmap_data)
+
+    # Build filename
+    title_slug = (analysis.job_title or "analysis").replace(" ", "-")[:30]
+    filename = f"skillgap-report-{title_slug}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )
+
+
+# ── Export URL endpoint (Phase 8) ────────────────────────────────────────────
+
+
+def _build_analysis_data(analysis: Analysis) -> dict:
+    """Build the dict expected by generate_pdf_report from an Analysis model."""
+    return {
         "id": str(analysis.id),
         "job_title": analysis.job_title,
         "job_company": analysis.job_company,
@@ -282,11 +319,44 @@ async def export_pdf_endpoint(
         "created_at": str(analysis.created_at) if analysis.created_at else None,
     }
 
-    # Check for roadmap
-    result = await session.execute(
+
+@router.get(
+    "/{analysis_id}/export-url",
+    summary="Get a download URL for the PDF report",
+)
+async def get_export_url_endpoint(
+    analysis_id: UUID,
+    user: CurrentUser,
+    _tier: None = Depends(require_tier("pro")),
+    session: AsyncSession = Depends(get_read_db_session),
+):
+    """
+    Return a URL for downloading the PDF report.
+
+    - S3 backend: generates the PDF, uploads it to S3 under
+      ``exports/{analysis_id}/report.pdf``, and returns a pre-signed URL
+      valid for ``s3_presigned_url_expiry_seconds`` seconds.
+    - Local backend: returns ``{"url": null, "is_presigned": false}`` so the
+      frontend falls back to the authenticated blob endpoint (``/export``).
+    """
+    from app.core.config import get_settings
+    from app.services.file_storage import get_storage
+    from app.services.pdf_exporter import generate_pdf_report
+
+    analysis = await _get_completed_analysis(analysis_id, user.id, session)
+    settings = get_settings()
+
+    if settings.storage_backend != "s3":
+        # Local backend — no pre-signed URLs; caller uses /export blob endpoint
+        return {"url": None, "is_presigned": False, "expires_in": None}
+
+    # Generate PDF
+    analysis_data = _build_analysis_data(analysis)
+
+    roadmap_result = await session.execute(
         select(Roadmap).where(Roadmap.analysis_id == analysis_id)
     )
-    roadmap_model = result.scalar_one_or_none()
+    roadmap_model = roadmap_result.scalar_one_or_none()
     roadmap_data = None
     if roadmap_model:
         roadmap_data = {
@@ -294,22 +364,15 @@ async def export_pdf_endpoint(
             "phases": roadmap_model.phases,
         }
 
-    from app.services.pdf_exporter import generate_pdf_report
+    pdf_bytes = generate_pdf_report(analysis=analysis_data, roadmap=roadmap_data)
 
-    pdf_bytes = generate_pdf_report(
-        analysis=analysis_data,
-        roadmap=roadmap_data,
-    )
-
-    # Build filename
+    # Upload to S3 and generate presigned URL
     title_slug = (analysis.job_title or "analysis").replace(" ", "-")[:30]
-    filename = f"skillgap-report-{title_slug}.pdf"
+    key = f"exports/{analysis_id}/{title_slug}-report.pdf"
+    storage = get_storage()
+    await storage.upload_bytes(key, pdf_bytes, content_type="application/pdf")
 
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Content-Length": str(len(pdf_bytes)),
-        },
-    )
+    expiry = settings.s3_presigned_url_expiry_seconds
+    url = await storage.generate_presigned_url(key, expiry_seconds=expiry)
+
+    return {"url": url, "is_presigned": True, "expires_in": expiry}

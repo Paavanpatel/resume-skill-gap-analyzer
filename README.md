@@ -246,6 +246,14 @@ cd backend
 # Install dependencies
 pip install -r requirements.txt
 
+# Install local quality tools
+pip install pre-commit ruff
+
+# Install git hooks
+cd ..
+pre-commit install
+cd backend
+
 # Run tests
 pytest
 
@@ -253,8 +261,11 @@ pytest
 pytest --cov=app --cov-report=html
 
 # Format code
-black app/
-isort app/
+ruff check app/ --select I --fix
+ruff format app/
+
+# Verify formatting before committing
+ruff format --check app/
 
 # Type checking
 mypy app/
@@ -507,10 +518,24 @@ Contributions are welcome! Please follow these guidelines:
 
 ### Code Standards
 
-- **Backend**: Black formatting, isort, mypy, flake8
+- **Backend**: Ruff formatting and import sorting, mypy, flake8
 - **Frontend**: ESLint, Prettier, TypeScript strict mode
 - **Commits**: Descriptive messages following Conventional Commits
 - **Tests**: Maintain coverage above 80%
+
+### Prevent Formatting Drift
+
+```bash
+# One-time setup from the repository root
+pip install pre-commit ruff
+pre-commit install
+
+# Manual verification before pushing
+cd backend
+ruff format --check app/
+```
+
+If you use VS Code, the workspace includes Ruff format-on-save settings and recommends the Ruff extension. In PyCharm, set Ruff as the formatter or add a File Watcher that runs `ruff format $FilePath$` on Python saves.
 
 ---
 

@@ -55,10 +55,7 @@ export default function HistoryPagination({
 
   return (
     <div
-      className={cn(
-        "flex flex-col items-center justify-between gap-3 sm:flex-row",
-        className
-      )}
+      className={cn("flex flex-col items-center justify-between gap-3 sm:flex-row", className)}
       data-testid="history-pagination"
     >
       {/* Left: showing X-Y of Z */}
@@ -104,10 +101,7 @@ export default function HistoryPagination({
 
         {getPageNumbers().map((page, idx) =>
           page === "ellipsis" ? (
-            <span
-              key={`ellipsis-${idx}`}
-              className="px-1 text-xs text-gray-400 dark:text-gray-500"
-            >
+            <span key={`ellipsis-${idx}`} className="px-1 text-xs text-gray-400 dark:text-gray-500">
               ...
             </span>
           ) : (

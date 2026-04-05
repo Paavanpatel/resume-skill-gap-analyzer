@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class SectionRewriteResponse(BaseModel):
     """A rewritten resume section."""
+
     section: str
     original: str
     rewritten: str
@@ -16,5 +17,6 @@ class SectionRewriteResponse(BaseModel):
 
 class AdvisorResponse(BaseModel):
     """Full resume advisor output."""
+
     rewrites: list[SectionRewriteResponse] = []
     overall_summary: str = ""

@@ -26,7 +26,6 @@ describe("CopyButton", () => {
       jest.runOnlyPendingTimers();
       jest.useRealTimers();
     });
-    
   });
 
   describe("Basic rendering", () => {
@@ -299,18 +298,14 @@ describe("CopyButton", () => {
 
   describe("Custom className", () => {
     it("applies custom className", () => {
-      render(
-        <CopyButton text="Copy me" className="custom-copy-btn" />
-      );
+      render(<CopyButton text="Copy me" className="custom-copy-btn" />);
 
       const button = screen.getByRole("button");
       expect(button).toHaveClass("custom-copy-btn");
     });
 
     it("preserves default classes with custom className", () => {
-      render(
-        <CopyButton text="Copy me" className="custom-class" />
-      );
+      render(<CopyButton text="Copy me" className="custom-class" />);
 
       const button = screen.getByRole("button");
       expect(button).toHaveClass("inline-flex");
@@ -365,6 +360,34 @@ describe("CopyButton", () => {
       await waitFor(() => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith(multilineText);
       });
+    });
+  });
+
+  describe("Clipboard fallback", () => {
+    it("uses textarea fallback when clipboard API throws", async () => {
+      // Make clipboard.writeText reject to trigger fallback
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: jest.fn().mockRejectedValue(new Error("not allowed")),
+        },
+      });
+
+      // JSDOM doesn't define execCommand, so we add it manually
+      const execCommandMock = jest.fn().mockReturnValue(true);
+      document.execCommand = execCommandMock;
+
+      render(<CopyButton text="fallback text" />);
+      fireEvent.click(screen.getByRole("button"));
+
+      await waitFor(() => {
+        expect(execCommandMock).toHaveBeenCalledWith("copy");
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("icon-check")).toBeInTheDocument();
+      });
+
+      delete (document as any).execCommand;
     });
   });
 

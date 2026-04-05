@@ -13,12 +13,15 @@ import {
   ChevronDown,
   Sparkles,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Dropdown from "@/components/ui/Dropdown";
+import StatusIndicator from "@/components/ui/StatusIndicator";
+import { useHealthCheck } from "@/hooks/useHealthCheck";
 
 const navItems = [
   { href: "/dashboard", label: "New Analysis", icon: BarChart3 },
@@ -31,6 +34,7 @@ export default function Navbar() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { status: healthStatus, checks, lastChecked } = useHealthCheck(30_000);
 
   // Glass effect on scroll
   useEffect(() => {
@@ -43,14 +47,18 @@ export default function Navbar() {
 
   // Close mobile menu on route change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   const handleDropdownSelect = useCallback(
     (id: string) => {
       if (id === "logout") logout();
       if (id === "settings") router.push("/settings");
       if (id === "billing") router.push("/settings?tab=billing");
+      if (id === "admin") router.push("/admin");
     },
     [logout, router]
   );
@@ -91,6 +99,17 @@ export default function Navbar() {
       label: "Billing & Usage",
       icon: <CreditCard className="h-4 w-4" />,
     },
+    // Admin link — only visible for admin/super_admin
+    ...(isAdmin
+      ? [
+          { id: "divider-admin", label: "", divider: true },
+          {
+            id: "admin",
+            label: "Admin Dashboard",
+            icon: <Shield className="h-4 w-4" />,
+          },
+        ]
+      : []),
     { id: "divider-2", label: "", divider: true },
     {
       id: "logout",
@@ -114,18 +133,14 @@ export default function Navbar() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           {/* Left: Logo + Nav */}
           <div className="flex items-center gap-8">
-            <Link
-              href="/dashboard"
-              className="text-lg font-bold tracking-tighter"
-            >
+            <Link href="/dashboard" className="text-lg font-bold tracking-tighter">
               <span className="text-gradient">SkillGap</span>
             </Link>
 
             <nav className="hidden items-center gap-1 sm:flex">
               {navItems.map(({ href, label, icon: Icon }) => {
                 const isActive =
-                  pathname === href ||
-                  (href !== "/dashboard" && pathname.startsWith(href));
+                  pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
                 return (
                   <Link
@@ -150,8 +165,14 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Right: Theme + Avatar */}
+          {/* Right: Status + Theme + Avatar */}
           <div className="flex items-center gap-2">
+            <StatusIndicator
+              status={healthStatus}
+              checks={checks}
+              lastChecked={lastChecked}
+              className="hidden sm:flex"
+            />
             <ThemeToggle />
 
             {/* User dropdown (desktop) */}
@@ -203,9 +224,7 @@ export default function Navbar() {
           {/* Drawer */}
           <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-surface-800 shadow-xl dark:shadow-dark-lg animate-drawer-in sm:hidden">
             <div className="flex h-14 items-center justify-between px-4 border-b border-gray-200 dark:border-surface-700">
-              <span className="text-lg font-bold tracking-tighter text-gradient">
-                SkillGap
-              </span>
+              <span className="text-lg font-bold tracking-tighter text-gradient">SkillGap</span>
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-700"
@@ -227,9 +246,7 @@ export default function Navbar() {
                       {user.full_name}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {user?.email}
-                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                   {user?.tier && (
                     <span
                       className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${tierBadgeClass}`}
@@ -264,8 +281,17 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* Theme + Logout */}
+            {/* Admin + Theme + Logout */}
             <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 dark:border-surface-700 space-y-3">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                >
+                  <Shield className="h-5 w-5" />
+                  Admin Dashboard
+                </Link>
+              )}
               <ThemeToggle variant="full" />
               <button
                 onClick={() => {

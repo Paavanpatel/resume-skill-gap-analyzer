@@ -4,6 +4,7 @@ Revision ID: 001_initial
 Revises: None
 Create Date: 2026-03-16
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -115,7 +116,9 @@ def upgrade() -> None:
         sa.Column("job_title", sa.String(500), nullable=True),
         sa.Column("job_description", sa.Text(), nullable=False),
         sa.Column("job_company", sa.String(255), nullable=True),
-        sa.Column("status", sa.String(20), default="queued", index=True, nullable=False),
+        sa.Column(
+            "status", sa.String(20), default="queued", index=True, nullable=False
+        ),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("processing_time_ms", sa.Integer(), nullable=True),
         sa.Column("ai_provider", sa.String(50), nullable=True),

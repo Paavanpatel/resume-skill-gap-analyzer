@@ -13,10 +13,9 @@ import pytest
 from app.core.exceptions import ErrorCode, FileUploadError
 from app.services.file_validator import (
     FileValidationResult,
-    validate_upload,
     _get_extension,
+    validate_upload,
 )
-
 
 # ── Extension extraction ──────────────────────────────────────
 
@@ -56,7 +55,6 @@ def _make_upload_file(
 
 
 class TestValidateUpload:
-
     @pytest.mark.asyncio
     async def test_valid_pdf(self):
         content = b"%PDF-1.4 some pdf content here"

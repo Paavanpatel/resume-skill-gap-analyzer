@@ -45,3 +45,4 @@ export const Zap = createMockIcon("Zap");
 export const Sparkles = createMockIcon("Sparkles");
 export const CreditCard = createMockIcon("CreditCard");
 export const Building2 = createMockIcon("Building2");
+export const WifiOff = createMockIcon("WifiOff");

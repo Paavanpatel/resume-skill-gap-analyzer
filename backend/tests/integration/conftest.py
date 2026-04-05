@@ -20,18 +20,10 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.main import create_app
 from app.core.dependencies import get_current_user, get_db_session, get_redis
-from app.models.user import User
 from app.core.security import create_access_token, create_refresh_token
-
-
-@pytest.fixture
-def event_loop():
-    """Create an event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+from app.main import create_app
+from app.models.user import User
 
 
 @pytest.fixture
@@ -58,8 +50,11 @@ async def mock_db_session() -> AsyncMock:
     # Execute method returns an AsyncMock that can be chained
     mock_execute = AsyncMock()
     mock_execute.scalar_one_or_none = MagicMock(return_value=None)
+    mock_execute.scalar_one = MagicMock(return_value=0)
     mock_execute.scalar = MagicMock(return_value=None)
-    mock_execute.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+    mock_execute.scalars = MagicMock(
+        return_value=MagicMock(all=MagicMock(return_value=[]))
+    )
 
     mock_session.execute = AsyncMock(return_value=mock_execute)
 
@@ -77,9 +72,13 @@ async def mock_redis() -> Optional[AsyncMock]:
     mock_redis = AsyncMock(spec=aioredis.Redis)
     mock_redis.get = AsyncMock(return_value=None)
     mock_redis.set = AsyncMock()
+    mock_redis.setex = AsyncMock()
     mock_redis.delete = AsyncMock()
     mock_redis.ping = AsyncMock(return_value=True)
     mock_redis.expire = AsyncMock()
+    mock_redis.incr = AsyncMock(return_value=1)
+    mock_redis.decr = AsyncMock(return_value=0)
+    mock_redis.exists = AsyncMock(return_value=False)
 
     return mock_redis
 
@@ -99,6 +98,8 @@ async def mock_user() -> User:
         is_active=True,
         is_verified=False,
         tier="free",
+        role="user",
+        preferences={},
         created_at=datetime.now(timezone.utc),
     )
     return user
@@ -111,6 +112,7 @@ async def mock_current_user(mock_user: User):
 
     Returns the mock user to authenticated endpoints.
     """
+
     async def _get_current_user():
         return mock_user
 
@@ -134,11 +136,11 @@ async def test_client(
     Returns an httpx.AsyncClient for making test requests.
     """
     import httpx
-    from app.core.dependencies import get_current_user
-    from app.db.session import get_db_session, get_read_db_session
-    from app.core.dependencies import get_redis
 
-    app = create_app()
+    from app.core.dependencies import get_current_user, get_redis
+    from app.db.session import get_db_session, get_read_db_session
+
+    app = create_app(testing=True)
 
     # Override dependencies
     app.dependency_overrides[get_db_session] = lambda: mock_db_session
@@ -203,9 +205,7 @@ def mock_analysis_response() -> dict:
         "resume_skills": ["Python", "FastAPI", "PostgreSQL", "Git"],
         "job_skills": ["Python", "FastAPI", "PostgreSQL", "Kubernetes", "Docker"],
         "suggestions": ["Learn Kubernetes basics"],
-        "category_breakdowns": [
-            {"category": "Backend", "coverage": 90.0}
-        ],
+        "category_breakdowns": [{"category": "Backend", "coverage": 90.0}],
         "score_explanation": "Good match overall",
         "ats_check": {"passes": 4, "fails": 1},
         "processing_time_ms": 5000,

@@ -1,19 +1,26 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import AuthIllustration from "@/components/auth/AuthIllustration";
+
+// These pages are reachable by both authenticated and unauthenticated users.
+// (e.g. verify-email after auto-login on register, reset-password from email link)
+const OPEN_PATHS = ["/verify-email", "/forgot-password", "/reset-password"];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isOpenPage = OPEN_PATHS.some((p) => pathname?.startsWith(p));
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && !isOpenPage) {
       router.replace("/dashboard");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, isOpenPage]);
 
   if (isLoading) {
     return (
@@ -23,7 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (isAuthenticated) return null;
+  if (isAuthenticated && !isOpenPage) return null;
 
   return (
     <div className="flex min-h-screen">

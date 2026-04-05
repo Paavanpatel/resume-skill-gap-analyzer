@@ -108,6 +108,7 @@ for section_name, patterns in SECTION_PATTERNS.items():
 @dataclass
 class ParsedSection:
     """A single identified section of the resume."""
+
     name: str
     content: str
     line_start: int
@@ -117,6 +118,7 @@ class ParsedSection:
 @dataclass
 class ParsedResume:
     """Complete parsed resume with identified sections."""
+
     sections: list[ParsedSection] = field(default_factory=list)
     raw_text: str = ""
     word_count: int = 0
@@ -135,6 +137,24 @@ class ParsedResume:
             ],
             "word_count": self.word_count,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ParsedResume":
+        """Reconstruct a ParsedResume from a dict produced by to_dict()."""
+        sections = [
+            ParsedSection(
+                name=s["name"],
+                content=s["content"],
+                line_start=s["line_start"],
+                line_end=s["line_end"],
+            )
+            for s in data.get("sections", [])
+        ]
+        return cls(
+            sections=sections,
+            raw_text=data.get("raw_text", ""),
+            word_count=data.get("word_count", 0),
+        )
 
     def get_section(self, name: str) -> str | None:
         """Get the content of a named section, or None if not found."""
@@ -200,12 +220,14 @@ def parse_sections(raw_text: str) -> ParsedResume:
 
         content = "\n".join(lines[start:end]).strip()
         if content:  # Skip empty sections
-            sections.append(ParsedSection(
-                name=name,
-                content=content,
-                line_start=start,
-                line_end=end,
-            ))
+            sections.append(
+                ParsedSection(
+                    name=name,
+                    content=content,
+                    line_start=start,
+                    line_end=end,
+                )
+            )
 
     return ParsedResume(
         sections=sections,

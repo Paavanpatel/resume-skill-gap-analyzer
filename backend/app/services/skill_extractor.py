@@ -15,10 +15,11 @@ LLM doesn't need the other's output to do its extraction.
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 
-from app.core.exceptions import ParsingError, ErrorCode
+from app.core.exceptions import ErrorCode, ParsingError
 from app.services.llm_client import LLMResponse, call_llm
 from app.services.prompts import (
     SKILL_EXTRACTION_SYSTEM,
@@ -29,15 +30,25 @@ from app.services.skill_normalizer import (
     NormalizedSkill,
     SkillNormalizer,
     TaxonomyEntry,
-    build_taxonomy_index,
 )
 
 logger = logging.getLogger(__name__)
+
+# Strips dot-separated language suffixes so "React.js" == "React", "Node.js" == "Node".
+# Only matches a literal dot followed by the suffix to avoid stripping letters from
+# skill names like "TypeScript" or "express".
+_TECH_SUFFIX_RE = re.compile(r"\.(js|ts|py|rb|go)$", re.IGNORECASE)
+
+
+def _strip_tech_suffix(name: str) -> str:
+    """Return the lowercased skill name with common dot-extension variants removed."""
+    return _TECH_SUFFIX_RE.sub("", name.strip()).lower()
 
 
 @dataclass
 class ExtractionResult:
     """Complete result from the skill extraction pipeline."""
+
     resume_skills: list[NormalizedSkill]
     job_skills: list[NormalizedSkill]
     matched_skills: list[NormalizedSkill]
@@ -97,22 +108,27 @@ class ExtractionResult:
         Used by Phase 9 endpoints (roadmap, advisor) that need to rebuild
         the extraction data from what's stored in the JSONB columns.
         """
-        def _to_skills(raw: list | None, source: str = "resume") -> list[NormalizedSkill]:
+
+        def _to_skills(
+            raw: list | None, source: str = "resume"
+        ) -> list[NormalizedSkill]:
             if not raw:
                 return []
             skills = []
             for s in raw:
                 if not isinstance(s, dict):
                     continue
-                skills.append(NormalizedSkill(
-                    name=s.get("name", ""),
-                    category=s.get("category", "general"),
-                    confidence=float(s.get("confidence", 0.8)),
-                    weight=float(s.get("weight", 1.0)),
-                    in_taxonomy=True,
-                    source=s.get("source", source),
-                    required=s.get("required"),
-                ))
+                skills.append(
+                    NormalizedSkill(
+                        name=s.get("name", ""),
+                        category=s.get("category", "general"),
+                        confidence=float(s.get("confidence", 0.8)),
+                        weight=float(s.get("weight", 1.0)),
+                        in_taxonomy=True,
+                        source=s.get("source", source),
+                        required=s.get("required"),
+                    )
+                )
             return skills
 
         return cls(
@@ -177,7 +193,8 @@ async def _extract_skills_from_text(
     if not isinstance(raw_skills, list):
         logger.warning(
             "LLM returned non-list 'skills' field from %s: %s",
-            source, type(raw_skills).__name__,
+            source,
+            type(raw_skills).__name__,
         )
         raw_skills = []
 
@@ -233,11 +250,13 @@ async def extract_skills(
             source="job_description",
         )
 
-        (raw_resume_skills, resume_response), (raw_job_skills, job_response) = (
-            await asyncio.gather(resume_task, job_task)
-        )
+        (
+            (raw_resume_skills, resume_response),
+            (raw_job_skills, job_response),
+        ) = await asyncio.gather(resume_task, job_task)
     except Exception as e:
         from app.core.exceptions import AppError
+
         if isinstance(e, AppError):  # Already a typed application error
             raise
         raise ParsingError(
@@ -250,15 +269,25 @@ async def extract_skills(
     resume_skills = normalizer.normalize(raw_resume_skills, source="resume")
     job_skills = normalizer.normalize(raw_job_skills, source="job_description")
 
-    # Compare: find matches and gaps
+    # Compare: find matches and gaps.
+    # Two-pass matching:
+    #   1. Exact (case-insensitive) canonical name match.
+    #   2. Fuzzy suffix match: strip dot-extensions (.js, .ts, …) so that
+    #      off-taxonomy variants like "React.js" / "React" or "Node.js" / "Node"
+    #      are treated as the same skill.
     resume_skill_names = {s.name.lower() for s in resume_skills}
+    resume_skill_names_stripped = {_strip_tech_suffix(s.name) for s in resume_skills}
 
-    matched_skills = [
-        s for s in job_skills if s.name.lower() in resume_skill_names
-    ]
-    missing_skills = [
-        s for s in job_skills if s.name.lower() not in resume_skill_names
-    ]
+    matched_skills = []
+    missing_skills = []
+    for s in job_skills:
+        job_lower = s.name.lower()
+        if job_lower in resume_skill_names:
+            matched_skills.append(s)
+        elif _strip_tech_suffix(s.name) in resume_skill_names_stripped:
+            matched_skills.append(s)
+        else:
+            missing_skills.append(s)
 
     elapsed_ms = int((time.perf_counter() - start_time) * 1000)
     total_tokens = resume_response.total_tokens + job_response.total_tokens

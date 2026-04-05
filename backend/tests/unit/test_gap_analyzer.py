@@ -16,24 +16,35 @@ from app.services.gap_analyzer import (
     CategoryBreakdown,
     GapAnalysisResult,
     ScoreExplanation,
-    analyze_gap,
-    compute_category_breakdowns,
-    explain_scores,
     _category_priority,
     _identify_strengths,
     _identify_weaknesses,
     _overall_verdict,
+    analyze_gap,
+    compute_category_breakdowns,
+    explain_scores,
 )
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
 
 
-def _skill(name, category="programming_language", weight=1.5, required=None,
-           confidence=0.9, in_taxonomy=True, source="job_description"):
+def _skill(
+    name,
+    category="programming_language",
+    weight=1.5,
+    required=None,
+    confidence=0.9,
+    in_taxonomy=True,
+    source="job_description",
+):
     """Helper to create a NormalizedSkill."""
     return NormalizedSkill(
-        name=name, category=category, confidence=confidence,
-        weight=weight, in_taxonomy=in_taxonomy, required=required,
+        name=name,
+        category=category,
+        confidence=confidence,
+        weight=weight,
+        in_taxonomy=in_taxonomy,
+        required=required,
         source=source,
     )
 
@@ -45,8 +56,10 @@ def _extraction(resume_skills, job_skills, matched_skills, missing_skills):
         job_skills=job_skills,
         matched_skills=matched_skills,
         missing_skills=missing_skills,
-        provider="openai", model="gpt-4o",
-        total_tokens=500, extraction_time_ms=100,
+        provider="openai",
+        model="gpt-4o",
+        total_tokens=500,
+        extraction_time_ms=100,
     )
 
 
@@ -55,8 +68,14 @@ class TestCategoryBreakdowns:
 
     def test_single_category_full_match(self):
         """All skills matched in one category -> 100%."""
-        job = [_skill("Python", "programming_language"), _skill("JavaScript", "programming_language")]
-        matched = [_skill("Python", "programming_language"), _skill("JavaScript", "programming_language")]
+        job = [
+            _skill("Python", "programming_language"),
+            _skill("JavaScript", "programming_language"),
+        ]
+        matched = [
+            _skill("Python", "programming_language"),
+            _skill("JavaScript", "programming_language"),
+        ]
         extraction = _extraction([], job, matched, [])
 
         breakdowns = compute_category_breakdowns(extraction)
@@ -199,7 +218,10 @@ class TestScoreExplanation:
         extraction = _extraction([], job, matched, missing)
 
         explanation = explain_scores(25.0, 25.0, extraction)
-        assert "weak match" in explanation.match_summary.lower() or "partial match" in explanation.match_summary.lower()
+        assert (
+            "weak match" in explanation.match_summary.lower()
+            or "partial match" in explanation.match_summary.lower()
+        )
 
     def test_strengths_identified(self):
         """Strong matched skills appear in strengths."""
@@ -251,6 +273,26 @@ class TestOverallVerdict:
         # 0 * 0.7 + 100 * 0.3 = 30 -> poor_match
         assert _overall_verdict(0.0, 100.0) == "poor_match"
 
+    def test_two_missing_required_caps_strong_to_weak(self):
+        """High combined score with 2 missing required skills is capped at weak_match."""
+        # combined = 90*0.7 + 85*0.3 = 63+25.5 = 88.5 -> would be strong_match without cap
+        assert _overall_verdict(90.0, 85.0, missing_required_count=2) == "weak_match"
+
+    def test_one_missing_required_caps_strong_to_moderate(self):
+        """High combined score with 1 missing required skill is capped at moderate_match."""
+        assert (
+            _overall_verdict(90.0, 85.0, missing_required_count=1) == "moderate_match"
+        )
+
+    def test_missing_required_does_not_upgrade_low_score(self):
+        """Capping only prevents upgrades — a poor score stays poor even with required missing."""
+        assert _overall_verdict(10.0, 5.0, missing_required_count=2) == "poor_match"
+        assert _overall_verdict(40.0, 35.0, missing_required_count=1) == "weak_match"
+
+    def test_zero_missing_required_no_cap(self):
+        """No missing required skills → strong_match still awarded for high score."""
+        assert _overall_verdict(90.0, 85.0, missing_required_count=0) == "strong_match"
+
 
 class TestAnalyzeGap:
     """Test the main analyze_gap entry point."""
@@ -268,7 +310,10 @@ class TestAnalyzeGap:
         assert len(result.category_breakdowns) >= 1
         assert result.score_explanation is not None
         assert result.score_explanation.overall_verdict in (
-            "strong_match", "moderate_match", "weak_match", "poor_match"
+            "strong_match",
+            "moderate_match",
+            "weak_match",
+            "poor_match",
         )
 
     def test_to_dict_serialization(self):
@@ -278,3 +323,60 @@ class TestAnalyzeGap:
         d = result.to_dict()
         assert "category_breakdowns" in d
         assert "score_explanation" in d
+
+    def test_high_score_two_missing_required_not_strong_match(self):
+        """Combined score > 80 but 2 missing required skills → verdict is NOT strong_match."""
+        job = [
+            _skill("Python", required=True),
+            _skill("Go", required=True),
+            _skill("Docker", "devops"),
+            _skill("Redis", "database"),
+            _skill("Kubernetes", "devops"),
+        ]
+        # Match all optional skills (high match/ats scores) but miss both required ones
+        matched = [
+            _skill("Docker", "devops"),
+            _skill("Redis", "database"),
+            _skill("Kubernetes", "devops"),
+        ]
+        missing = [_skill("Python", required=True), _skill("Go", required=True)]
+        extraction = _extraction([], job, matched, missing)
+
+        result = analyze_gap(extraction, 85.0, 80.0)
+        verdict = result.score_explanation.overall_verdict
+        assert verdict != "strong_match", (
+            f"Expected verdict to be capped, got {verdict!r}"
+        )
+        assert verdict == "weak_match"
+        assert result.score_explanation.missing_required_count == 2
+
+    def test_high_score_zero_missing_required_is_strong_match(self):
+        """Combined score > 80 with no missing required skills → strong_match."""
+        job = [_skill("Python", required=True), _skill("Docker", "devops")]
+        matched = [_skill("Python", required=True), _skill("Docker", "devops")]
+        extraction = _extraction([], job, matched, [])
+
+        result = analyze_gap(extraction, 90.0, 90.0)
+        assert result.score_explanation.overall_verdict == "strong_match"
+        assert result.score_explanation.missing_required_count == 0
+
+    def test_score_explanation_includes_verdict_cap_note_in_weaknesses(self):
+        """When verdict is capped, a note about it appears in weaknesses."""
+        job = [_skill("Python", required=True), _skill("Go", required=True)]
+        missing = [_skill("Python", required=True), _skill("Go", required=True)]
+        extraction = _extraction([], job, [], missing)
+
+        result = analyze_gap(extraction, 85.0, 80.0)
+        weaknesses = result.score_explanation.weaknesses
+        assert any("verdict capped" in w for w in weaknesses)
+
+    def test_score_explanation_to_dict_has_missing_required_count(self):
+        """Serialized explanation includes missing_required_count for the frontend."""
+        job = [_skill("Python", required=True)]
+        missing = [_skill("Python", required=True)]
+        extraction = _extraction([], job, [], missing)
+
+        result = analyze_gap(extraction, 85.0, 80.0)
+        d = result.score_explanation.to_dict()
+        assert "missing_required_count" in d
+        assert d["missing_required_count"] == 1

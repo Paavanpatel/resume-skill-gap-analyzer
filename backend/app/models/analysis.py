@@ -8,11 +8,20 @@ The matched_skills, missing_skills, and suggestions fields use JSONB
 to store variable-structure data without needing extra join tables.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.resume import Resume
+    from app.models.roadmap import Roadmap
+    from app.models.user import User
 
 
 class Analysis(Base, UUIDMixin, TimestampMixin):
@@ -20,13 +29,16 @@ class Analysis(Base, UUIDMixin, TimestampMixin):
 
     # ── Foreign keys ─────────────────────────────────────────
     user_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     resume_id: Mapped[str] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("resumes.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        nullable=False,
+        index=True,
     )
 
     # ── Input ────────────────────────────────────────────────
@@ -86,7 +98,10 @@ class Analysis(Base, UUIDMixin, TimestampMixin):
     user: Mapped["User"] = relationship("User", back_populates="analyses")
     resume: Mapped["Resume"] = relationship("Resume", back_populates="analyses")
     roadmap: Mapped["Roadmap | None"] = relationship(
-        "Roadmap", back_populates="analysis", uselist=False, cascade="all, delete-orphan"
+        "Roadmap",
+        back_populates="analysis",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

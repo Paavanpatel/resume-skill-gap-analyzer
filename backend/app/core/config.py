@@ -56,7 +56,9 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         if self.redis_password:
-            return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/0"
+            return (
+                f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/0"
+            )
         return f"redis://{self.redis_host}:{self.redis_port}/0"
 
     # ── AI / LLM ─────────────────────────────────────────────
@@ -86,6 +88,27 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 10
     storage_backend: str = "local"
     storage_local_path: str = "./storage"
+
+    # ── S3 / MinIO Object Storage ────────────────────────────
+    # Set storage_backend="s3" to use these.
+    # For MinIO (local dev), set s3_endpoint_url to http://minio:9000.
+    s3_bucket: str = "rsga-uploads"
+    s3_region: str = "us-east-1"
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_endpoint_url: str = ""  # Leave empty for AWS S3
+    s3_presigned_url_expiry_seconds: int = 300  # 5 minutes
+
+    # ── Email ────────────────────────────────────────────────
+    # Set email_backend="smtp" in production. "console" logs to stdout (dev only).
+    email_backend: str = "console"  # console | smtp
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@skillgap.app"
+    smtp_from_name: str = "SkillGap"
+    smtp_use_tls: bool = True
 
     # ── Stripe Billing ───────────────────────────────────────
     stripe_secret_key: str = ""

@@ -44,9 +44,7 @@ export default function Toggle({
           "relative shrink-0 rounded-full transition-colors duration-200 ease-spring",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
           trackSize,
-          checked
-            ? "bg-primary-600 dark:bg-primary-500"
-            : "bg-gray-300 dark:bg-surface-700"
+          checked ? "bg-primary-600 dark:bg-primary-500" : "bg-gray-300 dark:bg-surface-700"
         )}
       >
         <span
@@ -61,14 +59,10 @@ export default function Toggle({
       {(label || description) && (
         <div className="pt-0.5">
           {label && (
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {label}
-            </span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</span>
           )}
           {description && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {description}
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
           )}
         </div>
       )}

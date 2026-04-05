@@ -3,18 +3,28 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import usePageTitle from "@/hooks/usePageTitle";
+
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/context/AuthContext";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, Lock, AlertCircle, Clock } from "lucide-react";
 
 // Inline eye icons — avoids lucide-react export resolution issues in Docker builds
 function EyeSvg({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
       <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -23,7 +33,16 @@ function EyeSvg({ className }: { className?: string }) {
 
 function EyeOffSvg({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
       <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
       <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
       <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
@@ -43,13 +62,23 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
 
+  // Track rate limit state — clears the generic error when triggered
+  const { isLimited, secondsRemaining } = useRateLimit(() => {
+    setError("");
+  });
+
   const emailError =
     touched.email && email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
       ? "Please enter a valid email address"
       : undefined;
 
+  // Button is disabled while submitting OR while rate-limited
+  const isSubmitDisabled = isLoading || isLimited;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitDisabled) return;
+
     setError("");
     setIsLoading(true);
 
@@ -57,11 +86,25 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/dashboard");
     } catch (err) {
-      setError(getErrorMessage(err));
+      // 429 errors are handled by the useRateLimit hook via the interceptor event.
+      // We only set a generic error message for non-rate-limit failures.
+      const msg = getErrorMessage(err);
+      const isRateLimit = (err as any)?.response?.status === 429;
+      if (!isRateLimit) {
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
   }
+
+  // Build the countdown label for the submit button
+  const countdownLabel = (() => {
+    if (!isLimited) return null;
+    const mins = Math.floor(secondsRemaining / 60);
+    const secs = secondsRemaining % 60;
+    return mins > 0 ? `${mins}m ${secs.toString().padStart(2, "0")}s` : `${secondsRemaining}s`;
+  })();
 
   return (
     <div className="space-y-6">
@@ -80,9 +123,7 @@ export default function LoginPage() {
         )}
       >
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Welcome back
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome back</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Sign in to your account to continue
           </p>
@@ -108,12 +149,14 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
+                disabled={isLimited}
                 className={cn(
                   "block w-full rounded-lg border pl-10 pr-3 py-2.5 text-sm",
                   "bg-white dark:bg-surface-800",
                   "text-gray-900 dark:text-gray-100",
                   "placeholder:text-gray-400 dark:placeholder:text-gray-500",
                   "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-surface-800",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
                   emailError
                     ? "border-danger-300 dark:border-danger-700 focus:border-danger-500 focus:ring-danger-500"
                     : "border-gray-300 dark:border-surface-700 focus:border-primary-500 focus:ring-primary-500"
@@ -134,13 +177,12 @@ export default function LoginPage() {
               >
                 Password
               </label>
-              <button
-                type="button"
-                className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
-                tabIndex={-1}
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 transition-colors"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -153,12 +195,14 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
+                disabled={isLimited}
                 className={cn(
                   "block w-full rounded-lg border pl-10 pr-10 py-2.5 text-sm",
                   "bg-white dark:bg-surface-800",
                   "text-gray-900 dark:text-gray-100",
                   "placeholder:text-gray-400 dark:placeholder:text-gray-500",
                   "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-surface-800",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
                   "border-gray-300 dark:border-surface-700 focus:border-primary-500 focus:ring-primary-500"
                 )}
               />
@@ -169,11 +213,7 @@ export default function LoginPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 tabIndex={-1}
               >
-                {showPassword ? (
-                  <EyeOffSvg className="h-4 w-4" />
-                ) : (
-                  <EyeSvg className="h-4 w-4" />
-                )}
+                {showPassword ? <EyeOffSvg className="h-4 w-4" /> : <EyeSvg className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -185,16 +225,33 @@ export default function LoginPage() {
               type="checkbox"
               className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
-            <label
-              htmlFor="remember-me"
-              className="text-sm text-gray-600 dark:text-gray-400"
-            >
+            <label htmlFor="remember-me" className="text-sm text-gray-600 dark:text-gray-400">
               Remember me
             </label>
           </div>
 
-          {/* Error message */}
-          {error && (
+          {/* Rate limit inline error with countdown */}
+          {isLimited && (
+            <div
+              role="alert"
+              className={cn(
+                "flex items-center gap-2 rounded-lg p-3 text-sm",
+                "bg-warning-50 dark:bg-warning-900/30",
+                "text-warning-700 dark:text-warning-300",
+                "border border-warning-200 dark:border-warning-700",
+                "animate-slide-up"
+              )}
+            >
+              <Clock className="h-4 w-4 shrink-0" />
+              <span>
+                Too many attempts. You can try again in{" "}
+                <span className="font-semibold tabular-nums">{countdownLabel}</span>.
+              </span>
+            </div>
+          )}
+
+          {/* Generic error message (non-rate-limit failures) */}
+          {error && !isLimited && (
             <div
               role="alert"
               className={cn(
@@ -210,9 +267,22 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Submit */}
-          <Button type="submit" isLoading={isLoading} size="lg" className="w-full">
-            Sign in
+          {/* Submit — disabled with countdown label while rate-limited */}
+          <Button
+            type="submit"
+            isLoading={isLoading}
+            disabled={isSubmitDisabled}
+            size="lg"
+            className="w-full"
+          >
+            {isLimited ? (
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Try again in {countdownLabel}
+              </span>
+            ) : (
+              "Sign in"
+            )}
           </Button>
         </form>
 

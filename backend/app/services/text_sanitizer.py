@@ -60,9 +60,9 @@ def sanitize_text(text: str, source_filename: str = "unknown") -> str:
 
     # 1. Remove null bytes and control characters (except newlines and tabs)
     cleaned = "".join(
-        char for char in text
-        if char in ("\n", "\t", "\r")
-        or unicodedata.category(char) != "Cc"
+        char
+        for char in text
+        if char in ("\n", "\t", "\r") or unicodedata.category(char) != "Cc"
     )
 
     # 2. Normalize Unicode (NFC form) -- combines decomposed characters

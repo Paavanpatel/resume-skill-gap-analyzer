@@ -190,8 +190,18 @@ class TestSkillNormalizerEdgeCases:
     def test_required_field_for_job_skills(self, normalizer):
         """The 'required' field is preserved for job description skills."""
         skills = [
-            {"name": "Python", "confidence": 0.95, "category": "lang", "required": True},
-            {"name": "Docker", "confidence": 0.6, "category": "devops", "required": False},
+            {
+                "name": "Python",
+                "confidence": 0.95,
+                "category": "lang",
+                "required": True,
+            },
+            {
+                "name": "Docker",
+                "confidence": 0.6,
+                "category": "devops",
+                "required": False,
+            },
         ]
         result = normalizer.normalize(skills, source="job_description")
 
@@ -238,9 +248,7 @@ class TestBuildTaxonomyIndex:
 
     def test_null_aliases_defaults(self):
         """Null aliases defaults to empty list."""
-        data = [
-            {"name": "Go", "category": "programming_language", "aliases": None}
-        ]
+        data = [{"name": "Go", "category": "programming_language", "aliases": None}]
         result = build_taxonomy_index(data)
         assert result[0].aliases == []
 

@@ -41,9 +41,11 @@ export default function Tooltip({
 
   const arrowClasses: Record<string, string> = {
     top: "top-full left-1/2 -translate-x-1/2 border-t-gray-900 dark:border-t-surface-700 border-l-transparent border-r-transparent border-b-transparent",
-    bottom: "bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 dark:border-b-surface-700 border-l-transparent border-r-transparent border-t-transparent",
+    bottom:
+      "bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 dark:border-b-surface-700 border-l-transparent border-r-transparent border-t-transparent",
     left: "left-full top-1/2 -translate-y-1/2 border-l-gray-900 dark:border-l-surface-700 border-t-transparent border-b-transparent border-r-transparent",
-    right: "right-full top-1/2 -translate-y-1/2 border-r-gray-900 dark:border-r-surface-700 border-t-transparent border-b-transparent border-l-transparent",
+    right:
+      "right-full top-1/2 -translate-y-1/2 border-r-gray-900 dark:border-r-surface-700 border-t-transparent border-b-transparent border-l-transparent",
   };
 
   return (
@@ -71,12 +73,7 @@ export default function Tooltip({
         >
           {content}
           {/* Arrow */}
-          <span
-            className={cn(
-              "absolute border-[5px]",
-              arrowClasses[position]
-            )}
-          />
+          <span className={cn("absolute border-[5px]", arrowClasses[position])} />
         </div>
       )}
     </div>

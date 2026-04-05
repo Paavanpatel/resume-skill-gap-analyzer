@@ -10,18 +10,15 @@ module.exports = {
   testMatch: ["**/src/**/*.(test|spec).(ts|tsx)"],
   transform: {
     "^.+\\.(ts|tsx)$": [
-      "@swc/jest",
+      "ts-jest",
       {
-        jsc: {
-          parser: { syntax: "typescript", tsx: true },
-          transform: { react: { runtime: "automatic" } },
+        tsconfig: {
+          jsx: "react-jsx",
         },
       },
     ],
   },
-  transformIgnorePatterns: [
-    "/node_modules/(?!(lucide-react)/)",
-  ],
+  transformIgnorePatterns: ["/node_modules/(?!(lucide-react)/)"],
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",

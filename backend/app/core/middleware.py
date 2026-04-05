@@ -4,17 +4,20 @@ Custom middleware for cross-cutting concerns.
 Middleware runs on EVERY request, so it must be fast. Heavy operations
 (like rate limiting checks) should use Redis lookups, not DB queries.
 
-Rate limiting uses the sliding window counter pattern in Redis:
-- Each window is a Redis key with TTL (e.g., "ratelimit:1.2.3.4:general" with 60s TTL)
-- INCR atomically increments and returns the new count
-- If the key is new, EXPIRE sets the TTL
-- When the window expires, Redis deletes the key automatically
+Rate limiting uses the true sliding window pattern via Redis sorted sets:
+- Each request is stored as a member with score = Unix timestamp (ms)
+- ZREMRANGEBYSCORE removes entries older than the window before counting
+- ZADD + ZCARD in an atomic pipeline (MULTI/EXEC) give exact counts
+- The key expires automatically via EXPIRE as a safety net
 
-Why sliding window over fixed window? Fixed window has a burst problem:
-a client could make 30 requests at 11:59:59 and 30 more at 12:00:01,
-effectively getting 60 requests in 2 seconds. Sliding window smooths
-this out. (Our implementation is actually a fixed window for simplicity,
-but the short 60s window makes the burst problem negligible.)
+True sliding window vs. fixed window: a fixed window lets a client burst
+at the seam (30 req at 11:59:59 + 30 more at 12:00:01 = 60 in 2s).
+The sorted-set approach prevents this because we always count requests
+within the last N seconds from *now*, not from the start of a clock cycle.
+
+Auth brute-force protection applies a stricter IP-based limit on POST
+/auth/login and /auth/register endpoints, regardless of whether the
+client is authenticated.
 """
 
 import json
@@ -22,6 +25,7 @@ import logging
 import time
 import uuid
 
+import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
@@ -50,14 +54,42 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:16])
         request.state.request_id = request_id
 
+        # Bind request context to structlog so every log line in this request
+        # automatically carries request_id, method, and path without manual passing.
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(
+            request_id=request_id,
+            http_method=request.method,
+            http_path=request.url.path,
+        )
+
         start_time = time.perf_counter()
         response = await call_next(request)
-        duration_ms = (time.perf_counter() - start_time) * 1000
+        duration_s = time.perf_counter() - start_time
+        duration_ms = duration_s * 1000
 
         response.headers["X-Request-ID"] = request_id
 
-        # Log every request with timing. In production, this feeds into
-        # metrics dashboards (Grafana, Datadog, etc.)
+        # Record Prometheus HTTP metrics (import lazily to avoid circular imports
+        # if metrics.py ever imports from middleware in the future)
+        try:
+            from app.core.metrics import (
+                http_request_duration_seconds,
+                http_requests_total,
+            )
+
+            # Normalise path for high-cardinality routes (e.g. /analysis/{id})
+            path_label = _normalise_path(request.url.path)
+            status_label = str(response.status_code)
+            http_requests_total.labels(
+                method=request.method, path=path_label, status=status_label
+            ).inc()
+            http_request_duration_seconds.labels(
+                method=request.method, path=path_label
+            ).observe(duration_s)
+        except Exception:
+            pass  # Never let metrics recording crash a request
+
         logger.info(
             "%s %s -> %d (%.1fms) [request_id=%s]",
             request.method,
@@ -104,37 +136,86 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _normalise_path(path: str) -> str:
+    """
+    Replace path segments that look like UUIDs or numeric IDs with a
+    placeholder to prevent unbounded label cardinality in Prometheus.
+
+    Examples:
+      /api/v1/analysis/abc123def456  ->  /api/v1/analysis/{id}
+      /api/v1/resume/42              ->  /api/v1/resume/{id}
+    """
+    import re
+
+    # UUID-shaped segments (hex, 8-4-4-4-12 or 32 hex chars)
+    path = re.sub(
+        r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "/{id}", path
+    )
+    path = re.sub(r"/[0-9a-f]{32}", "/{id}", path)
+    # Pure numeric segments
+    path = re.sub(r"/\d+", "/{id}", path)
+    return path
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    Redis-based rate limiting middleware.
+    Redis sliding-window rate limiting middleware.
 
-    Applies two rate limit tiers:
-    1. General: N requests per minute (applies to all endpoints)
-    2. Analysis: M analysis submissions per hour (applies to POST /analysis)
+    Applies three rate limit tiers:
+    1. Auth brute-force: M attempts per 15 minutes per IP on login/register
+    2. General: N requests per minute per client (user ID or IP)
+    3. Analysis: P analysis submissions per hour per client
 
-    The rate limit key is based on the client's IP address for unauthenticated
-    requests, or the user ID for authenticated requests (extracted from the
-    JWT token in the Authorization header without full validation -- just
-    the "sub" claim for identification).
+    Sliding window implementation (sorted sets + MULTI/EXEC pipeline):
+    - Each request stored as a member with score = epoch ms
+    - ZREMRANGEBYSCORE prunes expired entries before counting
+    - ZADD + ZCARD run in one atomic pipeline transaction
+    - If over limit, the just-added member is removed (deny without counting)
+    - EXPIRE on the key ensures Redis cleans up stale windows automatically
 
-    If Redis is unavailable, rate limiting is skipped (fail-open). This is
-    a deliberate choice: blocking all requests because Redis is down is
-    worse than temporarily allowing unlimited requests.
+    Client identification:
+    - Authenticated requests: keyed by user ID (prevents IP-switching bypass)
+    - Unauthenticated requests: keyed by IP address
+    - Auth endpoints always use IP (brute force targets anonymous attempts)
 
-    Rate limit headers are added to every response:
-    - X-RateLimit-Limit: max requests allowed in the window
-    - X-RateLimit-Remaining: requests remaining in current window
+    Fail-open: if Redis is unavailable, rate limiting is skipped. Blocking
+    all traffic because Redis is down is worse than temporary unlimited access.
+
+    Response headers on every non-exempt response:
+    - X-RateLimit-Limit: max requests in the window
+    - X-RateLimit-Remaining: requests remaining
     - X-RateLimit-Reset: seconds until the window resets
     """
 
-    # Paths exempt from rate limiting (health checks, docs)
-    _EXEMPT_PATHS = frozenset({"/api/v1/health", "/docs", "/redoc", "/openapi.json"})
+    # Paths that bypass rate limiting entirely
+    _EXEMPT_PATHS = frozenset(
+        {
+            "/api/v1/health",
+            "/api/v1/health/live",
+            "/api/v1/health/ready",
+            "/api/v1/metrics",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+        }
+    )
 
-    def __init__(self, app, redis_url: str, general_limit: int = 30, analysis_limit: int = 10):
+    # Auth endpoints that get stricter IP-based brute-force protection
+    _AUTH_PATHS = frozenset({"/api/v1/auth/login", "/api/v1/auth/register"})
+
+    def __init__(
+        self,
+        app,
+        redis_url: str,
+        general_limit: int = 30,
+        analysis_limit: int = 10,
+        auth_limit: int = 20,
+    ):
         super().__init__(app)
         self._redis_url = redis_url
         self._general_limit = general_limit
         self._analysis_limit = analysis_limit
+        self._auth_limit = auth_limit
         self._redis = None
 
     async def _get_redis(self):
@@ -142,6 +223,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self._redis is None:
             try:
                 import redis.asyncio as aioredis
+
                 self._redis = aioredis.from_url(
                     self._redis_url,
                     encoding="utf-8",
@@ -164,15 +246,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         switching IPs, and prevents shared IPs (like corporate NATs)
         from unfairly limiting individual users.
         """
-        # Try to extract user ID from Bearer token (lightweight, no DB)
         auth_header = request.headers.get("authorization", "")
         if auth_header.startswith("Bearer "):
             try:
                 import jwt as pyjwt
+
                 token = auth_header[7:]
-                # Decode WITHOUT verification -- we just need the sub claim
-                # for rate limit bucketing. Full validation happens in the
-                # get_current_user dependency.
+                # Decode WITHOUT verification — just need the sub claim for
+                # rate limit bucketing. Full validation happens in get_current_user.
                 payload = pyjwt.decode(token, options={"verify_signature": False})
                 user_id = payload.get("sub")
                 if user_id:
@@ -180,16 +261,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             except Exception:
                 pass
 
-        # Fall back to IP address
+        return self._get_ip(request)
+
+    def _get_ip(self, request: Request) -> str:
+        """Extract client IP address for IP-based rate limiting."""
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return f"ip:{forwarded.split(',')[0].strip()}"
-
         client_host = request.client.host if request.client else "unknown"
         return f"ip:{client_host}"
 
     def _is_analysis_endpoint(self, request: Request) -> bool:
-        """Check if this is an analysis submission (the expensive endpoint)."""
+        """Check if this is an analysis submission (the expensive endpoint).
+
+        Both new submissions and retries consume AI resources, so both count
+        against the per-hour analysis limit. Only status polls are excluded.
+        """
         return (
             request.method == "POST"
             and request.url.path.startswith("/api/v1/analysis/")
@@ -200,35 +287,48 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self, redis_client, key: str, limit: int, window_seconds: int
     ) -> tuple[bool, int, int, int]:
         """
-        Check and increment the rate limit counter.
+        True sliding window rate limit check using Redis sorted sets.
+
+        Pipeline (MULTI/EXEC) steps:
+        1. ZREMRANGEBYSCORE — remove entries older than window_start
+        2. ZADD — record this request with current timestamp as score
+        3. ZCARD — count entries in the current window
+        4. EXPIRE — ensure the key eventually cleans up
+
+        If the count exceeds the limit, the just-added member is removed
+        (the request is denied without being counted toward the window).
 
         Returns: (allowed, current_count, limit, ttl_remaining)
         """
+        now_ms = int(time.time() * 1000)
+        window_start_ms = now_ms - (window_seconds * 1000)
+        member = f"{now_ms}-{uuid.uuid4().hex[:8]}"
+
         try:
-            pipe = redis_client.pipeline()
-            pipe.incr(key)
-            pipe.ttl(key)
-            results = await pipe.execute()
+            async with redis_client.pipeline(transaction=True) as pipe:
+                pipe.zremrangebyscore(key, 0, window_start_ms)
+                pipe.zadd(key, {member: now_ms})
+                pipe.zcard(key)
+                pipe.expire(key, window_seconds + 1)
+                results = await pipe.execute()
 
-            count = results[0]
-            ttl = results[1]
+            count = results[2]  # ZCARD result (includes just-added entry)
 
-            # First request in the window -- set TTL
-            if ttl == -1:
-                await redis_client.expire(key, window_seconds)
-                ttl = window_seconds
+            if count > limit:
+                # Remove the entry we just added — request is denied
+                await redis_client.zrem(key, member)
+                return False, count - 1, limit, window_seconds
 
-            allowed = count <= limit
-            return allowed, count, limit, max(ttl, 0)
+            return True, count, limit, window_seconds
 
         except Exception as e:
-            logger.warning("Rate limit check failed: %s", str(e)[:200])
+            logger.warning("Rate limit check failed for key=%s: %s", key, str(e)[:200])
             return True, 0, limit, 0  # Fail open
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        # Skip exempt paths
+        # Skip exempt paths (health checks, API docs)
         if request.url.path in self._EXEMPT_PATHS:
             return await call_next(request)
 
@@ -238,9 +338,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if redis_client is None:
             return await call_next(request)
 
+        # ── Auth brute-force protection (IP-based, stricter) ──────────
+        if request.method == "POST" and request.url.path in self._AUTH_PATHS:
+            ip_id = self._get_ip(request)
+            auth_key = f"ratelimit:{ip_id}:auth"
+            allowed, _, _, ttl = await self._check_rate_limit(
+                redis_client,
+                auth_key,
+                self._auth_limit,
+                900,  # 15-minute window
+            )
+            if not allowed:
+                return self._rate_limit_response(self._auth_limit, ttl, request)
+
         client_id = self._get_client_id(request)
 
-        # Check general rate limit (per minute)
+        # ── General rate limit (per minute) ──────────────────────────
         general_key = f"ratelimit:{client_id}:general"
         allowed, count, limit, ttl = await self._check_rate_limit(
             redis_client, general_key, self._general_limit, 60
@@ -249,20 +362,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not allowed:
             return self._rate_limit_response(limit, ttl, request)
 
-        # Check analysis-specific rate limit (per hour) for POST /analysis
+        # ── Analysis-specific rate limit (per hour) ───────────────────
         if self._is_analysis_endpoint(request):
             analysis_key = f"ratelimit:{client_id}:analysis"
-            allowed, count, limit, ttl = await self._check_rate_limit(
+            allowed, _, a_limit, a_ttl = await self._check_rate_limit(
                 redis_client, analysis_key, self._analysis_limit, 3600
             )
-
             if not allowed:
-                return self._rate_limit_response(limit, ttl, request)
+                return self._rate_limit_response(a_limit, a_ttl, request)
 
-        # Request is within limits
+        # ── Request is within limits — proceed ────────────────────────
         response = await call_next(request)
 
-        # Add rate limit headers
         remaining = max(self._general_limit - count, 0)
         response.headers["X-RateLimit-Limit"] = str(self._general_limit)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
@@ -270,20 +381,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _rate_limit_response(self, limit: int, retry_after: int, request: Request) -> Response:
+    def _rate_limit_response(
+        self, limit: int, retry_after: int, request: Request
+    ) -> Response:
         """Build a 429 Too Many Requests response."""
         request_id = getattr(request.state, "request_id", "unknown")
 
-        body = json.dumps({
-            "error": {
-                "code": "RATE_LIMITED",
-                "message": "Too many requests. Please try again later.",
-                "details": {
-                    "retry_after_seconds": retry_after,
+        body = json.dumps(
+            {
+                "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please try again later.",
+                    "details": {
+                        "retry_after_seconds": retry_after,
+                    },
                 },
-            },
-            "request_id": request_id,
-        })
+                "request_id": request_id,
+            }
+        )
 
         return Response(
             content=body,

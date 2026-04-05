@@ -57,9 +57,13 @@ export default function SkillsSection({ matchedSkills, missingSkills }: SkillsSe
                 className="mt-3 flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
               >
                 {showAllMatched ? (
-                  <>Show less <ChevronUp className="h-4 w-4" /></>
+                  <>
+                    Show less <ChevronUp className="h-4 w-4" />
+                  </>
                 ) : (
-                  <>Show all {matchedSkills.length} <ChevronDown className="h-4 w-4" /></>
+                  <>
+                    Show all {matchedSkills.length} <ChevronDown className="h-4 w-4" />
+                  </>
                 )}
               </button>
             )}
@@ -102,9 +106,13 @@ export default function SkillsSection({ matchedSkills, missingSkills }: SkillsSe
                 className="mt-3 flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
               >
                 {showAllMissing ? (
-                  <>Show less <ChevronUp className="h-4 w-4" /></>
+                  <>
+                    Show less <ChevronUp className="h-4 w-4" />
+                  </>
                 ) : (
-                  <>Show all {missingSkills.length} <ChevronDown className="h-4 w-4" /></>
+                  <>
+                    Show all {missingSkills.length} <ChevronDown className="h-4 w-4" />
+                  </>
                 )}
               </button>
             )}
@@ -120,10 +128,7 @@ function ConfidenceBar({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-green-200">
-        <div
-          className="h-full rounded-full bg-green-500"
-          style={{ width: `${pct}%` }}
-        />
+        <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
       </div>
       <span className="w-8 text-right text-xs text-gray-500">{pct}%</span>
     </div>
@@ -132,5 +137,9 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function PriorityBadge({ priority }: { priority: "high" | "medium" | "low" }) {
   const variant = priority === "high" ? "danger" : priority === "medium" ? "warning" : "info";
-  return <Badge variant={variant} className="text-xs capitalize">{priority}</Badge>;
+  return (
+    <Badge variant={variant} className="text-xs capitalize">
+      {priority}
+    </Badge>
+  );
 }

@@ -28,6 +28,7 @@ from app.services.section_parser import ParsedResume
 @dataclass
 class ATSIssue:
     """A single ATS compatibility issue found in the resume."""
+
     severity: str  # "error", "warning", "info"
     category: str  # "structure", "content", "formatting", "contact"
     title: str
@@ -47,6 +48,7 @@ class ATSIssue:
 @dataclass
 class ATSCheckResult:
     """Complete ATS check output."""
+
     issues: list[ATSIssue]
     format_score: float  # 0-100, purely structural (not skill-based)
     passed_checks: int
@@ -101,22 +103,24 @@ def _check_essential_sections(resume: ParsedResume) -> list[ATSIssue]:
 
     for section_key, (severity, title, desc, fix) in essential.items():
         if section_key not in section_names:
-            issues.append(ATSIssue(
-                severity=severity,
-                category="structure",
-                title=title,
-                description=desc,
-                fix=fix,
-            ))
+            issues.append(
+                ATSIssue(
+                    severity=severity,
+                    category="structure",
+                    title=title,
+                    description=desc,
+                    fix=fix,
+                )
+            )
 
     return issues
 
 
 _EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 _PHONE_PATTERN = re.compile(
-    r"(?:\+?\d{1,3}[-.\s]?)?"               # Optional country code (1-3 digits)
-    r"(?:\(?\d{2,4}\)?[-.\s]?)"              # Area code (2-4 digits)
-    r"\d{3,4}[-.\s]?\d{3,4}"                # Number
+    r"(?:\+?\d{1,3}[-.\s]?)?"  # Optional country code (1-3 digits)
+    r"(?:\(?\d{2,4}\)?[-.\s]?)"  # Area code (2-4 digits)
+    r"\d{3,4}[-.\s]?\d{3,4}"  # Number
 )
 
 
@@ -132,23 +136,27 @@ def _check_contact_info(resume: ParsedResume) -> list[ATSIssue]:
     full_text = resume.raw_text
 
     if not _EMAIL_PATTERN.search(full_text):
-        issues.append(ATSIssue(
-            severity="error",
-            category="contact",
-            title="No email address found",
-            description="ATS systems extract your email to create a candidate profile. "
-                        "Without it, recruiters cannot contact you.",
-            fix="Add your professional email address near the top of your resume.",
-        ))
+        issues.append(
+            ATSIssue(
+                severity="error",
+                category="contact",
+                title="No email address found",
+                description="ATS systems extract your email to create a candidate profile. "
+                "Without it, recruiters cannot contact you.",
+                fix="Add your professional email address near the top of your resume.",
+            )
+        )
 
     if not _PHONE_PATTERN.search(full_text):
-        issues.append(ATSIssue(
-            severity="warning",
-            category="contact",
-            title="No phone number found",
-            description="Most ATS systems expect a phone number for the candidate profile.",
-            fix="Add your phone number near the top of your resume.",
-        ))
+        issues.append(
+            ATSIssue(
+                severity="warning",
+                category="contact",
+                title="No phone number found",
+                description="Most ATS systems expect a phone number for the candidate profile.",
+                fix="Add your phone number near the top of your resume.",
+            )
+        )
 
     return issues
 
@@ -164,34 +172,40 @@ def _check_resume_length(resume: ParsedResume) -> list[ATSIssue]:
     wc = resume.word_count
 
     if wc < 150:
-        issues.append(ATSIssue(
-            severity="error",
-            category="content",
-            title=f"Resume is very short ({wc} words)",
-            description="Resumes under 150 words lack the detail ATS systems need "
-                        "for effective keyword matching. This often results in low match scores.",
-            fix="Expand your resume with more detail about your experience, projects, and skills. "
+        issues.append(
+            ATSIssue(
+                severity="error",
+                category="content",
+                title=f"Resume is very short ({wc} words)",
+                description="Resumes under 150 words lack the detail ATS systems need "
+                "for effective keyword matching. This often results in low match scores.",
+                fix="Expand your resume with more detail about your experience, projects, and skills. "
                 "Aim for 400-800 words.",
-        ))
+            )
+        )
     elif wc < 300:
-        issues.append(ATSIssue(
-            severity="warning",
-            category="content",
-            title=f"Resume may be too short ({wc} words)",
-            description="Short resumes provide fewer keyword matching opportunities. "
-                        "Consider adding more detail.",
-            fix="Add quantifiable achievements, project descriptions, or expand your skills section. "
+        issues.append(
+            ATSIssue(
+                severity="warning",
+                category="content",
+                title=f"Resume may be too short ({wc} words)",
+                description="Short resumes provide fewer keyword matching opportunities. "
+                "Consider adding more detail.",
+                fix="Add quantifiable achievements, project descriptions, or expand your skills section. "
                 "Aim for 400-800 words.",
-        ))
+            )
+        )
     elif wc > 1500:
-        issues.append(ATSIssue(
-            severity="warning",
-            category="content",
-            title=f"Resume may be too long ({wc} words)",
-            description="Very long resumes can dilute keyword density and are harder "
-                        "for recruiters to scan quickly.",
-            fix="Consider condensing to 1-2 pages. Focus on the most relevant and recent experience.",
-        ))
+        issues.append(
+            ATSIssue(
+                severity="warning",
+                category="content",
+                title=f"Resume may be too long ({wc} words)",
+                description="Very long resumes can dilute keyword density and are harder "
+                "for recruiters to scan quickly.",
+                fix="Consider condensing to 1-2 pages. Focus on the most relevant and recent experience.",
+            )
+        )
 
     return issues
 
@@ -208,15 +222,17 @@ def _check_summary_section(resume: ParsedResume) -> list[ATSIssue]:
     section_names = {s.name for s in resume.sections}
 
     if "summary" not in section_names:
-        issues.append(ATSIssue(
-            severity="info",
-            category="structure",
-            title="No summary or objective section",
-            description="A professional summary at the top of your resume provides "
-                        "concentrated keywords that ATS systems often weight more heavily.",
-            fix="Add a 2-3 sentence 'Professional Summary' section at the top of your resume "
+        issues.append(
+            ATSIssue(
+                severity="info",
+                category="structure",
+                title="No summary or objective section",
+                description="A professional summary at the top of your resume provides "
+                "concentrated keywords that ATS systems often weight more heavily.",
+                fix="Add a 2-3 sentence 'Professional Summary' section at the top of your resume "
                 "highlighting your key qualifications for the target role.",
-        ))
+            )
+        )
 
     return issues
 
@@ -235,39 +251,47 @@ def _check_formatting_issues(resume: ParsedResume) -> list[ATSIssue]:
     # Check for excessive special characters (sign of table/column layout)
     special_char_ratio = len(re.findall(r"[|│┃┆┊╎]", text)) / max(len(text), 1)
     if special_char_ratio > 0.01:
-        issues.append(ATSIssue(
-            severity="warning",
-            category="formatting",
-            title="Possible table or column layout detected",
-            description="ATS systems often misparse multi-column or table-based layouts, "
-                        "scrambling your content.",
-            fix="Use a single-column resume layout. Avoid tables, text boxes, and multi-column formatting.",
-        ))
+        issues.append(
+            ATSIssue(
+                severity="warning",
+                category="formatting",
+                title="Possible table or column layout detected",
+                description="ATS systems often misparse multi-column or table-based layouts, "
+                "scrambling your content.",
+                fix="Use a single-column resume layout. Avoid tables, text boxes, and multi-column formatting.",
+            )
+        )
 
     # Check for excessive bullet characters that might indicate parsing issues
     bullet_chars = len(re.findall(r"[●◆◇■□▪▫★☆►▸‣⁃]", text))
     if bullet_chars > 30:
-        issues.append(ATSIssue(
-            severity="info",
-            category="formatting",
-            title="Non-standard bullet characters detected",
-            description="Some ATS systems don't recognize fancy bullet characters and may "
-                        "display them as garbled text.",
-            fix="Use standard bullet characters (• or -) or plain dashes instead of special Unicode bullets.",
-        ))
+        issues.append(
+            ATSIssue(
+                severity="info",
+                category="formatting",
+                title="Non-standard bullet characters detected",
+                description="Some ATS systems don't recognize fancy bullet characters and may "
+                "display them as garbled text.",
+                fix="Use standard bullet characters (• or -) or plain dashes instead of special Unicode bullets.",
+            )
+        )
 
     # Check for lines that look like page headers/footers
     lines = text.split("\n")
-    page_pattern = re.compile(r"^\s*(?:page\s*\d+|^\d+\s*$|\d+\s*/\s*\d+)", re.IGNORECASE)
+    page_pattern = re.compile(
+        r"^\s*(?:page\s*\d+|^\d+\s*$|\d+\s*/\s*\d+)", re.IGNORECASE
+    )
     page_markers = sum(1 for line in lines if page_pattern.match(line.strip()))
     if page_markers >= 2:
-        issues.append(ATSIssue(
-            severity="info",
-            category="formatting",
-            title="Page number artifacts detected",
-            description="Page numbers embedded in the text can confuse ATS parsers.",
-            fix="Remove page numbers from your resume. They're unnecessary for digital submissions.",
-        ))
+        issues.append(
+            ATSIssue(
+                severity="info",
+                category="formatting",
+                title="Page number artifacts detected",
+                description="Page numbers embedded in the text can confuse ATS parsers.",
+                fix="Remove page numbers from your resume. They're unnecessary for digital submissions.",
+            )
+        )
 
     return issues
 
@@ -298,15 +322,17 @@ def _check_date_formats(resume: ParsedResume) -> list[ATSIssue]:
     )
 
     if not standard_date.search(exp_content):
-        issues.append(ATSIssue(
-            severity="warning",
-            category="content",
-            title="No recognizable dates in Experience section",
-            description="ATS systems extract dates to calculate your years of experience. "
-                        "Without clear dates, this calculation fails.",
-            fix="Include dates in a standard format like 'Jan 2020 - Present' or '2019 - 2023' "
+        issues.append(
+            ATSIssue(
+                severity="warning",
+                category="content",
+                title="No recognizable dates in Experience section",
+                description="ATS systems extract dates to calculate your years of experience. "
+                "Without clear dates, this calculation fails.",
+                fix="Include dates in a standard format like 'Jan 2020 - Present' or '2019 - 2023' "
                 "for each position.",
-        ))
+            )
+        )
 
     return issues
 
@@ -314,8 +340,15 @@ def _check_date_formats(resume: ParsedResume) -> list[ATSIssue]:
 # ── Main entry point ─────────────────────────────────────────────
 
 
-# Total number of checks we run (for the score calculation)
-_TOTAL_CHECKS = 8
+_CHECK_FUNCTIONS = [
+    _check_essential_sections,
+    _check_contact_info,
+    _check_resume_length,
+    _check_summary_section,
+    _check_formatting_issues,
+    _check_date_formats,
+]
+_TOTAL_CHECKS = len(_CHECK_FUNCTIONS)
 
 
 def check_ats_compatibility(resume: ParsedResume) -> ATSCheckResult:
@@ -340,14 +373,7 @@ def check_ats_compatibility(resume: ParsedResume) -> ATSCheckResult:
     # both Experience and Education), but it still counts as one failed check.
     checks_failed = 0
 
-    for check_fn in [
-        _check_essential_sections,
-        _check_contact_info,
-        _check_resume_length,
-        _check_summary_section,
-        _check_formatting_issues,
-        _check_date_formats,
-    ]:
+    for check_fn in _CHECK_FUNCTIONS:
         issues = check_fn(resume)
         all_issues.extend(issues)
         if any(i.severity in ("error", "warning") for i in issues):
@@ -356,8 +382,7 @@ def check_ats_compatibility(resume: ParsedResume) -> ATSCheckResult:
     # Compute format score based on issue severity
     # Each error deducts 15 points, warning 8, info 3
     deductions = sum(
-        {"error": 15, "warning": 8, "info": 3}.get(i.severity, 0)
-        for i in all_issues
+        {"error": 15, "warning": 8, "info": 3}.get(i.severity, 0) for i in all_issues
     )
     format_score = round(max(0.0, min(100.0, 100.0 - deductions)), 1)
 

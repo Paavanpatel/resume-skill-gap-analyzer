@@ -3,29 +3,28 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import usePageTitle from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/context/AuthContext";
 import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import PasswordStrengthMeter, {
-  getRequirements,
-} from "@/components/ui/PasswordStrengthMeter";
+import PasswordStrengthMeter, { getRequirements } from "@/components/ui/PasswordStrengthMeter";
 import ProgressSteps from "@/components/ui/ProgressSteps";
-import {
-  Mail,
-  Lock,
-  User,
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-} from "lucide-react";
+import { Mail, Lock, User, AlertCircle, ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 // Inline eye icons — avoids lucide-react export resolution issues in Docker builds
 function EyeSvg({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
       <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -34,7 +33,16 @@ function EyeSvg({ className }: { className?: string }) {
 
 function EyeOffSvg({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
       <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
       <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
       <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
@@ -117,7 +125,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await register(email, password, fullName || undefined);
-      router.push("/dashboard");
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -164,8 +172,7 @@ export default function RegisterPage() {
                   htmlFor="reg-name"
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  Full name{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
+                  Full name <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -271,7 +278,11 @@ export default function RegisterPage() {
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOffSvg className="h-4 w-4" /> : <EyeSvg className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOffSvg className="h-4 w-4" />
+                    ) : (
+                      <EyeSvg className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 <PasswordStrengthMeter password={password} />
@@ -313,7 +324,11 @@ export default function RegisterPage() {
                     aria-label={showConfirm ? "Hide password" : "Show password"}
                     tabIndex={-1}
                   >
-                    {showConfirm ? <EyeOffSvg className="h-4 w-4" /> : <EyeSvg className="h-4 w-4" />}
+                    {showConfirm ? (
+                      <EyeOffSvg className="h-4 w-4" />
+                    ) : (
+                      <EyeSvg className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {confirmError && (
@@ -389,11 +404,17 @@ export default function RegisterPage() {
                   className="text-sm text-gray-600 dark:text-gray-400 leading-snug"
                 >
                   I agree to the{" "}
-                  <button type="button" className="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">
+                  <button
+                    type="button"
+                    className="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium"
+                  >
                     Terms of Service
                   </button>{" "}
                   and{" "}
-                  <button type="button" className="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">
+                  <button
+                    type="button"
+                    className="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium"
+                  >
                     Privacy Policy
                   </button>
                 </label>

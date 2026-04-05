@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models.analysis import Analysis
-from app.models.roadmap import Roadmap
 from app.repositories.base import BaseRepository
 
 
@@ -66,7 +65,9 @@ class AnalysisRepository(BaseRepository[Analysis]):
         )
         row = result.one()
         return {
-            "average_match_score": round(float(row.avg_match), 1) if row.avg_match else None,
+            "average_match_score": round(float(row.avg_match), 1)
+            if row.avg_match
+            else None,
             "average_ats_score": round(float(row.avg_ats), 1) if row.avg_ats else None,
         }
 

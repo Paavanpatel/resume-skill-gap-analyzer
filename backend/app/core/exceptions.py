@@ -23,10 +23,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 # ── Error codes ───────────────────────────────────────────────
 # Machine-readable codes the frontend can use in switch statements.
 # Grouped by domain so they're easy to scan.
+
 
 class ErrorCode(str, Enum):
     # General
@@ -64,8 +64,10 @@ class ErrorCode(str, Enum):
 # ── Error response model ─────────────────────────────────────
 # This is the JSON shape every error response follows.
 
+
 class ErrorDetail(BaseModel):
     """The error payload inside every error response."""
+
     code: str
     message: str
     details: dict[str, Any] | None = None
@@ -73,6 +75,7 @@ class ErrorDetail(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Top-level error response envelope."""
+
     error: ErrorDetail
     request_id: str | None = None
 
@@ -82,6 +85,7 @@ class ErrorResponse(BaseModel):
 # catches AppError and converts it to the ErrorResponse shape.
 # Anything that ISN'T an AppError is an unexpected bug and gets
 # a generic 500.
+
 
 class AppError(Exception):
     """
@@ -236,7 +240,9 @@ class AuthenticationError(AppError):
 class AuthorizationError(AppError):
     """Authorization failed (403)."""
 
-    def __init__(self, message: str = "You do not have permission to perform this action."):
+    def __init__(
+        self, message: str = "You do not have permission to perform this action."
+    ):
         super().__init__(
             message=message,
             error_code=ErrorCode.FORBIDDEN,
@@ -247,7 +253,9 @@ class AuthorizationError(AppError):
 class ConflictError(AppError):
     """Resource state conflict (409)."""
 
-    def __init__(self, message: str = "The operation conflicts with the current resource state."):
+    def __init__(
+        self, message: str = "The operation conflicts with the current resource state."
+    ):
         super().__init__(
             message=message,
             error_code=ErrorCode.CONFLICT,

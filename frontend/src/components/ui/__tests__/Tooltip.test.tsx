@@ -24,7 +24,7 @@ describe("Tooltip", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
-  it("shows tooltip on mouse enter after delay", async() => {
+  it("shows tooltip on mouse enter after delay", async () => {
     render(
       <Tooltip content="Tooltip text" delay={200}>
         <button>Hover me</button>

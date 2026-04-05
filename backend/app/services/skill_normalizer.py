@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TaxonomyEntry:
     """A flattened skill taxonomy entry for fast lookup."""
+
     name: str
     category: str
     weight: float
@@ -36,11 +37,12 @@ class TaxonomyEntry:
 @dataclass
 class NormalizedSkill:
     """A skill after normalization against the taxonomy."""
-    name: str           # Canonical name (from taxonomy if matched)
-    category: str       # Category (from taxonomy if matched, from LLM otherwise)
-    confidence: float   # From LLM extraction
-    weight: float       # From taxonomy (1.0 default for unmatched)
-    in_taxonomy: bool   # Whether this skill matched a taxonomy entry
+
+    name: str  # Canonical name (from taxonomy if matched)
+    category: str  # Category (from taxonomy if matched, from LLM otherwise)
+    confidence: float  # From LLM extraction
+    weight: float  # From taxonomy (1.0 default for unmatched)
+    in_taxonomy: bool  # Whether this skill matched a taxonomy entry
     source: str = "resume"  # "resume" or "job_description"
     required: bool | None = None  # Only for job description skills
 
@@ -136,15 +138,17 @@ class SkillNormalizer:
                 continue
             seen_names.add(dedup_key)
 
-            results.append(NormalizedSkill(
-                name=canonical,
-                category=final_category,
-                confidence=confidence,
-                weight=weight,
-                in_taxonomy=in_taxonomy,
-                source=source,
-                required=required,
-            ))
+            results.append(
+                NormalizedSkill(
+                    name=canonical,
+                    category=final_category,
+                    confidence=confidence,
+                    weight=weight,
+                    in_taxonomy=in_taxonomy,
+                    source=source,
+                    required=required,
+                )
+            )
 
         matched_count = sum(1 for r in results if r.in_taxonomy)
         logger.info(
@@ -168,7 +172,9 @@ def build_taxonomy_index(skills_data: list[dict]) -> list[TaxonomyEntry]:
     entries: list[TaxonomyEntry] = []
     for i, s in enumerate(skills_data):
         if not isinstance(s, dict):
-            logger.warning("Taxonomy entry %d is not a dict, skipping: %s", i, type(s).__name__)
+            logger.warning(
+                "Taxonomy entry %d is not a dict, skipping: %s", i, type(s).__name__
+            )
             continue
         name = s.get("name")
         category = s.get("category")
@@ -176,7 +182,11 @@ def build_taxonomy_index(skills_data: list[dict]) -> list[TaxonomyEntry]:
             logger.warning("Taxonomy entry %d missing 'name', skipping: %s", i, s)
             continue
         if not category or not isinstance(category, str):
-            logger.warning("Taxonomy entry %d (%s) missing 'category', defaulting to 'other'", i, name)
+            logger.warning(
+                "Taxonomy entry %d (%s) missing 'category', defaulting to 'other'",
+                i,
+                name,
+            )
             category = "other"
 
         weight = s.get("weight", 1.0)
@@ -187,10 +197,12 @@ def build_taxonomy_index(skills_data: list[dict]) -> list[TaxonomyEntry]:
         if not isinstance(aliases, list):
             aliases = []
 
-        entries.append(TaxonomyEntry(
-            name=name.strip(),
-            category=category.strip(),
-            weight=float(weight),
-            aliases=[a for a in aliases if isinstance(a, str)],
-        ))
+        entries.append(
+            TaxonomyEntry(
+                name=name.strip(),
+                category=category.strip(),
+                weight=float(weight),
+                aliases=[a for a in aliases if isinstance(a, str)],
+            )
+        )
     return entries

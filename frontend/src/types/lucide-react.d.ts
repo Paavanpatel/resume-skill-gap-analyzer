@@ -28,4 +28,5 @@ declare module "lucide-react" {
   export const Lightbulb: LucideIcon;
   export const History: LucideIcon;
   export const FileSearch: LucideIcon;
+  export const WifiOff: LucideIcon;
 }

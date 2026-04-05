@@ -9,6 +9,7 @@ Key dependencies:
   returns the User model. Used by every protected endpoint.
 - get_current_active_user: Same as above but also checks is_active.
 - get_redis: Returns a Redis client for rate limiting and token blacklisting.
+- RateLimiter: Tier-aware per-endpoint rate limit dependency (sliding window).
 
 Why use FastAPI's Depends() instead of just calling functions?
 - Automatic cleanup: DB sessions are closed, Redis connections returned to pool
@@ -17,18 +18,25 @@ Why use FastAPI's Depends() instead of just calling functions?
 """
 
 import logging
+import time
+import uuid
 from typing import Annotated
 from uuid import UUID
 
 import redis.asyncio as aioredis
-from fastapi import Depends, Request
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.exceptions import AuthenticationError, AuthorizationError, ErrorCode
+from app.core.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    ErrorCode,
+    RateLimitError,
+)
 from app.core.security import decode_token
-from app.db.session import get_db_session, get_read_db_session
+from app.db.session import get_db_session
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
 
@@ -167,3 +175,126 @@ async def get_current_user(
 # Use in endpoint signatures for cleaner code:
 #   async def endpoint(user: CurrentUser):
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+# ── Role-based access control ────────────────────────────────
+
+# Role hierarchy: super_admin > admin > user
+ROLE_HIERARCHY = {"user": 0, "admin": 1, "super_admin": 2}
+
+
+def require_role(*allowed_roles: str):
+    """
+    Dependency factory that restricts an endpoint to users with one of the
+    specified roles (or higher in the hierarchy).
+
+    Usage:
+        @router.get("/admin-only")
+        async def admin_endpoint(user: User = Depends(require_role("admin"))):
+            ...
+
+    A super_admin always passes any role check. The check is based on
+    hierarchy: if the minimum required level is "admin" (level 1), then
+    both "admin" (1) and "super_admin" (2) pass.
+    """
+    min_level = min(ROLE_HIERARCHY.get(r, 0) for r in allowed_roles)
+
+    async def _guard(user: User = Depends(get_current_user)) -> User:
+        user_level = ROLE_HIERARCHY.get(getattr(user, "role", "user"), 0)
+        if user_level < min_level:
+            raise AuthorizationError(
+                message="You do not have the required role to access this resource.",
+            )
+        return user
+
+    return _guard
+
+
+# ── Tier-aware rate limiter dependency ────────────────────────
+
+
+class RateLimiter:
+    """
+    Tier-aware per-endpoint rate limit dependency using a sliding window.
+
+    Applies different request limits based on the user's subscription tier,
+    using the same Redis sorted-set sliding window as the middleware.
+
+    Usage in endpoints:
+        @router.post("/expensive-operation")
+        async def my_endpoint(
+            user: CurrentUser,
+            _: None = Depends(RateLimiter(free=5, pro=50, enterprise=200, window=60)),
+        ):
+            ...
+
+    Args:
+        free: Max requests per window for free-tier users.
+        pro: Max requests per window for pro-tier users.
+        enterprise: Max requests per window for enterprise-tier users.
+        window: Window size in seconds (default: 60).
+        scope: Logical name for the limit bucket. Use a unique name per
+               endpoint to avoid sharing counters across unrelated endpoints.
+               Defaults to "default" (all endpoints share one counter).
+    """
+
+    def __init__(
+        self,
+        free: int = 30,
+        pro: int = 100,
+        enterprise: int = 500,
+        window: int = 60,
+        scope: str = "default",
+    ):
+        self._limits = {"free": free, "pro": pro, "enterprise": enterprise}
+        self._window = window
+        self._scope = scope
+
+    async def __call__(
+        self,
+        user: User = Depends(get_current_user),
+        redis_client: aioredis.Redis | None = Depends(get_redis),
+    ) -> None:
+        """
+        Check the sliding-window rate limit for this user + scope combination.
+
+        Raises RateLimitError (429) if the limit is exceeded.
+        Silently passes if Redis is unavailable (fail-open).
+        """
+        if redis_client is None:
+            return  # Fail open — don't block requests when Redis is down
+
+        tier = getattr(user, "tier", "free") or "free"
+        limit = self._limits.get(tier, self._limits["free"])
+
+        key = f"ratelimit:dep:{self._scope}:user:{user.id}"
+        now_ms = int(time.time() * 1000)
+        window_start_ms = now_ms - (self._window * 1000)
+        member = f"{now_ms}-{uuid.uuid4().hex[:8]}"
+
+        try:
+            async with redis_client.pipeline(transaction=True) as pipe:
+                pipe.zremrangebyscore(key, 0, window_start_ms)
+                pipe.zadd(key, {member: now_ms})
+                pipe.zcard(key)
+                pipe.expire(key, self._window + 1)
+                results = await pipe.execute()
+
+            count = results[2]
+
+            if count > limit:
+                await redis_client.zrem(key, member)
+                raise RateLimitError(
+                    message=f"Rate limit exceeded for this operation. Try again in {self._window} seconds.",
+                    retry_after_seconds=self._window,
+                )
+
+        except RateLimitError:
+            raise
+        except Exception as e:
+            logger.warning(
+                "RateLimiter dependency check failed [scope=%s user=%s]: %s",
+                self._scope,
+                user.id,
+                str(e)[:200],
+            )

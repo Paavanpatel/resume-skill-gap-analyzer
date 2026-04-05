@@ -4,18 +4,25 @@ Comprehensive tests for error handlers (core/error_handlers.py).
 Tests all error response formatting and HTTP status codes.
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from fastapi import FastAPI, Request
-from fastapi.testclient import TestClient
 from fastapi.exceptions import RequestValidationError
+from fastapi.testclient import TestClient
 from pydantic import ValidationError as PydanticValidationError
 
-from app.core.exceptions import (
-    AppError, NotFoundError, ValidationError, AuthenticationError,
-    FileUploadError, ParsingError, DatabaseError, RateLimitError
-)
 from app.core.error_handlers import register_error_handlers
+from app.core.exceptions import (
+    AppError,
+    AuthenticationError,
+    DatabaseError,
+    FileUploadError,
+    NotFoundError,
+    ParsingError,
+    RateLimitError,
+    ValidationError,
+)
 
 
 @pytest.fixture
@@ -171,15 +178,17 @@ class TestErrorDetails:
         @app.get("/test-resource-error")
         def raise_error():
             raise NotFoundError(
-                message="User not found",
-                resource_type="user",
-                resource_id="123"
+                message="User not found", resource_type="user", resource_id="123"
             )
 
         client = TestClient(app)
         response = client.get("/test-resource-error")
 
         data = response.json()
-        assert data["status_code"] == 404 if "status_code" in data else response.status_code == 404
+        assert (
+            data["status_code"] == 404
+            if "status_code" in data
+            else response.status_code == 404
+        )
         assert data["error"]["details"]["resource_type"] == "user"
         assert data["error"]["details"]["resource_id"] == "123"

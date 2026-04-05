@@ -30,6 +30,7 @@ export default function WizardTransition({
   useEffect(() => {
     if (prevStepRef.current !== step) {
       const goingForward = step > prevStepRef.current;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDirection(goingForward ? "right" : "left");
       prevStepRef.current = step;
 

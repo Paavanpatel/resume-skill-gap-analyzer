@@ -7,14 +7,7 @@ interface DividerProps {
 
 export default function Divider({ label, className }: DividerProps) {
   if (!label) {
-    return (
-      <hr
-        className={cn(
-          "border-t border-gray-200 dark:border-surface-700",
-          className
-        )}
-      />
-    );
+    return <hr className={cn("border-t border-gray-200 dark:border-surface-700", className)} />;
   }
 
   return (

@@ -22,12 +22,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
-from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
-from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
-from app.schemas.resume import ResumeParseResponse, ResumeUploadResponse
+from app.schemas.resume import (
+    PaginatedResumeResponse,
+    ResumeParseResponse,
+    ResumeUploadResponse,
+)
 from app.services.file_storage import delete_file, save_upload
 from app.services.file_validator import validate_upload
 from app.services.resume_parser import parse_resume_content
@@ -197,17 +200,22 @@ async def delete_resume(
 
 @router.get(
     "/",
-    response_model=list[ResumeUploadResponse],
+    response_model=PaginatedResumeResponse,
     summary="List uploaded resumes",
 )
 async def list_resumes(
     user: CurrentUser,
     skip: int = Query(default=0, ge=0, description="Number of records to skip"),
-    limit: int = Query(default=20, ge=1, le=MAX_PAGE_SIZE, description="Max records to return"),
+    limit: int = Query(
+        default=20, ge=1, le=MAX_PAGE_SIZE, description="Max records to return"
+    ),
     session: AsyncSession = Depends(get_read_db_session),
 ):
     """
-    List all resumes for the current user, newest first.
+    List unique resumes for the current user, newest first.
+
+    Duplicates (same filename) are collapsed — only the most recent
+    upload per filename is returned.
 
     Pagination params are validated via Query constraints:
     - skip must be >= 0
@@ -220,4 +228,5 @@ async def list_resumes(
         skip=skip,
         limit=limit,
     )
-    return resumes
+    total = await repo.count_unique_by_user(user_id=user.id)
+    return PaginatedResumeResponse(resumes=resumes, total=total, skip=skip, limit=limit)

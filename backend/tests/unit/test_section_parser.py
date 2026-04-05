@@ -7,8 +7,7 @@ logic works correctly across common resume formats.
 
 import pytest
 
-from app.services.section_parser import ParsedResume, parse_sections, _detect_heading
-
+from app.services.section_parser import ParsedResume, _detect_heading, parse_sections
 
 # ── Heading detection tests ───────────────────────────────────
 

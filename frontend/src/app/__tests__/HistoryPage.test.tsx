@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@/__tests__/test-utils";
 import HistoryPage from "@/app/(dashboard)/history/page";
 
 const mockPush = jest.fn();
@@ -27,6 +27,17 @@ jest.mock("recharts", () => ({
   Tooltip: () => null,
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
   Legend: () => null,
+}));
+
+jest.mock("@/context/AnalysisTrackerContext", () => ({
+  useAnalysisTracker: () => ({
+    analyses: [],
+    track: jest.fn(),
+    dismiss: jest.fn(),
+    dismissAll: jest.fn(),
+    activeCount: 0,
+    completedCount: 0,
+  }),
 }));
 
 // Mock IntersectionObserver for AnimatedCounter
@@ -80,12 +91,12 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     // // Should show skeleton loading state (not Loader2 anymore)
     // expect(document.querySelectorAll('[class*="animate"]').length).toBeGreaterThan(0);
     // // Should show skeleton loading state
-    expect(document.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
   });
 
   it("shows empty state when no analyses exist", async () => {
@@ -94,8 +105,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("No analyses yet")).toBeInTheDocument();
@@ -110,8 +121,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -131,8 +142,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -149,8 +160,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
@@ -163,8 +174,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("No analyses yet")).toBeInTheDocument();
@@ -180,8 +191,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -204,8 +215,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -227,8 +238,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -254,8 +265,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -279,8 +290,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -316,8 +327,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("history-result-count")).toBeInTheDocument();
@@ -330,13 +341,12 @@ describe("HistoryPage", () => {
     mockGetAnalysisHistory.mockResolvedValue(mockItems);
 
     // render(<HistoryPage />);
-      
+
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
-
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();

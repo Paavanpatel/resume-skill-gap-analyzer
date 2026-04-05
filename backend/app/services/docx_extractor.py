@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class DOCXExtractionError(Exception):
     """Raised when DOCX text extraction fails."""
+
     pass
 
 

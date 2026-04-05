@@ -10,6 +10,8 @@ export interface UserPreferences {
   [key: string]: unknown;
 }
 
+export type UserRole = "user" | "admin" | "super_admin";
+
 export interface User {
   id: string;
   email: string;
@@ -17,6 +19,7 @@ export interface User {
   is_active: boolean;
   is_verified: boolean;
   tier: "free" | "pro" | "enterprise";
+  role: UserRole;
   preferences: UserPreferences;
   created_at: string;
 }

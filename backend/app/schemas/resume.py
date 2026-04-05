@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 class ResumeUploadResponse(BaseModel):
     """Returned after a successful resume upload."""
+
     id: UUID
     original_filename: str
     file_type: str
@@ -20,8 +21,18 @@ class ResumeUploadResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PaginatedResumeResponse(BaseModel):
+    """Paginated list of resumes with total count."""
+
+    resumes: list[ResumeUploadResponse]
+    total: int
+    skip: int
+    limit: int
+
+
 class ResumeParseResponse(BaseModel):
     """Returned after parsing a resume's text content."""
+
     id: UUID
     original_filename: str
     raw_text: str

@@ -14,11 +14,7 @@ interface ProgressStepsProps {
   className?: string;
 }
 
-export default function ProgressSteps({
-  steps,
-  currentStep,
-  className,
-}: ProgressStepsProps) {
+export default function ProgressSteps({ steps, currentStep, className }: ProgressStepsProps) {
   return (
     <div className={cn("flex items-center", className)}>
       {steps.map((step, i) => {
@@ -34,8 +30,7 @@ export default function ProgressSteps({
               <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-all duration-300",
-                  isCompleted &&
-                    "border-success-500 bg-success-500 text-white",
+                  isCompleted && "border-success-500 bg-success-500 text-white",
                   isActive &&
                     "border-primary-500 bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 shadow-glow scale-110",
                   isPending &&
@@ -69,9 +64,7 @@ export default function ProgressSteps({
                   <div
                     className={cn(
                       "h-full rounded-full transition-all duration-500 ease-spring",
-                      isCompleted
-                        ? "w-full bg-success-500"
-                        : "w-0 bg-primary-500"
+                      isCompleted ? "w-full bg-success-500" : "w-0 bg-primary-500"
                     )}
                   />
                 </div>

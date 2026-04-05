@@ -14,3 +14,17 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: jest.fn(),
   })),
 });
+
+// Mock global fetch to prevent network errors in tests
+global.fetch = jest.fn(() => Promise.reject(new Error("Network request not mocked"))) as jest.Mock;
+
+// Suppress console.error for network-related errors to reduce noise
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  // Filter out JSDOM XMLHttpRequest errors
+  const errorStr = String(args[0]);
+  if (errorStr.includes("AggregateError") || errorStr.includes("XMLHttpRequest")) {
+    return;
+  }
+  originalConsoleError(...args);
+};

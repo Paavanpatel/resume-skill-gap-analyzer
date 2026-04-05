@@ -28,9 +28,7 @@ export default function MobileBottomNav() {
       )}
     >
       {navItems.map(({ href, label, icon: Icon }) => {
-        const isActive =
-          pathname === href ||
-          (href !== "/dashboard" && pathname.startsWith(href));
+        const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
         return (
           <Link

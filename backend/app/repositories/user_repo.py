@@ -15,9 +15,7 @@ class UserRepository(BaseRepository[User]):
 
     async def get_by_email(self, email: str) -> User | None:
         """Find a user by their email address."""
-        result = await self._session.execute(
-            select(User).where(User.email == email)
-        )
+        result = await self._session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
     async def email_exists(self, email: str) -> bool:

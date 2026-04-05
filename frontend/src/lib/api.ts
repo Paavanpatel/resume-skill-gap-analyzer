@@ -13,12 +13,12 @@ import type {
   AnalysisResult,
   AnalysisStatusResponse,
   AnalysisSubmitResponse,
+  PaginatedResumeResponse,
   ResumeUploadResponse,
   RoadmapResponse,
 } from "@/types/analysis";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -58,7 +58,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Response interceptor: auto-refresh on 401 ───────────────
+// ── Response interceptor: auto-refresh on 401 + rate limit on 429 ──
 
 let isRefreshing = false;
 let failedQueue: { resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = [];
@@ -68,11 +68,57 @@ function processQueue(error: unknown) {
   failedQueue = [];
 }
 
+/**
+ * Dispatch a DOM CustomEvent so React components and hooks can react to
+ * rate limit responses without coupling api.ts to the React context tree.
+ *
+ * Listeners: useRateLimit hook, RateLimitBanner, login page
+ */
+function dispatchRateLimitEvent(retryAfterSeconds: number): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("api:rate-limit", {
+      detail: { retryAfterSeconds },
+    })
+  );
+}
+
+/**
+ * Dispatch a DOM CustomEvent so any component can display the request ID
+ * from a failed response without coupling api.ts to the toast context.
+ */
+function dispatchRequestIdEvent(requestId: string, status: number): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("api:request-error", {
+      detail: { requestId, status },
+    })
+  );
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
 
+    // ── Capture X-Request-ID from every error response ───────
+    const requestId = error.response?.headers?.["x-request-id"] as string | undefined;
+    if (requestId && error.response?.status) {
+      dispatchRequestIdEvent(requestId, error.response.status);
+    }
+
+    // ── 429 Rate limit handling ──────────────────────────────
+    if (error.response?.status === 429) {
+      // Parse Retry-After from header first, then from response body
+      const headerVal = error.response.headers?.["retry-after"];
+      const bodyVal = (error.response.data as any)?.error?.details?.retry_after_seconds;
+      const retryAfter = parseInt(String(headerVal ?? bodyVal ?? "60"), 10) || 60;
+
+      dispatchRateLimitEvent(retryAfter);
+      return Promise.reject(error);
+    }
+
+    // ── 401 Auto-refresh handling ────────────────────────────
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't retry auth endpoints
       if (originalRequest.url?.includes("/auth/")) {
@@ -166,6 +212,23 @@ export async function updatePreferences(preferences: Record<string, unknown>): P
   return res.data;
 }
 
+export async function verifyEmail(email: string, otp: string): Promise<User> {
+  const res = await apiClient.post("/auth/verify-email", { email, otp });
+  return res.data;
+}
+
+export async function resendVerification(email: string): Promise<void> {
+  await apiClient.post("/auth/resend-verification", { email });
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await apiClient.post("/auth/forgot-password", { email });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await apiClient.post("/auth/reset-password", { token, new_password: newPassword });
+}
+
 // ── Resume API ──────────────────────────────────────────────
 
 export async function uploadResume(file: File): Promise<ResumeUploadResponse> {
@@ -177,8 +240,11 @@ export async function uploadResume(file: File): Promise<ResumeUploadResponse> {
   return res.data;
 }
 
-export async function listResumes(): Promise<ResumeUploadResponse[]> {
-  const res = await apiClient.get("/resume/");
+export async function listResumes(
+  skip: number = 0,
+  limit: number = 20
+): Promise<PaginatedResumeResponse> {
+  const res = await apiClient.get("/resume/", { params: { skip, limit } });
   return res.data;
 }
 
@@ -202,16 +268,12 @@ export async function submitAnalysis(
   return res.data;
 }
 
-export async function getAnalysisStatus(
-  analysisId: string
-): Promise<AnalysisStatusResponse> {
+export async function getAnalysisStatus(analysisId: string): Promise<AnalysisStatusResponse> {
   const res = await apiClient.get(`/analysis/${analysisId}/status`);
   return res.data;
 }
 
-export async function getAnalysisResult(
-  analysisId: string
-): Promise<AnalysisResult> {
+export async function getAnalysisResult(analysisId: string): Promise<AnalysisResult> {
   const res = await apiClient.get(`/analysis/${analysisId}`);
   return res.data;
 }
@@ -247,6 +309,17 @@ export async function generateAdvisorRewrites(analysisId: string): Promise<Advis
   return res.data;
 }
 
+export interface ExportUrlResponse {
+  url: string | null;
+  is_presigned: boolean;
+  expires_in: number | null;
+}
+
+export async function getExportUrl(analysisId: string): Promise<ExportUrlResponse> {
+  const res = await apiClient.get(`/insights/${analysisId}/export-url`);
+  return res.data;
+}
+
 // ── Billing API (Phase 3) ────────────────────────────────────
 
 export interface UsageSummary {
@@ -270,6 +343,231 @@ export async function createPortalSession(): Promise<{ url: string }> {
   return res.data;
 }
 
+// ── Admin API (Phase 7) ─────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_verified: boolean;
+  tier: string;
+  role: string;
+  created_at: string;
+  analyses_count: number;
+}
+
+export interface AdminUserListResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminAnalysis {
+  id: string;
+  user_id: string;
+  user_email: string;
+  job_title: string | null;
+  job_company: string | null;
+  status: string;
+  match_score: number | null;
+  ats_score: number | null;
+  ai_provider: string | null;
+  ai_model: string | null;
+  ai_tokens_used: number | null;
+  processing_time_ms: number | null;
+  retry_count: number;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface AdminAnalysisListResponse {
+  analyses: AdminAnalysis[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AnalyticsOverview {
+  total_users: number;
+  active_users: number;
+  verified_users: number;
+  total_analyses: number;
+  completed_analyses: number;
+  failed_analyses: number;
+  avg_match_score: number | null;
+  avg_ats_score: number | null;
+  users_by_tier: Record<string, number>;
+  users_by_role: Record<string, number>;
+  analyses_by_status: Record<string, number>;
+  analyses_per_day: { date: string; count: number }[];
+  registrations_per_day: { date: string; count: number }[];
+}
+
+export async function adminGetUsers(
+  params: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    tier?: string;
+    role?: string;
+    is_active?: boolean;
+  } = {}
+): Promise<AdminUserListResponse> {
+  const res = await apiClient.get("/admin/users", { params });
+  return res.data;
+}
+
+export async function adminGetUser(userId: string): Promise<AdminUser> {
+  const res = await apiClient.get(`/admin/users/${userId}`);
+  return res.data;
+}
+
+export async function adminUpdateUser(
+  userId: string,
+  data: { tier?: string; role?: string; is_active?: boolean }
+): Promise<AdminUser> {
+  const res = await apiClient.patch(`/admin/users/${userId}`, data);
+  return res.data;
+}
+
+export async function adminDeactivateUser(userId: string): Promise<{ message: string }> {
+  const res = await apiClient.delete(`/admin/users/${userId}`);
+  return res.data;
+}
+
+export async function adminGetAnalytics(days: number = 30): Promise<AnalyticsOverview> {
+  const res = await apiClient.get("/admin/analytics", { params: { days } });
+  return res.data;
+}
+
+export async function adminGetAnalyses(
+  params: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+    user_id?: string;
+  } = {}
+): Promise<AdminAnalysisListResponse> {
+  const res = await apiClient.get("/admin/analyses", { params });
+  return res.data;
+}
+
+export async function adminRetryAnalysis(analysisId: string): Promise<{ message: string }> {
+  const res = await apiClient.post(`/admin/analyses/${analysisId}/retry`);
+  return res.data;
+}
+
+export async function adminDeleteAnalysis(analysisId: string): Promise<{ message: string }> {
+  const res = await apiClient.delete(`/admin/analyses/${analysisId}`);
+  return res.data;
+}
+
+export interface StorageStats {
+  backend: string;
+  total_files: number;
+  total_bytes: number;
+  bucket: string | null;
+}
+
+export async function adminGetStorageStats(): Promise<StorageStats> {
+  const res = await apiClient.get("/admin/storage/stats");
+  return res.data;
+}
+
+// ── Health check API (Phase 9) ──────────────────────────────
+
+export interface HealthCheck {
+  status: "healthy" | "degraded" | "unhealthy";
+  checks: {
+    database: string;
+    redis: string;
+    celery: string;
+  };
+  app: string;
+  version: string;
+  environment: string;
+  timestamp: number;
+}
+
+export interface LivenessResponse {
+  status: "ok";
+  timestamp: number;
+}
+
+/**
+ * Liveness probe — just confirms the process is alive.
+ * No dependency checks; suitable for frequent polling.
+ */
+export async function getHealthLive(): Promise<LivenessResponse> {
+  const res = await apiClient.get("/health/live");
+  return res.data;
+}
+
+/**
+ * Readiness probe — checks DB, Redis, and Celery.
+ * Returns status 200 for healthy/degraded, 503 for unhealthy.
+ */
+export async function getHealthReady(): Promise<HealthCheck> {
+  // validateStatus so axios doesn't throw on 503
+  const res = await apiClient.get("/health/ready", {
+    validateStatus: (s) => s < 600,
+  });
+  return res.data;
+}
+
+// ── Admin system observability (Phase 9) ────────────────────
+
+export interface MetricsSummary {
+  http: {
+    total_requests?: number;
+    by_status_class?: Record<string, number>;
+    avg_duration_ms?: number;
+  };
+  analyses: {
+    total?: number;
+    by_status?: Record<string, number>;
+  };
+  llm: {
+    total_calls?: number;
+    total_tokens?: number;
+    by_provider?: Record<string, number>;
+  };
+  timestamp: number;
+}
+
+export async function adminGetMetricsSummary(): Promise<MetricsSummary> {
+  const res = await apiClient.get("/admin/system/metrics");
+  return res.data;
+}
+
+export interface LogRecord {
+  ts: number;
+  level: string;
+  logger: string;
+  message: string;
+  request_id?: string;
+  exc?: string;
+}
+
+export interface LogsResponse {
+  records: LogRecord[];
+  count: number;
+  note: string;
+}
+
+export async function adminGetLogs(
+  params: {
+    limit?: number;
+    level?: string;
+    logger_prefix?: string;
+  } = {}
+): Promise<LogsResponse> {
+  const res = await apiClient.get("/admin/system/logs", { params });
+  return res.data;
+}
+
 // ── Error helper ────────────────────────────────────────────
 
 export function getErrorMessage(error: unknown): string {
@@ -278,6 +576,9 @@ export function getErrorMessage(error: unknown): string {
     if (data?.error?.message) return data.error.message;
     if (error.response?.status === 429) return "Too many requests. Please wait a moment.";
     if (error.response?.status === 413) return "File is too large.";
+    // Include request ID in generic errors for easier support triage
+    const reqId = error.response?.headers?.["x-request-id"];
+    if (reqId) return `Something went wrong (ref: ${reqId}). Please try again.`;
   }
   return "Something went wrong. Please try again.";
 }

@@ -9,6 +9,7 @@ Revision ID: 004_crud_columns
 Revises: 003_gap_analysis
 Create Date: 2026-03-26
 """
+
 from typing import Sequence, Union
 
 from alembic import op

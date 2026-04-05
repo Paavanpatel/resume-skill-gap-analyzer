@@ -15,7 +15,11 @@ jest.mock("recharts", () => ({
   Legend: () => null,
 }));
 
-const makeItem = (score: number | null, date: string, status = "completed"): AnalysisHistoryItem => ({
+const makeItem = (
+  score: number | null,
+  date: string,
+  status = "completed"
+): AnalysisHistoryItem => ({
   id: `id-${score}-${date}`,
   job_title: "Test",
   job_company: null,
@@ -42,10 +46,7 @@ describe("ScoreTrendChart", () => {
   });
 
   it("renders chart with 2+ completed analyses", () => {
-    const items = [
-      makeItem(60, "2024-01-01T00:00:00Z"),
-      makeItem(80, "2024-02-01T00:00:00Z"),
-    ];
+    const items = [makeItem(60, "2024-01-01T00:00:00Z"), makeItem(80, "2024-02-01T00:00:00Z")];
     render(<ScoreTrendChart items={items} />);
     expect(screen.getByTestId("score-trend-chart")).toBeInTheDocument();
     expect(screen.getByText("Score Trends")).toBeInTheDocument();
@@ -62,10 +63,7 @@ describe("ScoreTrendChart", () => {
   });
 
   it("renders the LineChart component", () => {
-    const items = [
-      makeItem(60, "2024-01-01T00:00:00Z"),
-      makeItem(80, "2024-02-01T00:00:00Z"),
-    ];
+    const items = [makeItem(60, "2024-01-01T00:00:00Z"), makeItem(80, "2024-02-01T00:00:00Z")];
     render(<ScoreTrendChart items={items} />);
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
   });

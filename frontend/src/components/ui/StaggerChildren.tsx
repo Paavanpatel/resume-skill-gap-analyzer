@@ -43,6 +43,7 @@ export default function StaggerChildren({
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsTriggered(true);
       return;
     }

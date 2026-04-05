@@ -11,6 +11,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("lucide-react", () => ({
   BarChart3: (props: any) => <svg data-testid="icon-barchart3" {...props} />,
   FileText: (props: any) => <svg data-testid="icon-filetext" {...props} />,
+  Settings: (props: any) => <svg data-testid="icon-settings" {...props} />,
   PlusCircle: (props: any) => <svg data-testid="icon-pluscircle" {...props} />,
 }));
 

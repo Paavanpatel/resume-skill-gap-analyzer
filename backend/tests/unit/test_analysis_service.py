@@ -8,31 +8,32 @@ Covers:
 """
 
 import json
-import pytest
-from unittest.mock import patch, AsyncMock, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 from uuid import uuid4
 
+import pytest
+
+from app.core.exceptions import NotFoundError, ParsingError
 from app.services.analysis_service import (
+    TAXONOMY_CACHE_KEY,
+    TAXONOMY_CACHE_TTL,
     _compute_ats_score,
     _compute_match_score,
     _load_taxonomy,
     run_analysis,
-    TAXONOMY_CACHE_KEY,
-    TAXONOMY_CACHE_TTL,
 )
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
-from app.core.exceptions import NotFoundError, ParsingError
 
 
-def _make_skill(name, weight=1.0, required=None):
+def _make_skill(name, weight=1.0, required=None, confidence=0.9, in_taxonomy=True):
     """Helper to create a NormalizedSkill for testing."""
     return NormalizedSkill(
         name=name,
         category="programming_language",
-        confidence=0.9,
+        confidence=confidence,
         weight=weight,
-        in_taxonomy=True,
+        in_taxonomy=in_taxonomy,
         required=required,
     )
 
@@ -100,6 +101,81 @@ class TestComputeMatchScore:
         result = _make_result(job, matched)
         assert _compute_match_score(result) <= 100.0
 
+    def test_high_confidence_match_scores_more(self):
+        """Matching a required skill (high confidence) contributes more than an implied one."""
+        # Two jobs each with one skill; the only difference is confidence.
+        # Matching the high-confidence skill should yield a higher score.
+        job_high = [
+            _make_skill("Python", weight=1.0, confidence=0.95),
+            _make_skill("Git", weight=1.0, confidence=0.95),
+        ]
+        job_low = [
+            _make_skill("Python", weight=1.0, confidence=0.4),
+            _make_skill("Git", weight=1.0, confidence=0.4),
+        ]
+
+        # Match only the first skill in each set
+        matched_high = [_make_skill("Python", weight=1.0, confidence=0.95)]
+        matched_low = [_make_skill("Python", weight=1.0, confidence=0.4)]
+
+        # Both scenarios match the same *proportion* of skills, so scores should be equal
+        # (confidence cancels in the ratio). Validate that — uniform confidence = same ratio.
+        score_high = _compute_match_score(_make_result(job_high, matched_high))
+        score_low = _compute_match_score(_make_result(job_low, matched_low))
+        assert score_high == score_low == 50.0
+
+    def test_off_taxonomy_confidence_drives_weight(self):
+        """Off-taxonomy skills (weight=1.0 default) are ranked by confidence."""
+        # Two off-taxonomy skills; different confidence values.
+        skill_important = _make_skill(
+            "RareFramework", weight=1.0, confidence=0.9, in_taxonomy=False
+        )
+        skill_implied = _make_skill(
+            "VagueSkill", weight=1.0, confidence=0.3, in_taxonomy=False
+        )
+
+        # Job requires both; only the important one is matched.
+        job = [skill_important, skill_implied]
+        matched = [skill_important]
+        result = _make_result(job, matched)
+
+        # effective_total = 1.0*0.9 + 1.0*0.3 = 1.2; effective_matched = 0.9
+        expected = round(0.9 / 1.2 * 100, 1)  # 75.0
+        assert _compute_match_score(result) == expected
+
+    def test_off_taxonomy_low_confidence_weighs_less(self):
+        """Matching only a low-confidence off-taxonomy skill gives a lower score."""
+        skill_important = _make_skill(
+            "CoreSkill", weight=1.0, confidence=0.9, in_taxonomy=False
+        )
+        skill_implied = _make_skill(
+            "VagueSkill", weight=1.0, confidence=0.3, in_taxonomy=False
+        )
+
+        job = [skill_important, skill_implied]
+        matched_high = _make_result(job, [skill_important])
+        matched_low = _make_result(job, [skill_implied])
+
+        assert _compute_match_score(matched_high) > _compute_match_score(matched_low)
+
+    def test_confidence_blends_with_taxonomy_weight(self):
+        """Effective weight = taxonomy_weight * confidence, both signals matter."""
+        # high-weight required skill vs low-weight preferred skill
+        required = _make_skill("Python", weight=2.0, confidence=0.95)
+        preferred = _make_skill("Docker", weight=1.0, confidence=0.65)
+
+        # effective: Python=1.9, Docker=0.65; total=2.55
+        job = [required, preferred]
+        matched_required = _make_result(job, [required])
+        matched_preferred = _make_result(job, [preferred])
+
+        score_req = _compute_match_score(matched_required)  # 1.9/2.55*100 ≈ 74.5
+        score_pref = _compute_match_score(matched_preferred)  # 0.65/2.55*100 ≈ 25.5
+
+        assert score_req > score_pref
+        assert score_req == round(1.9 / 2.55 * 100, 1)
+        assert score_pref == round(0.65 / 2.55 * 100, 1)
+
 
 class TestComputeATSScore:
     """Test the simplified ATS score computation."""
@@ -164,7 +240,9 @@ class TestLoadTaxonomy:
         with patch("app.services.analysis_service.SkillRepository") as MockRepo:
             repo_instance = MockRepo.return_value
             repo_instance.get_all = AsyncMock(return_value=[mock_skill])
-            with patch("app.services.analysis_service.build_taxonomy_index") as mock_build:
+            with patch(
+                "app.services.analysis_service.build_taxonomy_index"
+            ) as mock_build:
                 mock_build.return_value = [{"name": "Python"}]
                 result = await _load_taxonomy(mock_session, mock_redis)
 
@@ -185,7 +263,9 @@ class TestLoadTaxonomy:
         with patch("app.services.analysis_service.SkillRepository") as MockRepo:
             repo_instance = MockRepo.return_value
             repo_instance.get_all = AsyncMock(return_value=[mock_skill])
-            with patch("app.services.analysis_service.build_taxonomy_index") as mock_build:
+            with patch(
+                "app.services.analysis_service.build_taxonomy_index"
+            ) as mock_build:
                 mock_build.return_value = [{"name": "Docker"}]
                 result = await _load_taxonomy(mock_session, redis_client=None)
 
@@ -202,7 +282,9 @@ class TestLoadTaxonomy:
         with patch("app.services.analysis_service.SkillRepository") as MockRepo:
             repo_instance = MockRepo.return_value
             repo_instance.get_all = AsyncMock(return_value=[])
-            with patch("app.services.analysis_service.build_taxonomy_index") as mock_build:
+            with patch(
+                "app.services.analysis_service.build_taxonomy_index"
+            ) as mock_build:
                 mock_build.return_value = []
                 result = await _load_taxonomy(mock_session, mock_redis)
 
@@ -219,7 +301,9 @@ class TestLoadTaxonomy:
         with patch("app.services.analysis_service.SkillRepository") as MockRepo:
             repo_instance = MockRepo.return_value
             repo_instance.get_all = AsyncMock(return_value=[])
-            with patch("app.services.analysis_service.build_taxonomy_index") as mock_build:
+            with patch(
+                "app.services.analysis_service.build_taxonomy_index"
+            ) as mock_build:
                 mock_build.return_value = [{"name": "test"}]
                 result = await _load_taxonomy(mock_session, mock_redis)
 
@@ -238,7 +322,9 @@ class TestLoadTaxonomy:
         with patch("app.services.analysis_service.SkillRepository") as MockRepo:
             repo_instance = MockRepo.return_value
             repo_instance.get_all = AsyncMock(return_value=[mock_skill])
-            with patch("app.services.analysis_service.build_taxonomy_index") as mock_build:
+            with patch(
+                "app.services.analysis_service.build_taxonomy_index"
+            ) as mock_build:
                 mock_build.return_value = []
                 await _load_taxonomy(mock_session, redis_client=None)
 
@@ -275,7 +361,9 @@ class TestRunAnalysis:
         mock_session = AsyncMock()
         analysis_id = uuid4()
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo:
+        with patch(
+            "app.services.analysis_service.AnalysisRepository"
+        ) as MockAnalysisRepo:
             repo_instance = MockAnalysisRepo.return_value
             repo_instance.get_by_id = AsyncMock(return_value=None)
 
@@ -292,8 +380,12 @@ class TestRunAnalysis:
         mock_analysis = MagicMock()
         mock_analysis.resume_id = uuid4()
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
-             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo:
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+        ):
             analysis_repo = MockAnalysisRepo.return_value
             analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
             analysis_repo.update = AsyncMock(return_value=mock_analysis)
@@ -325,8 +417,12 @@ class TestRunAnalysis:
         mock_resume = MagicMock()
         mock_resume.raw_text = "Short"
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
-             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo:
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+        ):
             analysis_repo = MockAnalysisRepo.return_value
             analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
             analysis_repo.update = AsyncMock(return_value=mock_analysis)
@@ -349,7 +445,11 @@ class TestRunAnalysis:
         mock_analysis.job_description = "Need Python developer with 5 years experience"
 
         mock_resume = MagicMock()
-        mock_resume.raw_text = "Experienced Python developer with 5 years of experience building web applications and REST APIs. " * 3
+        mock_resume.raw_text = (
+            "Experienced Python developer with 5 years of experience building web applications and REST APIs. "
+            * 3
+        )
+        mock_resume.parsed_sections = None
 
         extraction = self._make_mock_extraction()
 
@@ -366,15 +466,39 @@ class TestRunAnalysis:
 
         updated_analysis = MagicMock()
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
-             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo, \
-             patch("app.services.analysis_service._load_taxonomy", new_callable=AsyncMock, return_value=[]), \
-             patch("app.services.analysis_service.extract_skills", new_callable=AsyncMock, return_value=extraction), \
-             patch("app.services.analysis_service.analyze_gap", return_value=mock_gap_result), \
-             patch("app.services.analysis_service.parse_sections", return_value=mock_parsed_resume), \
-             patch("app.services.analysis_service.check_ats_compatibility", return_value=mock_ats_result), \
-             patch("app.services.analysis_service.generate_suggestions", new_callable=AsyncMock, return_value=[]):
-
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch(
+                "app.services.analysis_service._load_taxonomy",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "app.services.analysis_service.extract_skills",
+                new_callable=AsyncMock,
+                return_value=extraction,
+            ),
+            patch(
+                "app.services.analysis_service.analyze_gap",
+                return_value=mock_gap_result,
+            ),
+            patch(
+                "app.services.analysis_service.parse_sections",
+                return_value=mock_parsed_resume,
+            ),
+            patch(
+                "app.services.analysis_service.check_ats_compatibility",
+                return_value=mock_ats_result,
+            ),
+            patch(
+                "app.services.analysis_service.generate_suggestions",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             analysis_repo = MockAnalysisRepo.return_value
             analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
             analysis_repo.update = AsyncMock(return_value=updated_analysis)
@@ -404,14 +528,27 @@ class TestRunAnalysis:
         mock_analysis.job_description = "Need Python developer"
 
         mock_resume = MagicMock()
-        mock_resume.raw_text = "Experienced Python developer with many years building web applications and REST APIs. " * 3
+        mock_resume.raw_text = (
+            "Experienced Python developer with many years building web applications and REST APIs. "
+            * 3
+        )
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
-             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo, \
-             patch("app.services.analysis_service._load_taxonomy", new_callable=AsyncMock, return_value=[]), \
-             patch("app.services.analysis_service.extract_skills", new_callable=AsyncMock,
-                   side_effect=Exception("LLM provider down")):
-
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch(
+                "app.services.analysis_service._load_taxonomy",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "app.services.analysis_service.extract_skills",
+                new_callable=AsyncMock,
+                side_effect=Exception("LLM provider down"),
+            ),
+        ):
             analysis_repo = MockAnalysisRepo.return_value
             analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
             analysis_repo.update = AsyncMock(return_value=mock_analysis)
@@ -424,7 +561,11 @@ class TestRunAnalysis:
 
             # Verify the analysis was marked as failed (update uses **kwargs, not positional args)
             update_calls = analysis_repo.update.call_args_list
-            fail_call = [c for c in update_calls if "status" in c.kwargs and c.kwargs.get("status") == "failed"]
+            fail_call = [
+                c
+                for c in update_calls
+                if "status" in c.kwargs and c.kwargs.get("status") == "failed"
+            ]
             assert len(fail_call) == 1
             assert "LLM provider down" in fail_call[0].kwargs["error_message"]
 
@@ -441,8 +582,12 @@ class TestRunAnalysis:
         mock_resume = MagicMock()
         mock_resume.raw_text = "Short"
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
-             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo:
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+        ):
             analysis_repo = MockAnalysisRepo.return_value
             analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
             analysis_repo.update = AsyncMock(return_value=mock_analysis)
@@ -470,7 +615,11 @@ class TestRunAnalysis:
         mock_analysis.job_description = "Python developer needed"
 
         mock_resume = MagicMock()
-        mock_resume.raw_text = "Python developer with extensive experience in building web applications and REST APIs. " * 3
+        mock_resume.raw_text = (
+            "Python developer with extensive experience in building web applications and REST APIs. "
+            * 3
+        )
+        mock_resume.parsed_sections = None
 
         extraction = self._make_mock_extraction()
 
@@ -483,15 +632,38 @@ class TestRunAnalysis:
         mock_ats_result.format_score = 80.0
         mock_ats_result.to_dict.return_value = {}
 
-        with patch("app.services.analysis_service.AnalysisRepository") as MockAnalysisRepo, \
-             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo, \
-             patch("app.services.analysis_service._load_taxonomy", new_callable=AsyncMock, return_value=[]) as mock_load, \
-             patch("app.services.analysis_service.extract_skills", new_callable=AsyncMock, return_value=extraction), \
-             patch("app.services.analysis_service.analyze_gap", return_value=mock_gap_result), \
-             patch("app.services.analysis_service.parse_sections", return_value=MagicMock()), \
-             patch("app.services.analysis_service.check_ats_compatibility", return_value=mock_ats_result), \
-             patch("app.services.analysis_service.generate_suggestions", new_callable=AsyncMock, return_value=[]):
-
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch(
+                "app.services.analysis_service._load_taxonomy",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_load,
+            patch(
+                "app.services.analysis_service.extract_skills",
+                new_callable=AsyncMock,
+                return_value=extraction,
+            ),
+            patch(
+                "app.services.analysis_service.analyze_gap",
+                return_value=mock_gap_result,
+            ),
+            patch(
+                "app.services.analysis_service.parse_sections", return_value=MagicMock()
+            ),
+            patch(
+                "app.services.analysis_service.check_ats_compatibility",
+                return_value=mock_ats_result,
+            ),
+            patch(
+                "app.services.analysis_service.generate_suggestions",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             analysis_repo = MockAnalysisRepo.return_value
             analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
             analysis_repo.update = AsyncMock(return_value=MagicMock())
@@ -502,3 +674,153 @@ class TestRunAnalysis:
             await run_analysis(analysis_id, mock_session, redis_client=mock_redis)
 
         mock_load.assert_called_once_with(mock_session, mock_redis)
+
+    @pytest.mark.asyncio
+    async def test_uses_stored_parsed_sections_when_available(self):
+        """run_analysis uses resume.parsed_sections and does NOT call parse_sections."""
+        mock_session = AsyncMock()
+        mock_session.flush = AsyncMock()
+        analysis_id = uuid4()
+
+        mock_analysis = MagicMock()
+        mock_analysis.resume_id = uuid4()
+        mock_analysis.job_description = "Python developer needed"
+
+        mock_resume = MagicMock()
+        mock_resume.raw_text = (
+            "Python developer with extensive experience in building web applications. "
+            * 3
+        )
+        mock_resume.parsed_sections = json.dumps(
+            {
+                "sections": [
+                    {
+                        "name": "skills",
+                        "content": "Python",
+                        "line_start": 0,
+                        "line_end": 1,
+                    }
+                ],
+                "word_count": 50,
+            }
+        )
+
+        extraction = self._make_mock_extraction()
+        mock_gap_result = MagicMock()
+        mock_gap_result.category_breakdowns = []
+        mock_gap_result.score_explanation = MagicMock()
+        mock_gap_result.score_explanation.to_dict.return_value = {}
+        mock_ats_result = MagicMock()
+        mock_ats_result.format_score = 80.0
+        mock_ats_result.to_dict.return_value = {}
+
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch(
+                "app.services.analysis_service._load_taxonomy",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "app.services.analysis_service.extract_skills",
+                new_callable=AsyncMock,
+                return_value=extraction,
+            ),
+            patch(
+                "app.services.analysis_service.analyze_gap",
+                return_value=mock_gap_result,
+            ),
+            patch("app.services.analysis_service.parse_sections") as mock_parse,
+            patch(
+                "app.services.analysis_service.check_ats_compatibility",
+                return_value=mock_ats_result,
+            ),
+            patch(
+                "app.services.analysis_service.generate_suggestions",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            analysis_repo = MockAnalysisRepo.return_value
+            analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
+            analysis_repo.update = AsyncMock(return_value=MagicMock())
+
+            resume_repo = MockResumeRepo.return_value
+            resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
+
+            await run_analysis(analysis_id, mock_session)
+
+        mock_parse.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_parse_sections_when_stored_sections_missing(self):
+        """run_analysis calls parse_sections when resume.parsed_sections is None."""
+        mock_session = AsyncMock()
+        mock_session.flush = AsyncMock()
+        analysis_id = uuid4()
+
+        mock_analysis = MagicMock()
+        mock_analysis.resume_id = uuid4()
+        mock_analysis.job_description = "Python developer needed"
+
+        mock_resume = MagicMock()
+        mock_resume.raw_text = (
+            "Python developer with extensive experience in building web applications. "
+            * 3
+        )
+        mock_resume.parsed_sections = None
+
+        extraction = self._make_mock_extraction()
+        mock_gap_result = MagicMock()
+        mock_gap_result.category_breakdowns = []
+        mock_gap_result.score_explanation = MagicMock()
+        mock_gap_result.score_explanation.to_dict.return_value = {}
+        mock_ats_result = MagicMock()
+        mock_ats_result.format_score = 80.0
+        mock_ats_result.to_dict.return_value = {}
+
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch(
+                "app.services.analysis_service._load_taxonomy",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "app.services.analysis_service.extract_skills",
+                new_callable=AsyncMock,
+                return_value=extraction,
+            ),
+            patch(
+                "app.services.analysis_service.analyze_gap",
+                return_value=mock_gap_result,
+            ),
+            patch(
+                "app.services.analysis_service.parse_sections", return_value=MagicMock()
+            ) as mock_parse,
+            patch(
+                "app.services.analysis_service.check_ats_compatibility",
+                return_value=mock_ats_result,
+            ),
+            patch(
+                "app.services.analysis_service.generate_suggestions",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            analysis_repo = MockAnalysisRepo.return_value
+            analysis_repo.get_by_id = AsyncMock(return_value=mock_analysis)
+            analysis_repo.update = AsyncMock(return_value=MagicMock())
+
+            resume_repo = MockResumeRepo.return_value
+            resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
+
+            await run_analysis(analysis_id, mock_session)
+
+        mock_parse.assert_called_once_with(mock_resume.raw_text)

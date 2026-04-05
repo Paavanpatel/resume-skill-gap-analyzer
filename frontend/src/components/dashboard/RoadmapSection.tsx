@@ -86,9 +86,7 @@ export default function RoadmapSection({ analysisId }: RoadmapSectionProps) {
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Learning Roadmap
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Learning Roadmap</h2>
         <Badge variant="info">{roadmap.total_weeks} weeks</Badge>
       </div>
 
@@ -98,9 +96,7 @@ export default function RoadmapSection({ analysisId }: RoadmapSectionProps) {
             <div className="absolute -left-2 top-0 h-4 w-4 rounded-full bg-primary-500" />
 
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-sm font-bold text-primary-700">
-                Weeks {phase.week_range}
-              </span>
+              <span className="text-sm font-bold text-primary-700">Weeks {phase.week_range}</span>
               <span className="text-sm font-semibold text-gray-900">{phase.focus}</span>
             </div>
 

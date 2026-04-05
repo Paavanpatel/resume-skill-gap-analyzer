@@ -5,11 +5,20 @@ Stores account credentials and profile information.
 One user can have many resumes and analyses.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.analysis import Analysis
+    from app.models.resume import Resume
+    from app.models.usage import UsageRecord
 
 
 class User(Base, UUIDMixin, TimestampMixin):
@@ -30,6 +39,13 @@ class User(Base, UUIDMixin, TimestampMixin):
     tier: Mapped[str] = mapped_column(
         String(20), default="free", nullable=False
     )  # free | pro | enterprise
+
+    # ── Role-based access ────────────────────────────────────
+    # Controls admin dashboard access and privileged operations.
+    # "user" = default, "admin" = dashboard access, "super_admin" = full control.
+    role: Mapped[str] = mapped_column(
+        String(20), default="user", nullable=False, server_default="user"
+    )  # user | admin | super_admin
 
     # ── User preferences (JSONB) ─────────────────────────────
     # Flexible blob for UI/app preferences. Keys added here without migrations.

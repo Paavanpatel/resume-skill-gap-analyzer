@@ -31,11 +31,7 @@ interface FeatureGateProps {
   children: React.ReactNode;
 }
 
-export default function FeatureGate({
-  requiredTier,
-  featureName,
-  children,
-}: FeatureGateProps) {
+export default function FeatureGate({ requiredTier, featureName, children }: FeatureGateProps) {
   const { user } = useAuth();
   const userTier = user?.tier ?? "free";
 
@@ -43,9 +39,7 @@ export default function FeatureGate({
     return <>{children}</>;
   }
 
-  return (
-    <UpgradePrompt requiredTier={requiredTier} featureName={featureName} />
-  );
+  return <UpgradePrompt requiredTier={requiredTier} featureName={featureName} />;
 }
 
 function UpgradePrompt({
@@ -62,14 +56,12 @@ function UpgradePrompt({
       </div>
       <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
         {featureName} is a{" "}
-        <span className="capitalize text-primary-600 dark:text-primary-400">
-          {requiredTier}
-        </span>{" "}
+        <span className="capitalize text-primary-600 dark:text-primary-400">{requiredTier}</span>{" "}
         feature
       </h3>
       <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-        Upgrade your plan to unlock AI-powered {featureName.toLowerCase()} and
-        more advanced capabilities.
+        Upgrade your plan to unlock AI-powered {featureName.toLowerCase()} and more advanced
+        capabilities.
       </p>
       <Link
         href="/pricing"

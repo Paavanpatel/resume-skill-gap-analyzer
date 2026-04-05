@@ -29,15 +29,20 @@ from dataclasses import dataclass
 
 from app.services.ats_checker import ATSCheckResult
 from app.services.gap_analyzer import GapAnalysisResult
+from app.services.section_parser import ParsedResume
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
 
 logger = logging.getLogger(__name__)
 
+MAX_RULE_SUGGESTIONS = 7  # cap on rule-based suggestions before merging with LLM
+MAX_TOTAL_SUGGESTIONS = 15  # cap on combined rule + LLM suggestions
+
 
 @dataclass
 class Suggestion:
     """A single resume improvement suggestion."""
+
     section: str
     current: str
     suggested: str
@@ -83,7 +88,7 @@ def generate_rule_based_suggestions(
     # 3. ATS structural issues -> fix formatting/sections
     suggestions.extend(_ats_issue_suggestions(ats_check))
 
-    # Deduplicate by (section, suggested) tuple and cap at 10
+    # Deduplicate by (section, suggested) tuple and cap at MAX_RULE_SUGGESTIONS
     seen = set()
     unique = []
     for s in suggestions:
@@ -96,7 +101,7 @@ def generate_rule_based_suggestions(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     unique.sort(key=lambda s: priority_order.get(s.priority, 3))
 
-    return unique[:10]
+    return unique[:MAX_RULE_SUGGESTIONS]
 
 
 def _missing_skill_suggestions(extraction: ExtractionResult) -> list[Suggestion]:
@@ -104,45 +109,61 @@ def _missing_skill_suggestions(extraction: ExtractionResult) -> list[Suggestion]
     suggestions = []
 
     # Group missing skills by priority
-    high_missing = [s for s in extraction.missing_skills if s.required is True and s.weight >= 2.0]
-    med_missing = [s for s in extraction.missing_skills if s not in high_missing and (s.required is True or s.weight >= 1.5)]
-    low_missing = [s for s in extraction.missing_skills if s not in high_missing and s not in med_missing]
+    high_missing = [
+        s for s in extraction.missing_skills if s.required is True and s.weight >= 2.0
+    ]
+    med_missing = [
+        s
+        for s in extraction.missing_skills
+        if s not in high_missing and (s.required is True or s.weight >= 1.5)
+    ]
+    low_missing = [
+        s
+        for s in extraction.missing_skills
+        if s not in high_missing and s not in med_missing
+    ]
 
     if high_missing:
         names = ", ".join(s.name for s in high_missing[:5])
-        suggestions.append(Suggestion(
-            section="skills",
-            current="Missing from resume",
-            suggested=f"Add these required skills to your Skills section: {names}",
-            reason="These are explicitly required in the job description and carry "
-                   "high weight in ATS keyword matching.",
-            priority="high",
-            source="rule",
-        ))
+        suggestions.append(
+            Suggestion(
+                section="skills",
+                current="Missing from resume",
+                suggested=f"Add these required skills to your Skills section: {names}",
+                reason="These are explicitly required in the job description and carry "
+                "high weight in ATS keyword matching.",
+                priority="high",
+                source="rule",
+            )
+        )
 
     if med_missing:
         names = ", ".join(s.name for s in med_missing[:5])
-        suggestions.append(Suggestion(
-            section="skills",
-            current="Missing from resume",
-            suggested=f"Consider adding these skills: {names}",
-            reason="These skills appear in the job description and would improve "
-                   "your match score.",
-            priority="medium",
-            source="rule",
-        ))
+        suggestions.append(
+            Suggestion(
+                section="skills",
+                current="Missing from resume",
+                suggested=f"Consider adding these skills: {names}",
+                reason="These skills appear in the job description and would improve "
+                "your match score.",
+                priority="medium",
+                source="rule",
+            )
+        )
 
     if low_missing and len(suggestions) < 3:
         names = ", ".join(s.name for s in low_missing[:3])
-        suggestions.append(Suggestion(
-            section="skills",
-            current="Not mentioned",
-            suggested=f"Nice-to-have skills to consider: {names}",
-            reason="These are preferred (not required) skills that could "
-                   "differentiate your application.",
-            priority="low",
-            source="rule",
-        ))
+        suggestions.append(
+            Suggestion(
+                section="skills",
+                current="Not mentioned",
+                suggested=f"Nice-to-have skills to consider: {names}",
+                reason="These are preferred (not required) skills that could "
+                "differentiate your application.",
+                priority="low",
+                source="rule",
+            )
+        )
 
     return suggestions
 
@@ -154,28 +175,32 @@ def _category_gap_suggestions(gap_analysis: GapAnalysisResult) -> list[Suggestio
     for breakdown in gap_analysis.category_breakdowns:
         if breakdown.priority == "critical" and breakdown.missing_skills:
             missing_names = ", ".join(breakdown.missing_skills[:4])
-            suggestions.append(Suggestion(
-                section="experience",
-                current=f"No {breakdown.display_name} skills demonstrated",
-                suggested=f"Add experience or projects demonstrating: {missing_names}",
-                reason=f"The job requires {breakdown.total_job_skills} skills in "
-                       f"{breakdown.display_name} but your resume shows none in this area. "
-                       f"This is the biggest gap to address.",
-                priority="high",
-                source="rule",
-            ))
+            suggestions.append(
+                Suggestion(
+                    section="experience",
+                    current=f"No {breakdown.display_name} skills demonstrated",
+                    suggested=f"Add experience or projects demonstrating: {missing_names}",
+                    reason=f"The job requires {breakdown.total_job_skills} skills in "
+                    f"{breakdown.display_name} but your resume shows none in this area. "
+                    f"This is the biggest gap to address.",
+                    priority="high",
+                    source="rule",
+                )
+            )
         elif breakdown.priority == "important" and breakdown.missing_count > 0:
             missing_names = ", ".join(breakdown.missing_skills[:3])
-            suggestions.append(Suggestion(
-                section="experience",
-                current=f"Partial {breakdown.display_name} coverage",
-                suggested=f"Strengthen {breakdown.display_name} by adding: {missing_names}",
-                reason=f"You match {breakdown.matched_count}/{breakdown.total_job_skills} "
-                       f"skills in {breakdown.display_name}. Filling these gaps would "
-                       f"significantly boost your score.",
-                priority="medium",
-                source="rule",
-            ))
+            suggestions.append(
+                Suggestion(
+                    section="experience",
+                    current=f"Partial {breakdown.display_name} coverage",
+                    suggested=f"Strengthen {breakdown.display_name} by adding: {missing_names}",
+                    reason=f"You match {breakdown.matched_count}/{breakdown.total_job_skills} "
+                    f"skills in {breakdown.display_name}. Filling these gaps would "
+                    f"significantly boost your score.",
+                    priority="medium",
+                    source="rule",
+                )
+            )
 
     return suggestions
 
@@ -192,14 +217,16 @@ def _ats_issue_suggestions(ats_check: ATSCheckResult) -> list[Suggestion]:
         else:
             priority = "low"
 
-        suggestions.append(Suggestion(
-            section=issue.category,
-            current=issue.title,
-            suggested=issue.fix,
-            reason=issue.description,
-            priority=priority,
-            source="rule",
-        ))
+        suggestions.append(
+            Suggestion(
+                section=issue.category,
+                current=issue.title,
+                suggested=issue.fix,
+                reason=issue.description,
+                priority=priority,
+                source="rule",
+            )
+        )
 
     return suggestions
 
@@ -214,9 +241,9 @@ Provide concrete, specific suggestions. Instead of "add more keywords", say exac
 
 SUGGESTION_PROMPT = """Based on the skill gap analysis, provide 3-5 specific resume improvement suggestions.
 
-<resume_text>
-{resume_text}
-</resume_text>
+<resume_sections>
+{resume_sections}
+</resume_sections>
 
 <job_description>
 {job_description}
@@ -233,6 +260,7 @@ For each suggestion, provide:
 - "current": what's currently in the resume (quote a brief snippet or say "missing")
 - "suggested": the specific change to make
 - "reason": why this change improves the resume for this specific job
+- "priority": importance of this change — "high" (critical gap), "medium" (would help), or "low" (nice to have)
 
 Respond with this exact JSON structure:
 {{
@@ -241,14 +269,44 @@ Respond with this exact JSON structure:
       "section": "skills",
       "current": "Python, JavaScript, React",
       "suggested": "Python, JavaScript, React, AWS, Docker, Kubernetes",
-      "reason": "The job requires cloud/DevOps skills. Adding these keywords will improve ATS matching."
+      "reason": "The job requires cloud/DevOps skills. Adding these keywords will improve ATS matching.",
+      "priority": "high"
     }}
   ]
 }}"""
 
 
+def _build_condensed_resume(parsed_resume: ParsedResume) -> str:
+    """
+    Build a structured, token-efficient resume representation.
+
+    Skills, summary, and education are always included in full — these
+    sections are often buried past the 3,000-char mark of a chronological
+    resume and are critical for accurate suggestions.
+
+    Experience is included but capped at 2,000 chars to limit token usage.
+    Falls back to raw_text[:3000] if none of the target sections are present
+    (e.g. the section parser found only "awards" or "certifications").
+    """
+    parts = []
+
+    for section_name in ("summary", "skills", "education"):
+        content = parsed_resume.get_section(section_name)
+        if content:
+            parts.append(f"[{section_name.title()}]\n{content}")
+
+    experience = parsed_resume.get_section("experience")
+    if experience:
+        parts.append(f"[Experience]\n{experience[:2000]}")
+
+    if not parts:
+        return parsed_resume.raw_text[:3000]
+
+    return "\n\n".join(parts)
+
+
 def build_suggestion_prompt(
-    resume_text: str,
+    parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     matched_skills: list[NormalizedSkill],
@@ -259,7 +317,7 @@ def build_suggestion_prompt(
     missing_str = ", ".join(s.name for s in missing_skills[:15])
 
     return SUGGESTION_PROMPT.format(
-        resume_text=resume_text[:3000],  # Truncate to save tokens
+        resume_sections=_build_condensed_resume(parsed_resume),
         job_description=job_description[:2000],
         match_score=f"{match_score:.0f}",
         matched_skills=matched_str or "None",
@@ -268,7 +326,7 @@ def build_suggestion_prompt(
 
 
 async def generate_llm_suggestions(
-    resume_text: str,
+    parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     extraction: ExtractionResult,
@@ -288,7 +346,7 @@ async def generate_llm_suggestions(
         from app.services.llm_client import call_llm
 
         prompt = build_suggestion_prompt(
-            resume_text=resume_text,
+            parsed_resume=parsed_resume,
             job_description=job_description,
             match_score=match_score,
             matched_skills=extraction.matched_skills,
@@ -306,25 +364,28 @@ async def generate_llm_suggestions(
         raw_suggestions = data.get("suggestions", [])
 
         suggestions = []
+        valid_priorities = {"high", "medium", "low"}
         for s in raw_suggestions:
             if not s.get("section") or not s.get("suggested"):
                 continue
-            suggestions.append(Suggestion(
-                section=s.get("section", "general"),
-                current=s.get("current", ""),
-                suggested=s.get("suggested", ""),
-                reason=s.get("reason", ""),
-                priority="medium",  # LLM suggestions default to medium
-                source="llm",
-            ))
+            raw_priority = s.get("priority", "medium")
+            priority = raw_priority if raw_priority in valid_priorities else "medium"
+            suggestions.append(
+                Suggestion(
+                    section=s.get("section", "general"),
+                    current=s.get("current", ""),
+                    suggested=s.get("suggested", ""),
+                    reason=s.get("reason", ""),
+                    priority=priority,
+                    source="llm",
+                )
+            )
 
         logger.info("Generated %d LLM suggestions", len(suggestions))
         return suggestions[:5]
 
     except Exception as e:
-        logger.warning(
-            "LLM suggestion generation failed (non-fatal): %s", str(e)[:200]
-        )
+        logger.warning("LLM suggestion generation failed (non-fatal): %s", str(e)[:200])
         return []
 
 
@@ -332,7 +393,7 @@ async def generate_llm_suggestions(
 
 
 async def generate_suggestions(
-    resume_text: str,
+    parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     extraction: ExtractionResult,
@@ -347,7 +408,7 @@ async def generate_suggestions(
     into a single prioritized list.
 
     Args:
-        resume_text: The parsed resume text.
+        parsed_resume: The parsed resume with identified sections.
         job_description: The target job description.
         match_score: Computed match score from Phase 5.
         extraction: ExtractionResult from Phase 5.
@@ -356,7 +417,7 @@ async def generate_suggestions(
         include_llm: Whether to generate LLM-powered suggestions.
 
     Returns:
-        List of suggestion dicts, sorted by priority, capped at 10.
+        List of suggestion dicts, sorted by priority, capped at MAX_TOTAL_SUGGESTIONS.
     """
     # Rule-based suggestions (always run)
     rule_suggestions = generate_rule_based_suggestions(
@@ -369,7 +430,7 @@ async def generate_suggestions(
     llm_suggestions = []
     if include_llm:
         llm_suggestions = await generate_llm_suggestions(
-            resume_text=resume_text,
+            parsed_resume=parsed_resume,
             job_description=job_description,
             match_score=match_score,
             extraction=extraction,
@@ -391,4 +452,4 @@ async def generate_suggestions(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     unique.sort(key=lambda s: priority_order.get(s.priority, 3))
 
-    return [s.to_dict() for s in unique[:10]]
+    return [s.to_dict() for s in unique[:MAX_TOTAL_SUGGESTIONS]]

@@ -20,18 +20,14 @@ describe("Dropdown", () => {
 
   describe("Visibility", () => {
     it("renders trigger but not menu initially", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       expect(screen.getByRole("button", { name: "Menu" })).toBeInTheDocument();
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     });
 
     it("opens menu on trigger click", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       const trigger = screen.getByRole("button", { name: "Menu" });
       fireEvent.click(trigger);
@@ -40,9 +36,7 @@ describe("Dropdown", () => {
     });
 
     it("toggle menu on repeated clicks", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       const trigger = screen.getByRole("button", { name: "Menu" });
 
@@ -59,9 +53,7 @@ describe("Dropdown", () => {
   describe("Item selection", () => {
     it("calls onSelect when item clicked", () => {
       const onSelect = jest.fn();
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={onSelect} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={onSelect} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
       const editItem = screen.getByRole("menuitem", { name: "Edit" });
@@ -71,9 +63,7 @@ describe("Dropdown", () => {
     });
 
     it("closes menu after selection", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
       expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -86,9 +76,7 @@ describe("Dropdown", () => {
 
     it("calls onSelect with correct id for each item", () => {
       const onSelect = jest.fn();
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={onSelect} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={onSelect} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
@@ -108,11 +96,7 @@ describe("Dropdown", () => {
       ];
 
       const { container } = render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithDivider}
-          onSelect={jest.fn()}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithDivider} onSelect={jest.fn()} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -130,11 +114,7 @@ describe("Dropdown", () => {
       ];
 
       render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithDivider}
-          onSelect={jest.fn()}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithDivider} onSelect={jest.fn()} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -171,9 +151,7 @@ describe("Dropdown", () => {
 
   describe("Keyboard interactions", () => {
     it("Escape closes menu", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
       expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -184,9 +162,7 @@ describe("Dropdown", () => {
     });
 
     it("Enter on trigger opens menu", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       const trigger = screen.getByRole("button", { name: "Menu" });
       fireEvent.keyDown(trigger, { key: "Enter" });
@@ -195,9 +171,7 @@ describe("Dropdown", () => {
     });
 
     it("Space on trigger opens menu", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       const trigger = screen.getByRole("button", { name: "Menu" });
       fireEvent.keyDown(trigger, { key: " " });
@@ -206,9 +180,7 @@ describe("Dropdown", () => {
     });
 
     it("ArrowDown on trigger opens menu and focuses first item", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       const trigger = screen.getByRole("button", { name: "Menu" });
       fireEvent.keyDown(trigger, { key: "ArrowDown" });
@@ -227,11 +199,7 @@ describe("Dropdown", () => {
 
       const onSelect = jest.fn();
       render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithDisabled}
-          onSelect={onSelect}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithDisabled} onSelect={onSelect} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -249,11 +217,7 @@ describe("Dropdown", () => {
       ];
 
       render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithDisabled}
-          onSelect={jest.fn()}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithDisabled} onSelect={jest.fn()} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -269,11 +233,7 @@ describe("Dropdown", () => {
       ];
 
       render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithDisabled}
-          onSelect={jest.fn()}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithDisabled} onSelect={jest.fn()} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -291,11 +251,7 @@ describe("Dropdown", () => {
 
       const onSelect = jest.fn();
       render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithDisabled}
-          onSelect={onSelect}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithDisabled} onSelect={onSelect} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -325,9 +281,7 @@ describe("Dropdown", () => {
     });
 
     it("does not close on click inside menu", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
       expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -347,11 +301,7 @@ describe("Dropdown", () => {
       ];
 
       render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={itemsWithIcons}
-          onSelect={jest.fn()}
-        />
+        <Dropdown trigger={<button>Menu</button>} items={itemsWithIcons} onSelect={jest.fn()} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
@@ -375,7 +325,7 @@ describe("Dropdown", () => {
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
       const menu = screen.getByRole("menu");
-      expect(menu.className).toContain("right-0");
+      expect(menu).toHaveAttribute("data-align", "right");
     });
 
     it("supports left alignment", () => {
@@ -391,7 +341,7 @@ describe("Dropdown", () => {
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
       const menu = screen.getByRole("menu");
-      expect(menu.className).toContain("left-0");
+      expect(menu).toHaveAttribute("data-align", "left");
     });
   });
 
@@ -413,9 +363,7 @@ describe("Dropdown", () => {
 
   describe("Aria attributes", () => {
     it("trigger has aria-haspopup='menu'", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       const trigger = screen.getByRole("button", { name: "Menu" });
       expect(trigger).toHaveAttribute("aria-haspopup", "menu");
@@ -436,9 +384,7 @@ describe("Dropdown", () => {
     });
 
     it("menu has role='menu'", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
@@ -446,9 +392,7 @@ describe("Dropdown", () => {
     });
 
     it("items have role='menuitem'", () => {
-      render(
-        <Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={mockItems} onSelect={jest.fn()} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
@@ -485,21 +429,17 @@ describe("Dropdown", () => {
       ];
 
       const onSelect = jest.fn();
-      render(
-        <Dropdown
-          trigger={<button>Menu</button>}
-          items={complexItems}
-          onSelect={onSelect}
-        />
-      );
+      render(<Dropdown trigger={<button>Menu</button>} items={complexItems} onSelect={onSelect} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Menu" }));
 
       const menuItems = screen.getAllByRole("menuitem");
       expect(screen.getAllByRole("menuitem")).toHaveLength(3);
-      expect(screen.getAllByRole("menuitem", { hidden: false }).filter(
-        el => !el.hasAttribute("disabled")
-      )).toHaveLength(2);
+      expect(
+        screen
+          .getAllByRole("menuitem", { hidden: false })
+          .filter((el) => !el.hasAttribute("disabled"))
+      ).toHaveLength(2);
     });
   });
 });

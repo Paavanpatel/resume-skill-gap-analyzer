@@ -2,7 +2,15 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { User } from "@/types/auth";
-import { clearTokens, getMe, getStoredTokens, login as apiLogin, logout as apiLogout, register as apiRegister, storeTokens } from "@/lib/api";
+import {
+  clearTokens,
+  getMe,
+  getStoredTokens,
+  login as apiLogin,
+  logout as apiLogout,
+  register as apiRegister,
+  storeTokens,
+} from "@/lib/api";
 
 interface AuthState {
   user: User | null;
@@ -30,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const tokens = getStoredTokens();
     if (!tokens) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ user: null, isLoading: false, isAuthenticated: false });
       return;
     }
@@ -50,11 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: response.user, isLoading: false, isAuthenticated: true });
   }, []);
 
-  const register = useCallback(async (email: string, password: string, fullName?: string) => {
-    await apiRegister({ email, password, full_name: fullName });
-    // Auto-login after registration
-    await login(email, password);
-  }, [login]);
+  const register = useCallback(
+    async (email: string, password: string, fullName?: string) => {
+      await apiRegister({ email, password, full_name: fullName });
+      // Auto-login after registration
+      await login(email, password);
+    },
+    [login]
+  );
 
   const logout = useCallback(async () => {
     await apiLogout();

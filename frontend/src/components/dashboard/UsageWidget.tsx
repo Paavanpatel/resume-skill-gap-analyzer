@@ -25,7 +25,9 @@ export default function UsageWidget() {
   const [usage, setUsage] = useState<UsageSummary | null>(null);
 
   useEffect(() => {
-    getUsageSummary().then(setUsage).catch(() => {});
+    getUsageSummary()
+      .then(setUsage)
+      .catch(() => {});
   }, []);
 
   // Enterprise = unlimited → don't show widget
@@ -73,20 +75,13 @@ export default function UsageWidget() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-            {isAtLimit
-              ? "Monthly limit reached"
-              : `${used} / ${limit} analyses used`}
+            {isAtLimit ? "Monthly limit reached" : `${used} / ${limit} analyses used`}
           </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {usage.period}
-          </span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{usage.period}</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
           <div
-            className={cn(
-              "h-full rounded-full transition-all duration-700",
-              barColor(pct)
-            )}
+            className={cn("h-full rounded-full transition-all duration-700", barColor(pct))}
             style={{ width: `${Math.min(pct, 100)}%` }}
           />
         </div>

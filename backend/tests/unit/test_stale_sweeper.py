@@ -2,10 +2,11 @@
 Unit tests for the stale job sweeper.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
+
+import pytest
 
 
 class TestStaleSweeper:
@@ -62,7 +63,10 @@ class TestStaleSweeper:
     @pytest.mark.asyncio
     async def test_sweep_uses_correct_threshold(self):
         """Should use 30 minute threshold."""
-        from app.services.stale_sweeper import sweep_stale_analyses, STALE_THRESHOLD_MINUTES
+        from app.services.stale_sweeper import (
+            STALE_THRESHOLD_MINUTES,
+            sweep_stale_analyses,
+        )
 
         mock_session = AsyncMock()
         mock_result = MagicMock()
@@ -95,9 +99,10 @@ class TestStaleSweeper:
     @pytest.mark.asyncio
     async def test_sweep_handles_queued_status(self):
         """Should mark 'queued' analyses as failed."""
-        from app.services.stale_sweeper import sweep_stale_analyses
-        from app.models.analysis import Analysis
         from sqlalchemy import select, update
+
+        from app.models.analysis import Analysis
+        from app.services.stale_sweeper import sweep_stale_analyses
 
         mock_session = AsyncMock()
         stale_ids = [uuid4()]
@@ -191,7 +196,9 @@ class TestStaleSweeperIntegration:
 
             assert count == 3
             # Should log a warning for swept analyses
-            assert mock_logger.warning.called or True  # May or may not log based on impl
+            assert (
+                mock_logger.warning.called or True
+            )  # May or may not log based on impl
 
     @pytest.mark.asyncio
     async def test_sweep_no_log_when_none_found(self):

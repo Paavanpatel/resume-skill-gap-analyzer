@@ -4,18 +4,18 @@ Unit tests for FastAPI dependency injection (core/dependencies.py).
 Tests core authentication and dependency resolution logic.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_redis
 from app.core.exceptions import AuthenticationError, AuthorizationError, ErrorCode
-from app.models.user import User
 from app.core.security import create_access_token
+from app.models.user import User
 
 
 class TestGetCurrentUser:
@@ -49,8 +49,7 @@ class TestGetCurrentUser:
 
             # Create credentials
             credentials = HTTPAuthorizationCredentials(
-                scheme="Bearer",
-                credentials=token
+                scheme="Bearer", credentials=token
             )
 
             result = await get_current_user(credentials, mock_session, None)
@@ -76,8 +75,7 @@ class TestGetCurrentUser:
         mock_session = AsyncMock(spec=AsyncSession)
 
         credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer",
-            credentials="invalid_token_not_jwt"
+            scheme="Bearer", credentials="invalid_token_not_jwt"
         )
 
         with pytest.raises(AuthenticationError) as exc_info:
@@ -110,8 +108,7 @@ class TestGetCurrentUser:
             MockRepo.return_value = mock_repo
 
             credentials = HTTPAuthorizationCredentials(
-                scheme="Bearer",
-                credentials=token
+                scheme="Bearer", credentials=token
             )
 
             with pytest.raises(AuthorizationError) as exc_info:
@@ -136,8 +133,7 @@ class TestGetCurrentUser:
             MockRepo.return_value = mock_repo
 
             credentials = HTTPAuthorizationCredentials(
-                scheme="Bearer",
-                credentials=token
+                scheme="Bearer", credentials=token
             )
 
             with pytest.raises(AuthenticationError) as exc_info:
@@ -174,8 +170,7 @@ class TestGetCurrentUser:
             MockRepo.return_value = mock_repo
 
             credentials = HTTPAuthorizationCredentials(
-                scheme="Bearer",
-                credentials=token
+                scheme="Bearer", credentials=token
             )
 
             with pytest.raises(AuthenticationError) as exc_info:
@@ -197,6 +192,7 @@ class TestGetRedis:
 
                 # Reset global pool
                 import app.core.dependencies
+
                 app.core.dependencies._redis_pool = None
 
                 result = await get_redis()
@@ -215,6 +211,7 @@ class TestGetRedis:
 
             # Reset global pool
             import app.core.dependencies
+
             app.core.dependencies._redis_pool = None
 
             result = await get_redis()
@@ -232,14 +229,12 @@ class TestTokenValidation:
 
         # Create a refresh token (type='refresh')
         from app.core.security import create_refresh_token
+
         token = create_refresh_token(user_id=user_id)
 
         mock_session = AsyncMock(spec=AsyncSession)
 
-        credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer",
-            credentials=token
-        )
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
         with pytest.raises(AuthenticationError) as exc_info:
             await get_current_user(credentials, mock_session, None)

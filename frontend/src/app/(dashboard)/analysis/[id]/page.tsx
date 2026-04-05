@@ -24,7 +24,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { getAnalysisResult, getAnalysisStatus, retryAnalysis, getErrorMessage } from "@/lib/api";
 import type { AnalysisResult, AnalysisStatusResponse } from "@/types/analysis";
-import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
+import { useAnalysisTracker, type TransportMode } from "@/context/AnalysisTrackerContext";
+import type { WsConnectionStatus } from "@/hooks/useAnalysisWebSocket";
 import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -37,14 +38,12 @@ import SuggestionsSection from "@/components/dashboard/SuggestionsSection";
 import CategoryBreakdown from "@/components/dashboard/CategoryBreakdown";
 import dynamic from "next/dynamic";
 
-const RoadmapSection = dynamic(
-  () => import("@/components/dashboard/RoadmapSection"),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" /> }
-);
-const AdvisorSection = dynamic(
-  () => import("@/components/dashboard/AdvisorSection"),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" /> }
-);
+const RoadmapSection = dynamic(() => import("@/components/dashboard/RoadmapSection"), {
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" />,
+});
+const AdvisorSection = dynamic(() => import("@/components/dashboard/AdvisorSection"), {
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" />,
+});
 import ExportButton from "@/components/dashboard/ExportButton";
 import FeatureGate from "@/components/ui/FeatureGate";
 import { cn } from "@/lib/utils";
@@ -121,11 +120,13 @@ export default function AnalysisPage() {
   const { analyses: trackedAnalyses, track } = useAnalysisTracker();
   const tracked = trackedAnalyses.find((a) => a.jobId === analysisId);
 
+  // Connection info from tracker
+  const transportMode: TransportMode = tracked?.transport ?? "polling";
+  const wsConnectionStatus: WsConnectionStatus = tracked?.wsStatus ?? "disconnected";
+
   const { toast } = useToast();
 
-  const [status, setStatus] = useState<AnalysisStatusResponse | null>(
-    tracked?.status || null
-  );
+  const [status, setStatus] = useState<AnalysisStatusResponse | null>(tracked?.status || null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
   const [isRetrying, setIsRetrying] = useState(false);
@@ -162,9 +163,7 @@ export default function AnalysisPage() {
     if (!analysisId) return;
 
     // If the global tracker is already polling this analysis, don't double-poll
-    const isTrackedGlobally = trackedAnalyses.some(
-      (a) => a.jobId === analysisId && !a.dismissed
-    );
+    const isTrackedGlobally = trackedAnalyses.some((a) => a.jobId === analysisId && !a.dismissed);
 
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -192,8 +191,12 @@ export default function AnalysisPage() {
       // Just watch the tracked status for completion
       if (tracked?.status?.status === "completed") {
         getAnalysisResult(analysisId)
-          .then((r) => { if (!cancelled) setResult(r); })
-          .catch((err) => { if (!cancelled) setError(getErrorMessage(err)); });
+          .then((r) => {
+            if (!cancelled) setResult(r);
+          })
+          .catch((err) => {
+            if (!cancelled) setError(getErrorMessage(err));
+          });
       } else if (tracked?.status?.status === "failed") {
         setError(tracked.status.error_message || "Analysis failed.");
       }
@@ -234,8 +237,11 @@ export default function AnalysisPage() {
               Analyzing Your Resume
             </h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              This usually takes 10-20 seconds. Feel free to navigate away — we&apos;ll track progress for you.
+              This usually takes 10-20 seconds. Feel free to navigate away — we&apos;ll track
+              progress for you.
             </p>
+            {/* Connection status indicator */}
+            <ConnectionIndicator transport={transportMode} wsStatus={wsConnectionStatus} />
           </div>
 
           {/* Stage indicators */}
@@ -278,9 +284,7 @@ export default function AnalysisPage() {
                   >
                     {stage.label}
                   </span>
-                  {isCompleted && (
-                    <span className="ml-auto text-xs text-success-500">Done</span>
-                  )}
+                  {isCompleted && <span className="ml-auto text-xs text-success-500">Done</span>}
                 </div>
               );
             })}
@@ -294,7 +298,7 @@ export default function AnalysisPage() {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-700 ease-out"
+                className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-1000 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 style={{ width: `${Math.max(progress, 3)}%` }}
               />
             </div>
@@ -334,14 +338,12 @@ export default function AnalysisPage() {
     return (
       <div className="mx-auto max-w-lg py-20 text-center">
         <XCircle className="mx-auto h-12 w-12 text-danger-400" />
-        <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">Analysis Failed</h2>
+        <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
+          Analysis Failed
+        </h2>
         <p className="mt-2 text-sm text-danger-600 dark:text-danger-400">{error}</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Button
-            onClick={handleRetry}
-            isLoading={isRetrying}
-            variant="primary"
-          >
+          <Button onClick={handleRetry} isLoading={isRetrying} variant="primary">
             <RefreshCw className="h-4 w-4" />
             Retry Analysis
           </Button>
@@ -399,9 +401,7 @@ export default function AnalysisPage() {
             key={label}
             className={cn(
               "transition-all duration-700 ease-out",
-              scoreRevealed
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4"
+              scoreRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             )}
             style={{ transitionDelay: `${delay}ms` }}
           >
@@ -410,7 +410,11 @@ export default function AnalysisPage() {
                 "flex flex-col items-center py-8 transition-shadow duration-500",
                 scoreRevealed && score != null && score >= 80 && "shadow-glow-success",
                 scoreRevealed && score != null && score >= 60 && score < 80 && "shadow-glow",
-                scoreRevealed && score != null && score >= 40 && score < 60 && "shadow-glow-warning",
+                scoreRevealed &&
+                  score != null &&
+                  score >= 40 &&
+                  score < 60 &&
+                  "shadow-glow-warning",
                 scoreRevealed && score != null && score < 40 && "shadow-glow-danger"
               )}
               hoverable
@@ -592,7 +596,11 @@ function VerdictBadge({ verdict }: { verdict: string }) {
   else if (v.includes("weak") || v.includes("needs")) variant = "warning";
   else if (v.includes("poor") || v.includes("low")) variant = "danger";
 
-  return <Badge variant={variant} className="text-sm px-3 py-1">{verdict}</Badge>;
+  return (
+    <Badge variant={variant} className="text-sm px-3 py-1">
+      {verdict}
+    </Badge>
+  );
 }
 
 function EmptyTabState({
@@ -609,12 +617,49 @@ function EmptyTabState({
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 dark:bg-surface-700/50">
         {icon}
       </div>
-      <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-        {title}
-      </h3>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-        {description}
-      </p>
+      <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">{description}</p>
+    </div>
+  );
+}
+
+/**
+ * Connection status indicator (green/yellow/red dot) shown during processing.
+ */
+function ConnectionIndicator({
+  transport,
+  wsStatus,
+}: {
+  transport: TransportMode;
+  wsStatus: WsConnectionStatus;
+}) {
+  let color: string;
+  let label: string;
+
+  if (transport === "websocket") {
+    switch (wsStatus) {
+      case "connected":
+        color = "bg-success-500";
+        label = "Live";
+        break;
+      case "connecting":
+        color = "bg-warning-400 animate-pulse";
+        label = "Connecting";
+        break;
+      default:
+        color = "bg-danger-400";
+        label = "Reconnecting";
+        break;
+    }
+  } else {
+    color = "bg-warning-400";
+    label = "Polling";
+  }
+
+  return (
+    <div className="mt-2 flex items-center justify-center gap-1.5">
+      <span className={cn("inline-block h-2 w-2 rounded-full", color)} />
+      <span className="text-xs text-gray-400 dark:text-gray-500">{label}</span>
     </div>
   );
 }

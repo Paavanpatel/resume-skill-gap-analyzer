@@ -4,11 +4,10 @@ FastAPI application entry point.
 Creates and configures the FastAPI application with:
 - CORS middleware
 - Security headers middleware
-- Request ID tracking middleware
+- Request ID tracking + Prometheus HTTP metrics middleware
 - Global exception handlers
-- API router mounting
+- API router mounting (includes /health/live, /health/ready, /metrics)
 - Lifespan events (startup/shutdown)
-- Health check endpoint
 """
 
 import logging
@@ -20,7 +19,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.error_handlers import register_error_handlers
 from app.core.logging_config import configure_logging
-from app.core.middleware import RateLimitMiddleware, RequestIdMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    RateLimitMiddleware,
+    RequestIdMiddleware,
+    SecurityHeadersMiddleware,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down %s...", settings.app_name)
 
 
-def create_app() -> FastAPI:
+def create_app(testing: bool = False) -> FastAPI:
     """Application factory. Creates and configures the FastAPI instance."""
     settings = get_settings()
 
@@ -53,12 +56,14 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
 
     # Rate limiting (Redis-backed, fail-open if Redis unavailable)
-    app.add_middleware(
-        RateLimitMiddleware,
-        redis_url=settings.redis_url,
-        general_limit=settings.rate_limit_per_minute,
-        analysis_limit=settings.rate_limit_analysis_per_hour,
-    )
+    # Skipped during testing to prevent test requests hitting the real Redis limit.
+    if not testing:
+        app.add_middleware(
+            RateLimitMiddleware,
+            redis_url=settings.redis_url,
+            general_limit=settings.rate_limit_per_minute,
+            analysis_limit=settings.rate_limit_analysis_per_hour,
+        )
 
     # Request ID tracking and request logging
     app.add_middleware(RequestIdMiddleware)
@@ -77,58 +82,21 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────
     from app.api.v1.router import api_router
+
     app.include_router(api_router, prefix="/api/v1")
 
-    # ── Health Check ──────────────────────────────────────────
-    @app.get("/api/v1/health", tags=["system"])
-    async def health_check():
-        """
-        Production-grade health check.
+    # ── WebSocket routes (no /api/v1 prefix — ws_url is /ws/analysis/{id}) ──
+    from app.api.v1.websockets import router as ws_router
 
-        Returns connectivity status for all dependencies so container
-        orchestrators (Docker, K8s) and load balancers can make
-        informed routing decisions.
-        """
-        import time
-        checks: dict = {}
+    app.include_router(ws_router)
 
-        # -- Database connectivity --
-        try:
-            import asyncpg
-            conn = await asyncpg.connect(
-                host=settings.postgres_host,
-                port=settings.postgres_port,
-                user=settings.postgres_user,
-                password=settings.postgres_password,
-                database=settings.postgres_db,
-                timeout=5,
-            )
-            await conn.execute("SELECT 1")
-            await conn.close()
-            checks["database"] = "ok"
-        except Exception as exc:
-            checks["database"] = f"error: {type(exc).__name__}"
+    # ── Legacy /health alias — redirects to /health/ready for backward compat ──
+    from fastapi.responses import RedirectResponse
 
-        # -- Redis connectivity --
-        try:
-            import redis.asyncio as aioredis
-            r = aioredis.from_url(settings.redis_url, socket_connect_timeout=2)
-            await r.ping()
-            await r.aclose()
-            checks["redis"] = "ok"
-        except Exception as exc:
-            checks["redis"] = f"error: {type(exc).__name__}"
-
-        overall = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
-
-        return {
-            "status": overall,
-            "app": settings.app_name,
-            "version": "1.0.0",
-            "environment": settings.app_env,
-            "checks": checks,
-            "timestamp": time.time(),
-        }
+    @app.get("/api/v1/health", tags=["health"], include_in_schema=False)
+    async def health_legacy():
+        """Backward-compat alias for /api/v1/health/ready."""
+        return RedirectResponse(url="/api/v1/health/ready", status_code=307)
 
     return app
 

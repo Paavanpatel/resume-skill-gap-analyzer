@@ -110,7 +110,9 @@ export default function AdvisorSection({ analysisId }: AdvisorSectionProps) {
 
                   {rewrite.changes_made.length > 0 && (
                     <div>
-                      <p className="mb-1 text-xs font-semibold uppercase text-gray-500">Changes Made</p>
+                      <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                        Changes Made
+                      </p>
                       <ul className="space-y-1">
                         {rewrite.changes_made.map((change, j) => (
                           <li key={j} className="flex gap-2 text-sm text-gray-600">

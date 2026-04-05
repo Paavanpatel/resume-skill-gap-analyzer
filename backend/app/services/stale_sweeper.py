@@ -11,7 +11,7 @@ This sweeper runs periodically (via Celery beat or cron) to clean up.
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analysis import Analysis
@@ -42,7 +42,7 @@ async def sweep_stale_analyses(session: AsyncSession) -> int:
         .values(
             status="failed",
             error_message=f"Analysis timed out after {STALE_THRESHOLD_MINUTES} minutes. "
-                          "The worker may have crashed. Please try again.",
+            "The worker may have crashed. Please try again.",
         )
         .returning(Analysis.id)
     )

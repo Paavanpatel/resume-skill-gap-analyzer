@@ -15,6 +15,7 @@ from app.schemas.skill import ExtractedSkill, MissingSkill
 
 class AnalysisRequest(BaseModel):
     """Input for creating a new analysis. Resume file is sent as multipart."""
+
     job_description: str = Field(min_length=50, max_length=10000)
     job_title: str | None = Field(None, max_length=500)
     job_company: str | None = Field(None, max_length=255)
@@ -22,6 +23,7 @@ class AnalysisRequest(BaseModel):
 
 class AnalysisSubmitResponse(BaseModel):
     """Returned immediately when an analysis job is submitted (async)."""
+
     job_id: UUID
     status: str = "queued"
     estimated_seconds: int = 15
@@ -31,6 +33,7 @@ class AnalysisSubmitResponse(BaseModel):
 
 class AnalysisStatusResponse(BaseModel):
     """Real-time progress polling response."""
+
     job_id: UUID
     status: str  # queued | processing | completed | failed
     progress: int = Field(ge=0, le=100)
@@ -41,6 +44,7 @@ class AnalysisStatusResponse(BaseModel):
 
 class ResumeSuggestion(BaseModel):
     """A single resume improvement suggestion."""
+
     section: str
     current: str
     suggested: str
@@ -51,6 +55,7 @@ class ResumeSuggestion(BaseModel):
 
 class CategoryBreakdownResponse(BaseModel):
     """Skill gap breakdown for a single category."""
+
     category: str
     display_name: str
     total_job_skills: int
@@ -64,6 +69,7 @@ class CategoryBreakdownResponse(BaseModel):
 
 class ScoreExplanationResponse(BaseModel):
     """Human-readable score explanation."""
+
     match_score: float
     ats_score: float
     match_summary: str
@@ -75,6 +81,7 @@ class ScoreExplanationResponse(BaseModel):
 
 class ATSIssueResponse(BaseModel):
     """A single ATS compatibility issue."""
+
     severity: str
     category: str
     title: str
@@ -84,6 +91,7 @@ class ATSIssueResponse(BaseModel):
 
 class ATSCheckResponse(BaseModel):
     """ATS formatting check results."""
+
     issues: list[ATSIssueResponse] = []
     format_score: float
     passed_checks: int
@@ -92,6 +100,7 @@ class ATSCheckResponse(BaseModel):
 
 class AnalysisResponse(BaseModel):
     """Full analysis result returned after completion."""
+
     id: UUID
     status: str
     match_score: float | None = Field(None, ge=0, le=100)
@@ -115,6 +124,7 @@ class AnalysisResponse(BaseModel):
 
 class AnalysisHistoryItem(BaseModel):
     """Summary item for the analysis history list."""
+
     id: UUID
     job_title: str | None
     job_company: str | None
@@ -128,6 +138,7 @@ class AnalysisHistoryItem(BaseModel):
 
 class AnalysisHistoryResponse(BaseModel):
     """Paginated list of past analyses."""
+
     analyses: list[AnalysisHistoryItem]
     total: int
     page: int

@@ -21,7 +21,7 @@ full resume text as context.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.services.gap_analyzer import GapAnalysisResult
 from app.services.skill_extractor import ExtractionResult
@@ -35,11 +35,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SectionRewrite:
     """A rewritten resume section."""
-    section: str           # "summary", "experience", "skills", "education"
-    original: str          # Current text (may be empty if section missing)
-    rewritten: str         # LLM-generated improved version
+
+    section: str  # "summary", "experience", "skills", "education"
+    original: str  # Current text (may be empty if section missing)
+    rewritten: str  # LLM-generated improved version
     changes_made: list[str]  # List of what was changed and why
-    confidence: float      # 0.0-1.0 how confident we are this improves things
+    confidence: float  # 0.0-1.0 how confident we are this improves things
 
     def to_dict(self) -> dict:
         return {
@@ -54,6 +55,7 @@ class SectionRewrite:
 @dataclass
 class AdvisorResult:
     """Complete resume advisor output."""
+
     rewrites: list[SectionRewrite]
     overall_summary: str  # Brief explanation of all changes
 
@@ -156,15 +158,19 @@ def generate_rule_based_advice(
 
     if missing_names:
         all_skills = matched_names + missing_names
-        rewrites.append(SectionRewrite(
-            section="skills",
-            original=", ".join(matched_names) if matched_names else "(no skills section found)",
-            rewritten=", ".join(all_skills),
-            changes_made=[
-                f"Added missing skill: {name}" for name in missing_names[:5]
-            ],
-            confidence=0.6,
-        ))
+        rewrites.append(
+            SectionRewrite(
+                section="skills",
+                original=", ".join(matched_names)
+                if matched_names
+                else "(no skills section found)",
+                rewritten=", ".join(all_skills),
+                changes_made=[
+                    f"Added missing skill: {name}" for name in missing_names[:5]
+                ],
+                confidence=0.6,
+            )
+        )
 
     # Summary section: suggest adding role-aligned keywords
     critical_gaps = []
@@ -174,16 +180,18 @@ def generate_rule_based_advice(
 
     if critical_gaps:
         keywords = ", ".join(critical_gaps[:4])
-        rewrites.append(SectionRewrite(
-            section="summary",
-            original="(current summary)",
-            rewritten=f"Consider adding references to: {keywords}. "
-                      f"Frame your existing experience in terms the job description uses.",
-            changes_made=[
-                f"Suggested keyword addition: {kw}" for kw in critical_gaps[:4]
-            ],
-            confidence=0.4,
-        ))
+        rewrites.append(
+            SectionRewrite(
+                section="summary",
+                original="(current summary)",
+                rewritten=f"Consider adding references to: {keywords}. "
+                f"Frame your existing experience in terms the job description uses.",
+                changes_made=[
+                    f"Suggested keyword addition: {kw}" for kw in critical_gaps[:4]
+                ],
+                confidence=0.4,
+            )
+        )
 
     summary = (
         f"Identified {len(missing_names)} missing skills to incorporate. "
@@ -231,27 +239,37 @@ async def generate_llm_advice(
         for r in raw_rewrites:
             if not r.get("section") or not r.get("rewritten"):
                 continue
-            rewrites.append(SectionRewrite(
-                section=r.get("section", "general"),
-                original=r.get("original", ""),
-                rewritten=r.get("rewritten", ""),
-                changes_made=r.get("changes_made", [])[:6],
-                confidence=min(1.0, max(0.0, float(r.get("confidence", 0.7)))),
-            ))
+            rewrites.append(
+                SectionRewrite(
+                    section=r.get("section", "general"),
+                    original=r.get("original", ""),
+                    rewritten=r.get("rewritten", ""),
+                    changes_made=r.get("changes_made", [])[:6],
+                    confidence=min(1.0, max(0.0, float(r.get("confidence", 0.7)))),
+                )
+            )
 
-        overall = data.get("overall_summary", "Resume sections rewritten to better match the target role.")
+        overall = data.get(
+            "overall_summary",
+            "Resume sections rewritten to better match the target role.",
+        )
 
         if not rewrites:
             logger.warning("LLM returned empty advice, falling back to rules")
             # Can't call rule-based here without gap_analysis, so return minimal
-            return AdvisorResult(rewrites=[], overall_summary="No specific rewrites generated.")
+            return AdvisorResult(
+                rewrites=[], overall_summary="No specific rewrites generated."
+            )
 
         logger.info("Generated %d LLM section rewrites", len(rewrites))
         return AdvisorResult(rewrites=rewrites, overall_summary=overall)
 
     except Exception as e:
         logger.warning("LLM resume advice failed (non-fatal): %s", str(e)[:200])
-        return AdvisorResult(rewrites=[], overall_summary="LLM advising unavailable; see suggestions for guidance.")
+        return AdvisorResult(
+            rewrites=[],
+            overall_summary="LLM advising unavailable; see suggestions for guidance.",
+        )
 
 
 # ── Main entry point ─────────────────────────────────────────────

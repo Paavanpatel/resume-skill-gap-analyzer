@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import usePageTitle from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 describe("usePageTitle", () => {
   const originalTitle = document.title;
