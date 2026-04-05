@@ -19,7 +19,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.error_handlers import register_error_handlers
 from app.core.logging_config import configure_logging
-from app.core.middleware import RateLimitMiddleware, RequestIdMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    RateLimitMiddleware,
+    RequestIdMiddleware,
+    SecurityHeadersMiddleware,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +80,12 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────
     from app.api.v1.router import api_router
+
     app.include_router(api_router, prefix="/api/v1")
 
     # ── WebSocket routes (no /api/v1 prefix — ws_url is /ws/analysis/{id}) ──
     from app.api.v1.websockets import router as ws_router
+
     app.include_router(ws_router)
 
     # ── Legacy /health alias — redirects to /health/ready for backward compat ──

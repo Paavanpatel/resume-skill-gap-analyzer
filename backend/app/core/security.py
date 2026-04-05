@@ -74,6 +74,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 # ── JWT token creation ────────────────────────────────────────
 
+
 def create_access_token(user_id: UUID, email: str) -> str:
     """
     Create a short-lived access token.
@@ -97,7 +98,9 @@ def create_access_token(user_id: UUID, email: str) -> str:
         "iat": now,
     }
 
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
 
 
 def create_refresh_token(user_id: UUID) -> str:
@@ -118,7 +121,9 @@ def create_refresh_token(user_id: UUID) -> str:
         "iat": now,
     }
 
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
 
 
 def decode_token(token: str) -> dict:

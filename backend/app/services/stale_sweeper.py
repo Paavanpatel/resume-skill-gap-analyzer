@@ -42,7 +42,7 @@ async def sweep_stale_analyses(session: AsyncSession) -> int:
         .values(
             status="failed",
             error_message=f"Analysis timed out after {STALE_THRESHOLD_MINUTES} minutes. "
-                          "The worker may have crashed. Please try again.",
+            "The worker may have crashed. Please try again.",
         )
         .returning(Analysis.id)
     )

@@ -83,33 +83,38 @@ async def metrics_summary():
             if name == "rsga_http_requests_total":
                 # Only the _total samples carry label dimensions; skip _created samples
                 value_samples = [s for s in metric.samples if s.name == name]
-                summary["http"]["total_requests"] = int(sum(s.value for s in value_samples))
+                summary["http"]["total_requests"] = int(
+                    sum(s.value for s in value_samples)
+                )
                 # Count by HTTP status class (2xx, 4xx, 5xx, …)
                 by_status: dict[str, int] = {}
                 for s in value_samples:
                     status = s.labels.get("status", "") or "unknown"
-                    cls = f"{status[0]}xx" if status and status[0].isdigit() else "other"
+                    cls = (
+                        f"{status[0]}xx" if status and status[0].isdigit() else "other"
+                    )
                     by_status[cls] = by_status.get(cls, 0) + int(s.value)
                 summary["http"]["by_status_class"] = by_status
 
             elif name == "rsga_http_request_duration_seconds":
                 # Histogram: extract count and sum from sample names within this metric
                 count = sum(
-                    s.value for s in metric.samples
-                    if s.name == f"{name}_count"
+                    s.value for s in metric.samples if s.name == f"{name}_count"
                 )
                 total_sum = sum(
-                    s.value for s in metric.samples
-                    if s.name == f"{name}_sum"
+                    s.value for s in metric.samples if s.name == f"{name}_sum"
                 )
                 if count:
                     summary["http"]["total_timed"] = int(count)
-                    summary["http"]["avg_duration_ms"] = round(total_sum / count * 1000, 2)
+                    summary["http"]["avg_duration_ms"] = round(
+                        total_sum / count * 1000, 2
+                    )
 
             elif name == "rsga_analyses_total":
                 value_samples = [s for s in metric.samples if s.name == name]
                 summary["analyses"]["by_status"] = {
-                    s.labels.get("status", "unknown"): int(s.value) for s in value_samples
+                    s.labels.get("status", "unknown"): int(s.value)
+                    for s in value_samples
                 }
                 summary["analyses"]["total"] = int(sum(s.value for s in value_samples))
 
@@ -124,7 +129,9 @@ async def metrics_summary():
 
             elif name == "rsga_llm_tokens_total":
                 value_samples = [s for s in metric.samples if s.name == name]
-                summary["llm"]["total_tokens"] = int(sum(s.value for s in value_samples))
+                summary["llm"]["total_tokens"] = int(
+                    sum(s.value for s in value_samples)
+                )
     except Exception as exc:
         logger.warning("Failed to read metrics for summary: %s", exc)
 

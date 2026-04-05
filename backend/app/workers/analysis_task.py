@@ -81,7 +81,7 @@ def run_skill_gap_analysis(self, analysis_id: str) -> dict:
     except Exception as exc:
         # Transient error (network blip, LLM 500, Redis timeout) — retry
         # with exponential backoff: 15s then 30s.
-        countdown = 15 * (2 ** self.request.retries)
+        countdown = 15 * (2**self.request.retries)
         logger.warning(
             "Analysis task %s failed transiently (attempt %d/%d), retrying in %ds: %s",
             analysis_id,

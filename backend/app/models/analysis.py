@@ -29,13 +29,16 @@ class Analysis(Base, UUIDMixin, TimestampMixin):
 
     # ── Foreign keys ─────────────────────────────────────────
     user_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     resume_id: Mapped[str] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("resumes.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        nullable=False,
+        index=True,
     )
 
     # ── Input ────────────────────────────────────────────────
@@ -95,7 +98,10 @@ class Analysis(Base, UUIDMixin, TimestampMixin):
     user: Mapped["User"] = relationship("User", back_populates="analyses")
     resume: Mapped["Resume"] = relationship("Resume", back_populates="analyses")
     roadmap: Mapped["Roadmap | None"] = relationship(
-        "Roadmap", back_populates="analysis", uselist=False, cascade="all, delete-orphan"
+        "Roadmap",
+        back_populates="analysis",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

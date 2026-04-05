@@ -63,7 +63,7 @@ async def _get_completed_analysis(
     if analysis.status != "completed":
         raise ValidationError(
             message=f"Analysis is '{analysis.status}'. Insights are only "
-                    "available for completed analyses.",
+            "available for completed analyses.",
         )
 
     return analysis
@@ -157,7 +157,7 @@ async def get_roadmap_endpoint(
     if roadmap is None:
         raise NotFoundError(
             message="No roadmap has been generated for this analysis yet. "
-                    "POST to generate one.",
+            "POST to generate one.",
             resource_type="roadmap",
         )
 
@@ -221,6 +221,7 @@ async def generate_advisor_endpoint(
 
     # Persist the advisor result to the database
     from app.services.resume_advisor import save_advisor_result
+
     await save_advisor_result(analysis_id, result, session)
     await session.commit()
 

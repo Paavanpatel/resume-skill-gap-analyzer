@@ -103,11 +103,13 @@ class LogBuffer:
             records = list(cls._buffer)
 
         if min_level_num:
-            records = [r for r in records if level_map.get(r["level"], 0) >= min_level_num]
+            records = [
+                r for r in records if level_map.get(r["level"], 0) >= min_level_num
+            ]
         if logger_prefix:
             records = [r for r in records if r["logger"].startswith(logger_prefix)]
 
-        return records[-min(limit, _MAX_RECORDS):]
+        return records[-min(limit, _MAX_RECORDS) :]
 
     @classmethod
     def clear(cls) -> None:

@@ -46,13 +46,13 @@ logger = logging.getLogger(__name__)
 
 # ── Color palette ────────────────────────────────────────────────
 
-COLOR_PRIMARY = colors.HexColor("#2563eb")     # blue-600
-COLOR_SUCCESS = colors.HexColor("#16a34a")     # green-600
-COLOR_WARNING = colors.HexColor("#d97706")     # amber-600
-COLOR_DANGER = colors.HexColor("#dc2626")      # red-600
-COLOR_MUTED = colors.HexColor("#6b7280")       # gray-500
-COLOR_HEADER_BG = colors.HexColor("#f0f4ff")   # blue-50
-COLOR_ROW_ALT = colors.HexColor("#f9fafb")     # gray-50
+COLOR_PRIMARY = colors.HexColor("#2563eb")  # blue-600
+COLOR_SUCCESS = colors.HexColor("#16a34a")  # green-600
+COLOR_WARNING = colors.HexColor("#d97706")  # amber-600
+COLOR_DANGER = colors.HexColor("#dc2626")  # red-600
+COLOR_MUTED = colors.HexColor("#6b7280")  # gray-500
+COLOR_HEADER_BG = colors.HexColor("#f0f4ff")  # blue-50
+COLOR_ROW_ALT = colors.HexColor("#f9fafb")  # gray-50
 
 
 def _score_color(score: float) -> colors.HexColor:
@@ -169,10 +169,14 @@ def _build_header(
     if subtitle_parts:
         elements.append(Paragraph(" ".join(subtitle_parts), styles["subtitle"]))
 
-    elements.append(HRFlowable(
-        width="100%", thickness=1,
-        color=colors.HexColor("#e5e7eb"), spaceAfter=12,
-    ))
+    elements.append(
+        HRFlowable(
+            width="100%",
+            thickness=1,
+            color=colors.HexColor("#e5e7eb"),
+            spaceAfter=12,
+        )
+    )
 
     return elements
 
@@ -195,7 +199,10 @@ def _build_score_cards(styles: dict, analysis: dict) -> list:
     score_cells = []
     for label, value, color in scores:
         cell_content = [
-            Paragraph(f'<font color="{color.hexval()}">{value:.0f}%</font>', styles["score_big"]),
+            Paragraph(
+                f'<font color="{color.hexval()}">{value:.0f}%</font>',
+                styles["score_big"],
+            ),
             Paragraph(label, styles["score_label"]),
         ]
         score_cells.append(cell_content)
@@ -205,16 +212,20 @@ def _build_score_cards(styles: dict, analysis: dict) -> list:
         colWidths=[2.1 * inch, 2.1 * inch, 2.1 * inch],
         rowHeights=[60],
     )
-    table.setStyle(TableStyle([
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("BOX", (0, 0), (0, 0), 0.5, colors.HexColor("#e5e7eb")),
-        ("BOX", (1, 0), (1, 0), 0.5, colors.HexColor("#e5e7eb")),
-        ("BOX", (2, 0), (2, 0), 0.5, colors.HexColor("#e5e7eb")),
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fafbfc")),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("BOX", (0, 0), (0, 0), 0.5, colors.HexColor("#e5e7eb")),
+                ("BOX", (1, 0), (1, 0), 0.5, colors.HexColor("#e5e7eb")),
+                ("BOX", (2, 0), (2, 0), 0.5, colors.HexColor("#e5e7eb")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fafbfc")),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
 
     return [table, Spacer(1, 12)]
 
@@ -270,26 +281,35 @@ def _build_skills_table(styles: dict, analysis: dict) -> list:
         if i < len(matched):
             m = matched[i]
             name = m.get("name", "") if isinstance(m, dict) else str(m)
-            m_cell = Paragraph(f"<font color='#16a34a'>\u2713</font> {name}", styles["body"])
+            m_cell = Paragraph(
+                f"<font color='#16a34a'>\u2713</font> {name}", styles["body"]
+            )
 
         g_cell = ""
         if i < len(missing):
             g = missing[i]
             name = g.get("name", "") if isinstance(g, dict) else str(g)
             priority = g.get("priority", "medium") if isinstance(g, dict) else "medium"
-            g_cell = Paragraph(f"<font color='#dc2626'>\u2717</font> {name} ({priority})", styles["body"])
+            g_cell = Paragraph(
+                f"<font color='#dc2626'>\u2717</font> {name} ({priority})",
+                styles["body"],
+            )
 
         rows.append([m_cell, g_cell])
 
     table = Table(rows, colWidths=[3.15 * inch, 3.15 * inch])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), COLOR_HEADER_BG),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e7eb")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), COLOR_HEADER_BG),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e7eb")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
 
     elements.append(table)
     return elements
@@ -318,13 +338,19 @@ def _build_categories(styles: dict, analysis: dict) -> list:
             continue
         pct = bd.get("match_percentage", 0)
         color = _score_color(pct)
-        rows.append([
-            Paragraph(bd.get("display_name", bd.get("category", "")), styles["body"]),
-            Paragraph(f'<font color="{color.hexval()}">{pct:.0f}%</font>', styles["body"]),
-            Paragraph(str(bd.get("matched_count", 0)), styles["body"]),
-            Paragraph(str(bd.get("missing_count", 0)), styles["body"]),
-            Paragraph(_priority_label(bd.get("priority", "")), styles["body"]),
-        ])
+        rows.append(
+            [
+                Paragraph(
+                    bd.get("display_name", bd.get("category", "")), styles["body"]
+                ),
+                Paragraph(
+                    f'<font color="{color.hexval()}">{pct:.0f}%</font>', styles["body"]
+                ),
+                Paragraph(str(bd.get("matched_count", 0)), styles["body"]),
+                Paragraph(str(bd.get("missing_count", 0)), styles["body"]),
+                Paragraph(_priority_label(bd.get("priority", "")), styles["body"]),
+            ]
+        )
 
     table = Table(
         rows,
@@ -365,17 +391,26 @@ def _build_suggestions(styles: dict, analysis: dict) -> list:
         reason = s.get("reason", "")
         priority = s.get("priority", "medium")
 
-        elements.append(Paragraph(
-            f"<b>{i + 1}. [{section.title()}] ({priority})</b>",
-            styles["body"],
-        ))
+        elements.append(
+            Paragraph(
+                f"<b>{i + 1}. [{section.title()}] ({priority})</b>",
+                styles["body"],
+            )
+        )
         if suggested:
             elements.append(Paragraph(suggested, styles["bullet"]))
         if reason:
-            elements.append(Paragraph(
-                f"<i>{reason}</i>",
-                ParagraphStyle("ItalicSmall", parent=styles["body"], fontSize=9, textColor=COLOR_MUTED),
-            ))
+            elements.append(
+                Paragraph(
+                    f"<i>{reason}</i>",
+                    ParagraphStyle(
+                        "ItalicSmall",
+                        parent=styles["body"],
+                        fontSize=9,
+                        textColor=COLOR_MUTED,
+                    ),
+                )
+            )
         elements.append(Spacer(1, 4))
 
     return elements
@@ -392,9 +427,9 @@ def _build_roadmap(styles: dict, roadmap: dict | None) -> list:
 
     elements = []
     total_weeks = roadmap.get("total_weeks", 0)
-    elements.append(Paragraph(
-        f"Learning Roadmap ({total_weeks} weeks)", styles["heading"]
-    ))
+    elements.append(
+        Paragraph(f"Learning Roadmap ({total_weeks} weeks)", styles["heading"])
+    )
 
     for phase in phases[:8]:
         if not isinstance(phase, dict):
@@ -402,18 +437,25 @@ def _build_roadmap(styles: dict, roadmap: dict | None) -> list:
         week = phase.get("week_range", "")
         focus = phase.get("focus", "")
 
-        elements.append(KeepTogether([
-            Paragraph(f"<b>Weeks {week}: {focus}</b>", styles["body"]),
-            *[
-                Paragraph(f"\u2022 {obj}", styles["bullet"])
-                for obj in (phase.get("objectives") or [])[:4]
-            ],
-            *[
-                Paragraph(f"<font color='#2563eb'>Resource:</font> {res}", styles["small"])
-                for res in (phase.get("resources") or [])[:2]
-            ],
-            Spacer(1, 6),
-        ]))
+        elements.append(
+            KeepTogether(
+                [
+                    Paragraph(f"<b>Weeks {week}: {focus}</b>", styles["body"]),
+                    *[
+                        Paragraph(f"\u2022 {obj}", styles["bullet"])
+                        for obj in (phase.get("objectives") or [])[:4]
+                    ],
+                    *[
+                        Paragraph(
+                            f"<font color='#2563eb'>Resource:</font> {res}",
+                            styles["small"],
+                        )
+                        for res in (phase.get("resources") or [])[:2]
+                    ],
+                    Spacer(1, 6),
+                ]
+            )
+        )
 
     return elements
 
@@ -464,12 +506,14 @@ def generate_pdf_report(
     elements = []
 
     # Header
-    elements.extend(_build_header(
-        styles,
-        job_title=analysis.get("job_title"),
-        job_company=analysis.get("job_company"),
-        created_at=analysis.get("created_at"),
-    ))
+    elements.extend(
+        _build_header(
+            styles,
+            job_title=analysis.get("job_title"),
+            job_company=analysis.get("job_company"),
+            created_at=analysis.get("created_at"),
+        )
+    )
 
     # Score cards
     elements.extend(_build_score_cards(styles, analysis))

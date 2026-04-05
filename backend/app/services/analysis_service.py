@@ -46,7 +46,9 @@ TAXONOMY_CACHE_KEY = "taxonomy:all"
 TAXONOMY_CACHE_TTL = 3600  # 1 hour
 
 
-async def _load_taxonomy(session: AsyncSession, redis_client: aioredis.Redis | None = None) -> list:
+async def _load_taxonomy(
+    session: AsyncSession, redis_client: aioredis.Redis | None = None
+) -> list:
     """
     Load the skill taxonomy from the database and convert to lookup format.
 
@@ -78,12 +80,14 @@ async def _load_taxonomy(session: AsyncSession, redis_client: aioredis.Redis | N
     # Convert ORM objects to dicts for build_taxonomy_index
     skills_data = []
     for skill in raw_skills:
-        skills_data.append({
-            "name": skill.name,
-            "category": skill.category,
-            "weight": getattr(skill, "weight", 1.0),
-            "aliases": getattr(skill, "aliases", []) or [],
-        })
+        skills_data.append(
+            {
+                "name": skill.name,
+                "category": skill.category,
+                "weight": getattr(skill, "weight", 1.0),
+                "aliases": getattr(skill, "aliases", []) or [],
+            }
+        )
 
     taxonomy = build_taxonomy_index(skills_data)
 
@@ -219,8 +223,11 @@ async def run_analysis(
 
     # Publish initial progress via WebSocket
     await publish_progress(
-        redis_client, str(analysis_id),
-        status="processing", progress=0, current_step="Parsing resume",
+        redis_client,
+        str(analysis_id),
+        status="processing",
+        progress=0,
+        current_step="Parsing resume",
     )
 
     try:
@@ -236,7 +243,7 @@ async def run_analysis(
         if not resume_text or len(resume_text.strip()) < 50:
             raise ParsingError(
                 message="Resume text is too short for meaningful analysis. "
-                        "Please upload a resume with more content.",
+                "Please upload a resume with more content.",
             )
 
         # 3. Load skill taxonomy (with Redis caching)
@@ -244,8 +251,11 @@ async def run_analysis(
 
         # Publish: parsing done, extracting skills
         await publish_progress(
-            redis_client, str(analysis_id),
-            status="processing", progress=25, current_step="Extracting skills",
+            redis_client,
+            str(analysis_id),
+            status="processing",
+            progress=25,
+            current_step="Extracting skills",
         )
 
         logger.info(
@@ -268,8 +278,11 @@ async def run_analysis(
 
         # Publish: extraction done, matching and scoring
         await publish_progress(
-            redis_client, str(analysis_id),
-            status="processing", progress=50, current_step="Matching skills and scoring",
+            redis_client,
+            str(analysis_id),
+            status="processing",
+            progress=50,
+            current_step="Matching skills and scoring",
         )
 
         # 6. Run gap analysis (Phase 6)
@@ -287,8 +300,11 @@ async def run_analysis(
 
         # Publish: gap analysis done, generating suggestions
         await publish_progress(
-            redis_client, str(analysis_id),
-            status="processing", progress=75, current_step="Generating suggestions and insights",
+            redis_client,
+            str(analysis_id),
+            status="processing",
+            progress=75,
+            current_step="Generating suggestions and insights",
         )
 
         # 8. Generate improvement suggestions (Phase 6)
@@ -316,7 +332,9 @@ async def run_analysis(
             "matched_skills": skill_data["matched_skills"],
             "missing_skills": skill_data["missing_skills"],
             "suggestions": suggestions,
-            "category_breakdowns": [b.to_dict() for b in gap_result.category_breakdowns],
+            "category_breakdowns": [
+                b.to_dict() for b in gap_result.category_breakdowns
+            ],
             "score_explanation": gap_result.score_explanation.to_dict(),
             "ats_check": ats_result.to_dict(),
             "ai_provider": extraction.provider,
@@ -330,8 +348,11 @@ async def run_analysis(
 
         # Publish completion via WebSocket
         await publish_progress(
-            redis_client, str(analysis_id),
-            status="completed", progress=100, current_step="Analysis complete",
+            redis_client,
+            str(analysis_id),
+            status="completed",
+            progress=100,
+            current_step="Analysis complete",
         )
 
         logger.info(
@@ -365,8 +386,11 @@ async def run_analysis(
 
         # Publish failure via WebSocket
         await publish_progress(
-            redis_client, str(analysis_id),
-            status="failed", progress=0, current_step="Analysis failed",
+            redis_client,
+            str(analysis_id),
+            status="failed",
+            progress=0,
+            current_step="Analysis failed",
             error_message=error_msg,
         )
 

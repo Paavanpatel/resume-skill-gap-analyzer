@@ -34,6 +34,7 @@ def _get_stripe():
         return None
     try:
         import stripe
+
         stripe.api_key = settings.stripe_secret_key
         return stripe
     except ImportError:
@@ -42,6 +43,7 @@ def _get_stripe():
 
 
 # ── Stripe tier → price ID mapping ───────────────────────────
+
 
 def _price_id_for_tier(tier: str) -> Optional[str]:
     settings = get_settings()
@@ -53,6 +55,7 @@ def _price_id_for_tier(tier: str) -> Optional[str]:
 
 # ── Stripe tier from subscription status ─────────────────────
 
+
 def _tier_from_price(price_id: str) -> str:
     settings = get_settings()
     if price_id == settings.stripe_pro_price_id:
@@ -63,6 +66,7 @@ def _tier_from_price(price_id: str) -> str:
 
 
 # ── Customer management ───────────────────────────────────────
+
 
 async def get_or_create_customer(
     user: User,
@@ -96,6 +100,7 @@ async def get_or_create_customer(
 
 
 # ── Checkout session ──────────────────────────────────────────
+
 
 async def create_checkout_session(
     user: User,
@@ -137,6 +142,7 @@ async def create_checkout_session(
 
 # ── Customer portal ───────────────────────────────────────────
 
+
 async def create_portal_session(
     user: User,
     session: AsyncSession,
@@ -167,6 +173,7 @@ async def create_portal_session(
 
 
 # ── Webhook handler ───────────────────────────────────────────
+
 
 async def handle_webhook_event(
     payload: bytes,
@@ -207,6 +214,7 @@ async def handle_webhook_event(
         # Look up the user by stripe_customer_id
         from sqlalchemy import select
         from app.models.user import User as UserModel
+
         result = await session.execute(
             select(UserModel).where(UserModel.stripe_customer_id == customer_id)
         )
@@ -227,7 +235,9 @@ async def handle_webhook_event(
             handled = True
             logger.info(
                 "Updated user %s tier to '%s' from Stripe event %s",
-                db_user.id, new_tier, event_type,
+                db_user.id,
+                new_tier,
+                event_type,
             )
 
     return {"handled": handled, "event_type": event_type}

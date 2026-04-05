@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RoadmapPhase:
     """A single learning phase (1-2 week block)."""
+
     week_range: str
     focus: str
     objectives: list[str]
@@ -55,6 +56,7 @@ class RoadmapPhase:
 @dataclass
 class GeneratedRoadmap:
     """Complete learning roadmap output."""
+
     total_weeks: int
     phases: list[RoadmapPhase]
 
@@ -197,12 +199,16 @@ def generate_rule_based_roadmap(
     if not all_missing:
         return GeneratedRoadmap(
             total_weeks=0,
-            phases=[RoadmapPhase(
-                week_range="N/A",
-                focus="No gaps detected",
-                objectives=["Your skills already match the job requirements!"],
-                resources=["Consider advanced certifications to strengthen your profile"],
-            )],
+            phases=[
+                RoadmapPhase(
+                    week_range="N/A",
+                    focus="No gaps detected",
+                    objectives=["Your skills already match the job requirements!"],
+                    resources=[
+                        "Consider advanced certifications to strengthen your profile"
+                    ],
+                )
+            ],
         )
 
     # Create 2-week phases, grouping 2-3 skills per phase
@@ -211,20 +217,20 @@ def generate_rule_based_roadmap(
     week = 1
 
     for i in range(0, len(all_missing), skills_per_phase):
-        batch = all_missing[i:i + skills_per_phase]
+        batch = all_missing[i : i + skills_per_phase]
         end_week = min(week + 1, total_weeks)
 
         phase = RoadmapPhase(
             week_range=f"{week}-{end_week}",
-            focus=batch[0] if len(batch) == 1 else f"{batch[0]} & {batch[1]}" if len(batch) == 2 else f"{batch[0]} and related skills",
-            objectives=[
-                f"Learn fundamentals of {skill}" for skill in batch[:3]
-            ] + [
-                f"Complete a hands-on project using {batch[0]}"
-            ],
-            resources=[
-                f"Official documentation for {skill}" for skill in batch[:2]
-            ] + ["Practice on relevant coding challenges or projects"],
+            focus=batch[0]
+            if len(batch) == 1
+            else f"{batch[0]} & {batch[1]}"
+            if len(batch) == 2
+            else f"{batch[0]} and related skills",
+            objectives=[f"Learn fundamentals of {skill}" for skill in batch[:3]]
+            + [f"Complete a hands-on project using {batch[0]}"],
+            resources=[f"Official documentation for {skill}" for skill in batch[:2]]
+            + ["Practice on relevant coding challenges or projects"],
         )
         phases.append(phase)
         week += 2
@@ -274,18 +280,22 @@ async def generate_llm_roadmap(
         for p in raw_phases:
             if not p.get("focus"):
                 continue
-            phases.append(RoadmapPhase(
-                week_range=p.get("week_range", ""),
-                focus=p.get("focus", ""),
-                objectives=p.get("objectives", [])[:5],
-                resources=p.get("resources", [])[:4],
-            ))
+            phases.append(
+                RoadmapPhase(
+                    week_range=p.get("week_range", ""),
+                    focus=p.get("focus", ""),
+                    objectives=p.get("objectives", [])[:5],
+                    resources=p.get("resources", [])[:4],
+                )
+            )
 
         if not phases:
             logger.warning("LLM returned empty roadmap, falling back to rules")
             return generate_rule_based_roadmap(extraction, gap_analysis)
 
-        logger.info("Generated LLM roadmap: %d weeks, %d phases", total_weeks, len(phases))
+        logger.info(
+            "Generated LLM roadmap: %d weeks, %d phases", total_weeks, len(phases)
+        )
         return GeneratedRoadmap(total_weeks=total_weeks, phases=phases)
 
     except Exception as e:
@@ -309,7 +319,9 @@ async def save_roadmap(
     )
     session.add(db_roadmap)
     await session.flush()
-    logger.info("Saved roadmap for analysis %s (%d weeks)", analysis_id, roadmap.total_weeks)
+    logger.info(
+        "Saved roadmap for analysis %s (%d weeks)", analysis_id, roadmap.total_weeks
+    )
     return db_roadmap
 
 

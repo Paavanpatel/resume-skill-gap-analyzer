@@ -24,6 +24,7 @@ from app.services.skill_normalizer import NormalizedSkill
 @dataclass
 class CategoryBreakdown:
     """Skill gap analysis for a single category (e.g., 'programming_language')."""
+
     category: str
     display_name: str
     total_job_skills: int
@@ -51,6 +52,7 @@ class CategoryBreakdown:
 @dataclass
 class ScoreExplanation:
     """Human-readable explanation of how scores were computed."""
+
     match_score: float
     ats_score: float
     match_summary: str
@@ -58,7 +60,9 @@ class ScoreExplanation:
     strengths: list[str]
     weaknesses: list[str]
     overall_verdict: str  # "strong_match", "moderate_match", "weak_match", "poor_match"
-    missing_required_count: int = 0  # Number of missing required skills (may cap verdict)
+    missing_required_count: int = (
+        0  # Number of missing required skills (may cap verdict)
+    )
 
     def to_dict(self) -> dict:
         return {
@@ -76,6 +80,7 @@ class ScoreExplanation:
 @dataclass
 class GapAnalysisResult:
     """Complete output from the gap analysis pipeline."""
+
     category_breakdowns: list[CategoryBreakdown]
     score_explanation: ScoreExplanation
 
@@ -107,7 +112,9 @@ CATEGORY_DISPLAY_NAMES = {
 # ── Category breakdown ──────────────────────────────────────────
 
 
-def compute_category_breakdowns(extraction: ExtractionResult) -> list[CategoryBreakdown]:
+def compute_category_breakdowns(
+    extraction: ExtractionResult,
+) -> list[CategoryBreakdown]:
     """
     Break down the skill match by category.
 
@@ -140,17 +147,21 @@ def compute_category_breakdowns(extraction: ExtractionResult) -> list[CategoryBr
         # Determine priority based on gap severity and skill importance
         priority = _category_priority(matched, missing)
 
-        breakdowns.append(CategoryBreakdown(
-            category=category,
-            display_name=CATEGORY_DISPLAY_NAMES.get(category, category.replace("_", " ").title()),
-            total_job_skills=total,
-            matched_count=len(matched),
-            missing_count=len(missing),
-            match_percentage=match_pct,
-            matched_skills=[s.name for s in matched],
-            missing_skills=[s.name for s in missing],
-            priority=priority,
-        ))
+        breakdowns.append(
+            CategoryBreakdown(
+                category=category,
+                display_name=CATEGORY_DISPLAY_NAMES.get(
+                    category, category.replace("_", " ").title()
+                ),
+                total_job_skills=total,
+                matched_count=len(matched),
+                missing_count=len(missing),
+                match_percentage=match_pct,
+                matched_skills=[s.name for s in matched],
+                missing_skills=[s.name for s in missing],
+                priority=priority,
+            )
+        )
 
     # Sort: critical gaps first, then important, then nice_to_have
     priority_order = {"critical": 0, "important": 1, "nice_to_have": 2}
@@ -211,7 +222,9 @@ def explain_scores(
         f"from the job description ({match_score:.0f}% weighted match). "
     )
     if match_score >= 80:
-        match_summary += "This is a strong match — you meet most of the core requirements."
+        match_summary += (
+            "This is a strong match — you meet most of the core requirements."
+        )
     elif match_score >= 60:
         match_summary += "This is a moderate match — you have a solid foundation but some gaps to address."
     elif match_score >= 40:
@@ -238,7 +251,9 @@ def explain_scores(
     weaknesses = _identify_weaknesses(extraction)
 
     # Overall verdict (may be capped if required skills are missing)
-    missing_required_count = sum(1 for s in extraction.missing_skills if s.required is True)
+    missing_required_count = sum(
+        1 for s in extraction.missing_skills if s.required is True
+    )
     verdict = _overall_verdict(match_score, ats_score, missing_required_count)
 
     if missing_required_count >= 2:
@@ -267,8 +282,7 @@ def _identify_strengths(extraction: ExtractionResult) -> list[str]:
 
     # High-confidence, high-weight matched skills
     strong_matches = [
-        s for s in extraction.matched_skills
-        if s.confidence >= 0.8 and s.weight >= 1.5
+        s for s in extraction.matched_skills if s.confidence >= 0.8 and s.weight >= 1.5
     ]
     if strong_matches:
         names = ", ".join(s.name for s in strong_matches[:5])
@@ -292,7 +306,8 @@ def _identify_strengths(extraction: ExtractionResult) -> list[str]:
     # Resume has extra relevant skills beyond what the job asked for
     job_names = {s.name.lower() for s in extraction.job_skills}
     extra_relevant = [
-        s for s in extraction.resume_skills
+        s
+        for s in extraction.resume_skills
         if s.name.lower() not in job_names and s.in_taxonomy and s.weight >= 1.5
     ]
     if extra_relevant:
@@ -314,7 +329,8 @@ def _identify_weaknesses(extraction: ExtractionResult) -> list[str]:
 
     # Missing high-weight skills (even if not explicitly required)
     heavy_missing = [
-        s for s in extraction.missing_skills
+        s
+        for s in extraction.missing_skills
         if s.weight >= 2.0 and s.required is not True
     ]
     if heavy_missing:
@@ -334,7 +350,9 @@ def _identify_weaknesses(extraction: ExtractionResult) -> list[str]:
     for cat, counts in cats.items():
         if counts["total"] >= 2 and counts["matched"] == 0:
             display = CATEGORY_DISPLAY_NAMES.get(cat, cat.replace("_", " ").title())
-            weaknesses.append(f"No coverage in {display} ({counts['total']} skills needed)")
+            weaknesses.append(
+                f"No coverage in {display} ({counts['total']} skills needed)"
+            )
 
     return weaknesses[:5]  # Cap at 5
 
@@ -366,11 +384,21 @@ def _overall_verdict(
         raw = "poor_match"
 
     if missing_required_count >= 2:
-        verdict_rank = {"strong_match": 3, "moderate_match": 2, "weak_match": 1, "poor_match": 0}
+        verdict_rank = {
+            "strong_match": 3,
+            "moderate_match": 2,
+            "weak_match": 1,
+            "poor_match": 0,
+        }
         cap = "weak_match"
         return cap if verdict_rank[raw] > verdict_rank[cap] else raw
     if missing_required_count == 1:
-        verdict_rank = {"strong_match": 3, "moderate_match": 2, "weak_match": 1, "poor_match": 0}
+        verdict_rank = {
+            "strong_match": 3,
+            "moderate_match": 2,
+            "weak_match": 1,
+            "poor_match": 0,
+        }
         cap = "moderate_match"
         return cap if verdict_rank[raw] > verdict_rank[cap] else raw
 

@@ -48,6 +48,7 @@ ALLOWED_MIME_TYPES = {
 @dataclass
 class FileValidationResult:
     """Outcome of a successful file validation."""
+
     file_type: str
     file_size: int
 
@@ -89,7 +90,10 @@ async def validate_upload(file: UploadFile) -> FileValidationResult:
         raise FileUploadError(
             message=f"Unsupported file type '.{extension}'. Only PDF and DOCX files are accepted.",
             error_code=ErrorCode.FILE_TYPE_NOT_ALLOWED,
-            details={"allowed_types": sorted(ALLOWED_EXTENSIONS), "received": extension},
+            details={
+                "allowed_types": sorted(ALLOWED_EXTENSIONS),
+                "received": extension,
+            },
         )
 
     # 3. Read content (bounded read to prevent memory exhaustion)
@@ -116,7 +120,7 @@ async def validate_upload(file: UploadFile) -> FileValidationResult:
 
     # 5. Magic bytes -- does the actual content match what the extension claims?
     expected_magic = MAGIC_BYTES.get(extension, b"")
-    if not content[:len(expected_magic)] == expected_magic:
+    if not content[: len(expected_magic)] == expected_magic:
         logger.warning(
             "Magic byte mismatch for '%s': expected %s, got %s",
             filename,

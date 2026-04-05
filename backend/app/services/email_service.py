@@ -114,6 +114,7 @@ If you didn't request a password reset, you can safely ignore this email.
 
 # ── Core send helper ─────────────────────────────────────────
 
+
 async def _send(to_email: str, subject: str, html_body: str, text_body: str) -> None:
     """
     Low-level email dispatcher.
@@ -166,6 +167,7 @@ async def _send(to_email: str, subject: str, html_body: str, text_body: str) -> 
 
 
 # ── Public helpers ───────────────────────────────────────────
+
 
 async def send_verification_email(to_email: str, otp: str) -> None:
     """Send the 6-digit OTP verification email."""

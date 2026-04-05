@@ -86,7 +86,9 @@ async def _get_current_status(analysis_id: UUID) -> dict | None:
             "status": analysis.status,
             "progress": progress,
             "current_step": step,
-            "error_message": analysis.error_message if analysis.status == "failed" else None,
+            "error_message": analysis.error_message
+            if analysis.status == "failed"
+            else None,
         }
 
 
@@ -156,14 +158,18 @@ async def analysis_websocket(websocket: WebSocket, analysis_id: str):
         pubsub = redis_client.pubsub()
         await pubsub.subscribe(channel_name)
     except Exception as e:
-        logger.warning("Redis Pub/Sub connection failed for WS %s: %s", analysis_id, str(e)[:200])
+        logger.warning(
+            "Redis Pub/Sub connection failed for WS %s: %s", analysis_id, str(e)[:200]
+        )
         # Fallback: tell client to use polling
-        await websocket.send_json({
-            "status": "error",
-            "progress": 0,
-            "current_step": "Real-time updates unavailable",
-            "error_message": "Please use polling fallback",
-        })
+        await websocket.send_json(
+            {
+                "status": "error",
+                "progress": 0,
+                "current_step": "Real-time updates unavailable",
+                "error_message": "Please use polling fallback",
+            }
+        )
         await websocket.close(code=1011, reason="Redis unavailable")
         return
 
@@ -174,12 +180,14 @@ async def analysis_websocket(websocket: WebSocket, analysis_id: str):
             remaining = deadline - asyncio.get_event_loop().time()
             if remaining <= 0:
                 logger.info("WebSocket timeout for analysis %s", analysis_id)
-                await websocket.send_json({
-                    "status": "error",
-                    "progress": 0,
-                    "current_step": "Connection timed out",
-                    "error_message": "WebSocket timed out after 5 minutes",
-                })
+                await websocket.send_json(
+                    {
+                        "status": "error",
+                        "progress": 0,
+                        "current_step": "Connection timed out",
+                        "error_message": "WebSocket timed out after 5 minutes",
+                    }
+                )
                 break
 
             try:
@@ -257,12 +265,14 @@ async def publish_progress(
         return
 
     channel = _pubsub_channel(analysis_id)
-    payload = json.dumps({
-        "status": status,
-        "progress": progress,
-        "current_step": current_step,
-        "error_message": error_message,
-    })
+    payload = json.dumps(
+        {
+            "status": status,
+            "progress": progress,
+            "current_step": current_step,
+            "error_message": error_message,
+        }
+    )
 
     try:
         await redis_client.publish(channel, payload)

@@ -29,7 +29,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.exceptions import AuthenticationError, AuthorizationError, ErrorCode, RateLimitError
+from app.core.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    ErrorCode,
+    RateLimitError,
+)
 from app.core.security import decode_token
 from app.db.session import get_db_session
 from app.models.user import User
@@ -206,6 +211,7 @@ def require_role(*allowed_roles: str):
 
 
 # ── Tier-aware rate limiter dependency ────────────────────────
+
 
 class RateLimiter:
     """

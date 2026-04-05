@@ -26,7 +26,11 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
 from app.repositories.resume_repo import ResumeRepository
-from app.schemas.resume import PaginatedResumeResponse, ResumeParseResponse, ResumeUploadResponse
+from app.schemas.resume import (
+    PaginatedResumeResponse,
+    ResumeParseResponse,
+    ResumeUploadResponse,
+)
 from app.services.file_storage import delete_file, save_upload
 from app.services.file_validator import validate_upload
 from app.services.resume_parser import parse_resume_content
@@ -202,7 +206,9 @@ async def delete_resume(
 async def list_resumes(
     user: CurrentUser,
     skip: int = Query(default=0, ge=0, description="Number of records to skip"),
-    limit: int = Query(default=20, ge=1, le=MAX_PAGE_SIZE, description="Max records to return"),
+    limit: int = Query(
+        default=20, ge=1, le=MAX_PAGE_SIZE, description="Max records to return"
+    ),
     session: AsyncSession = Depends(get_read_db_session),
 ):
     """
@@ -223,6 +229,4 @@ async def list_resumes(
         limit=limit,
     )
     total = await repo.count_unique_by_user(user_id=user.id)
-    return PaginatedResumeResponse(
-        resumes=resumes, total=total, skip=skip, limit=limit
-    )
+    return PaginatedResumeResponse(resumes=resumes, total=total, skip=skip, limit=limit)

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class PDFExtractionError(Exception):
     """Raised when PDF text extraction fails."""
+
     pass
 
 

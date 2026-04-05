@@ -33,7 +33,9 @@ class Resume(Base, UUIDMixin, TimestampMixin):
     # ── File metadata ────────────────────────────────────────
     original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
-    file_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "pdf" or "docx"
+    file_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "pdf" or "docx"
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # ── Parsed content ───────────────────────────────────────
@@ -43,7 +45,9 @@ class Resume(Base, UUIDMixin, TimestampMixin):
     )  # JSON string of identified sections (experience, education, etc.)
 
     # ── Usage tracking ───────────────────────────────────────
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # ── Relationships ────────────────────────────────────────
     user: Mapped["User"] = relationship("User", back_populates="resumes")

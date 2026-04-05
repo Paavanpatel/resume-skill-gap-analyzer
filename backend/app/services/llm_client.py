@@ -46,6 +46,7 @@ class LLMError(AppError):
 @dataclass
 class LLMResponse:
     """Standardized response from any LLM provider."""
+
     content: str
     provider: str  # "openai" or "anthropic"
     model: str
@@ -183,6 +184,7 @@ class RedisCircuitBreaker:
         """Lazily resolve the Redis client; returns None if unavailable."""
         try:
             from app.core.dependencies import get_redis  # lazy to avoid circular import
+
             return await get_redis()
         except Exception:
             return None
@@ -206,7 +208,9 @@ class RedisCircuitBreaker:
             try:
                 count = await redis.incr(self._failures_key())
                 # Keep failures key alive 3× longer than the open window for diagnostics
-                await redis.expire(self._failures_key(), int(self._recovery_timeout * 3))
+                await redis.expire(
+                    self._failures_key(), int(self._recovery_timeout * 3)
+                )
                 if count >= self._failure_threshold:
                     await redis.set(
                         self._state_key(), "open", ex=int(self._recovery_timeout)

@@ -70,6 +70,7 @@ def configure_logging() -> None:
     # Attach the in-memory log buffer handler (plain, no formatter needed —
     # _LogBufferHandler.emit() builds its own dict rather than using format())
     from app.core.log_buffer import LogBuffer
+
     root_logger.addHandler(LogBuffer.make_handler())
 
     # Quiet noisy third-party loggers

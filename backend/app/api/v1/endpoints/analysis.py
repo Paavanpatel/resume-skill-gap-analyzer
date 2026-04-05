@@ -86,7 +86,7 @@ async def submit_analysis(
     if not resume.raw_text or len(resume.raw_text.strip()) < 50:
         raise ValidationError(
             message="This resume hasn't been parsed yet or contains too little text. "
-                    "Please re-upload.",
+            "Please re-upload.",
         )
 
     # Enforce monthly analysis quota before accepting the job
@@ -110,11 +110,13 @@ async def submit_analysis(
 
     # Increment usage counter for this billing period
     from app.services.usage_service import increment_analysis_count
+
     await increment_analysis_count(user_id=str(user.id), session=session)
 
     # Dispatch Celery task
     try:
         from app.workers.analysis_task import run_skill_gap_analysis
+
         run_skill_gap_analysis.delay(str(analysis.id))
         logger.info("Dispatched analysis task for %s", analysis.id)
     except Exception as e:
@@ -320,7 +322,9 @@ MAX_RETRIES = 3
     status_code=202,
     summary="Retry a failed analysis",
     responses={
-        409: {"description": "Analysis is not in a retryable state (must be failed or queued) or max retries exceeded"},
+        409: {
+            "description": "Analysis is not in a retryable state (must be failed or queued) or max retries exceeded"
+        },
     },
 )
 async def retry_analysis(
@@ -366,8 +370,13 @@ async def retry_analysis(
     # Re-dispatch the Celery task
     try:
         from app.workers.analysis_task import run_skill_gap_analysis
+
         run_skill_gap_analysis.delay(str(analysis_id))
-        logger.info("Re-dispatched analysis task for %s (retry %d)", analysis_id, analysis.retry_count + 1)
+        logger.info(
+            "Re-dispatched analysis task for %s (retry %d)",
+            analysis_id,
+            analysis.retry_count + 1,
+        )
     except Exception as e:
         logger.warning(
             "Failed to dispatch Celery retry task for analysis %s: %s",

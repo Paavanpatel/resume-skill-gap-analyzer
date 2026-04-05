@@ -12,8 +12,10 @@ from pydantic import BaseModel, Field
 
 # ── User management schemas ──────────────────────────────────
 
+
 class AdminUserUpdate(BaseModel):
     """PATCH /admin/users/{id} — admin updates tier, role, or active status."""
+
     tier: str | None = Field(None, pattern=r"^(free|pro|enterprise)$")
     role: str | None = Field(None, pattern=r"^(user|admin|super_admin)$")
     is_active: bool | None = None
@@ -21,6 +23,7 @@ class AdminUserUpdate(BaseModel):
 
 class AdminUserResponse(BaseModel):
     """Extended user response for admin views."""
+
     id: UUID
     email: str
     full_name: str | None
@@ -36,6 +39,7 @@ class AdminUserResponse(BaseModel):
 
 class AdminUserListResponse(BaseModel):
     """Paginated user list response."""
+
     users: list[AdminUserResponse]
     total: int
     page: int
@@ -44,8 +48,10 @@ class AdminUserListResponse(BaseModel):
 
 # ── Analysis listing schemas ─────────────────────────────────
 
+
 class AdminAnalysisResponse(BaseModel):
     """Analysis item for admin views."""
+
     id: UUID
     user_id: UUID
     user_email: str
@@ -67,6 +73,7 @@ class AdminAnalysisResponse(BaseModel):
 
 class AdminAnalysisListResponse(BaseModel):
     """Paginated analysis list response."""
+
     analyses: list[AdminAnalysisResponse]
     total: int
     page: int
@@ -75,8 +82,10 @@ class AdminAnalysisListResponse(BaseModel):
 
 # ── Analytics schemas ────────────────────────────────────────
 
+
 class AnalyticsOverview(BaseModel):
     """KPI summary for the admin dashboard."""
+
     total_users: int
     active_users: int
     verified_users: int
@@ -94,9 +103,11 @@ class AnalyticsOverview(BaseModel):
 
 # ── Storage stats schema ─────────────────────────────────────
 
+
 class StorageStats(BaseModel):
     """Storage usage summary for the admin dashboard."""
-    backend: str          # "local" or "s3"
+
+    backend: str  # "local" or "s3"
     total_files: int
     total_bytes: int
-    bucket: str | None    # S3 bucket name, None for local
+    bucket: str | None  # S3 bucket name, None for local

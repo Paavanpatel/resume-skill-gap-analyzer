@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 # ── Shared filename sanitisation ──────────────────────────────────────────────
 
+
 def _sanitize_filename(filename: str) -> str:
     """Strip dangerous characters from a user-supplied filename."""
     name = filename.replace("\\", "/").rsplit("/", 1)[-1]
@@ -47,6 +48,7 @@ def _verify_path_within_root(path: Path, root: Path) -> None:
 
 
 # ── Protocol ──────────────────────────────────────────────────────────────────
+
 
 @runtime_checkable
 class StorageBackend(Protocol):
@@ -70,6 +72,7 @@ class StorageBackend(Protocol):
 
 
 # ── LocalStorage ──────────────────────────────────────────────────────────────
+
 
 class LocalStorage:
     """Filesystem-backed storage. Keys are paths relative to `base_path`."""
@@ -167,6 +170,7 @@ class LocalStorage:
 
 # ── S3Storage ─────────────────────────────────────────────────────────────────
 
+
 class S3Storage:
     """S3-compatible object storage via aioboto3. Works with AWS S3 and MinIO."""
 
@@ -187,6 +191,7 @@ class S3Storage:
     def _client(self):
         """Return an aioboto3 async S3 client context manager."""
         import aioboto3  # lazy import — only required when storage_backend=s3
+
         session = aioboto3.Session(
             aws_access_key_id=self._access_key_id,
             aws_secret_access_key=self._secret_access_key,
@@ -262,7 +267,9 @@ class S3Storage:
         try:
             async with self._client() as s3:
                 paginator = s3.get_paginator("list_objects_v2")
-                async for page in paginator.paginate(Bucket=self._bucket, Prefix="uploads/"):
+                async for page in paginator.paginate(
+                    Bucket=self._bucket, Prefix="uploads/"
+                ):
                     for obj in page.get("Contents", []):
                         total_files += 1
                         total_bytes += obj["Size"]
@@ -277,6 +284,7 @@ class S3Storage:
 
 
 # ── Factory ───────────────────────────────────────────────────────────────────
+
 
 def get_storage() -> StorageBackend:
     """Return the configured storage backend (cached per process via module scope)."""
@@ -295,9 +303,8 @@ def get_storage() -> StorageBackend:
 # ── Module-level backward-compatible API ──────────────────────────────────────
 # Existing callers (resume.py, parse_task.py, etc.) import these directly.
 
-async def save_upload(
-    file_content: bytes, user_id: str, original_filename: str
-) -> str:
+
+async def save_upload(file_content: bytes, user_id: str, original_filename: str) -> str:
     return await get_storage().save_upload(file_content, user_id, original_filename)
 
 

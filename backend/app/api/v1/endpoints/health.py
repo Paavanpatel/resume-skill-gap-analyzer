@@ -59,6 +59,7 @@ async def readiness():
     async def _check_db() -> str:
         try:
             import asyncpg
+
             conn = await asyncpg.connect(
                 host=_settings.postgres_host,
                 port=_settings.postgres_port,
@@ -77,6 +78,7 @@ async def readiness():
     async def _check_redis() -> str:
         try:
             import redis.asyncio as aioredis
+
             r = aioredis.from_url(_settings.redis_url, socket_connect_timeout=2)
             await r.ping()
             await r.aclose()
@@ -97,6 +99,7 @@ async def readiness():
         """
         try:
             from app.workers.celery_app import celery_app
+
             loop = asyncio.get_running_loop()
             inspect = celery_app.control.inspect(timeout=2.0)
             result = await loop.run_in_executor(None, inspect.ping)

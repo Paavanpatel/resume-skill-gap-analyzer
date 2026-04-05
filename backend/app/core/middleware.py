@@ -73,7 +73,11 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         # Record Prometheus HTTP metrics (import lazily to avoid circular imports
         # if metrics.py ever imports from middleware in the future)
         try:
-            from app.core.metrics import http_requests_total, http_request_duration_seconds
+            from app.core.metrics import (
+                http_requests_total,
+                http_request_duration_seconds,
+            )
+
             # Normalise path for high-cardinality routes (e.g. /analysis/{id})
             path_label = _normalise_path(request.url.path)
             status_label = str(response.status_code)
@@ -142,8 +146,11 @@ def _normalise_path(path: str) -> str:
       /api/v1/resume/42              ->  /api/v1/resume/{id}
     """
     import re
+
     # UUID-shaped segments (hex, 8-4-4-4-12 or 32 hex chars)
-    path = re.sub(r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "/{id}", path)
+    path = re.sub(
+        r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "/{id}", path
+    )
     path = re.sub(r"/[0-9a-f]{32}", "/{id}", path)
     # Pure numeric segments
     path = re.sub(r"/\d+", "/{id}", path)
@@ -181,15 +188,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """
 
     # Paths that bypass rate limiting entirely
-    _EXEMPT_PATHS = frozenset({
-        "/api/v1/health",
-        "/api/v1/health/live",
-        "/api/v1/health/ready",
-        "/api/v1/metrics",
-        "/docs",
-        "/redoc",
-        "/openapi.json",
-    })
+    _EXEMPT_PATHS = frozenset(
+        {
+            "/api/v1/health",
+            "/api/v1/health/live",
+            "/api/v1/health/ready",
+            "/api/v1/metrics",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+        }
+    )
 
     # Auth endpoints that get stricter IP-based brute-force protection
     _AUTH_PATHS = frozenset({"/api/v1/auth/login", "/api/v1/auth/register"})
@@ -334,7 +343,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             ip_id = self._get_ip(request)
             auth_key = f"ratelimit:{ip_id}:auth"
             allowed, _, _, ttl = await self._check_rate_limit(
-                redis_client, auth_key, self._auth_limit, 900  # 15-minute window
+                redis_client,
+                auth_key,
+                self._auth_limit,
+                900,  # 15-minute window
             )
             if not allowed:
                 return self._rate_limit_response(self._auth_limit, ttl, request)

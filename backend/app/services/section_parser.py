@@ -108,6 +108,7 @@ for section_name, patterns in SECTION_PATTERNS.items():
 @dataclass
 class ParsedSection:
     """A single identified section of the resume."""
+
     name: str
     content: str
     line_start: int
@@ -117,6 +118,7 @@ class ParsedSection:
 @dataclass
 class ParsedResume:
     """Complete parsed resume with identified sections."""
+
     sections: list[ParsedSection] = field(default_factory=list)
     raw_text: str = ""
     word_count: int = 0
@@ -218,12 +220,14 @@ def parse_sections(raw_text: str) -> ParsedResume:
 
         content = "\n".join(lines[start:end]).strip()
         if content:  # Skip empty sections
-            sections.append(ParsedSection(
-                name=name,
-                content=content,
-                line_start=start,
-                line_end=end,
-            ))
+            sections.append(
+                ParsedSection(
+                    name=name,
+                    content=content,
+                    line_start=start,
+                    line_end=end,
+                )
+            )
 
     return ParsedResume(
         sections=sections,

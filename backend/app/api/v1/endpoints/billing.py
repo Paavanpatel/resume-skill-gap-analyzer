@@ -81,7 +81,7 @@ async def checkout(
     if url is None:
         raise ValidationError(
             message="Billing is not configured on this server. "
-                    "Set STRIPE_SECRET_KEY and STRIPE_PRO_PRICE_ID in environment.",
+            "Set STRIPE_SECRET_KEY and STRIPE_PRO_PRICE_ID in environment.",
         )
 
     return {"url": url}

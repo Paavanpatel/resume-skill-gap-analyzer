@@ -7,6 +7,7 @@ Revision ID: 007_add_user_role
 Revises: 006_add_billing
 Create Date: 2026-03-28
 """
+
 from typing import Sequence, Union
 
 from alembic import op

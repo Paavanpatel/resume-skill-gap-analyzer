@@ -41,9 +41,7 @@ class SkillRepository(BaseRepository[Skill]):
     async def get_by_category(self, category: str) -> list[Skill]:
         """Fetch all skills in a specific category."""
         result = await self._session.execute(
-            select(Skill)
-            .where(Skill.category == category)
-            .order_by(Skill.name)
+            select(Skill).where(Skill.category == category).order_by(Skill.name)
         )
         return list(result.scalars().all())
 

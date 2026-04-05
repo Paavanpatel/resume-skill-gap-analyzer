@@ -65,7 +65,9 @@ class AnalysisRepository(BaseRepository[Analysis]):
         )
         row = result.one()
         return {
-            "average_match_score": round(float(row.avg_match), 1) if row.avg_match else None,
+            "average_match_score": round(float(row.avg_match), 1)
+            if row.avg_match
+            else None,
             "average_ats_score": round(float(row.avg_ats), 1) if row.avg_ats else None,
         }
 

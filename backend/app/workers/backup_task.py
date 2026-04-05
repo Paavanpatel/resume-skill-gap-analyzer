@@ -36,6 +36,7 @@ BACKUP_DIR = Path(os.getenv("BACKUP_DIR", "/app/storage/backups"))
 
 # ── Daily backup ───────────────────────────────────────────────
 
+
 @celery_app.task(
     name="daily_db_backup",
     bind=True,
@@ -127,6 +128,7 @@ def _prune_old_backups() -> None:
 
 
 # ── Weekly stale-analysis sweep ────────────────────────────────
+
 
 @celery_app.task(
     name="weekly_sweep_stale",

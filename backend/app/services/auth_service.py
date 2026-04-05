@@ -192,9 +192,7 @@ async def refresh_tokens(
         exp = payload.get("exp", 0)
         now = int(datetime.now(timezone.utc).timestamp())
         ttl = max(exp - now, 1)
-        await redis_client.setex(
-            f"token:blacklist:{refresh_token}", ttl, "revoked"
-        )
+        await redis_client.setex(f"token:blacklist:{refresh_token}", ttl, "revoked")
 
     logger.info("Tokens refreshed for user %s", user_id)
 
@@ -240,7 +238,9 @@ async def logout_user(
                 f"token:blacklist:{refresh_token}", refresh_ttl, "revoked"
             )
 
-        logger.info("User tokens blacklisted for logout (sub=%s)", access_payload.get("sub"))
+        logger.info(
+            "User tokens blacklisted for logout (sub=%s)", access_payload.get("sub")
+        )
 
     except Exception as e:
         # Don't fail the logout if blacklisting fails
@@ -440,7 +440,9 @@ async def verify_email_otp(
         AuthenticationError: If no account exists for this email.
     """
     if redis_client is None:
-        raise ValidationError(message="Verification service temporarily unavailable. Try again later.")
+        raise ValidationError(
+            message="Verification service temporarily unavailable. Try again later."
+        )
 
     key = _otp_redis_key(email)
     stored_otp = await redis_client.get(key)
@@ -561,7 +563,9 @@ async def reset_password_with_token(
         AuthenticationError: If the associated account no longer exists.
     """
     if redis_client is None:
-        raise ValidationError(message="Reset service temporarily unavailable. Try again later.")
+        raise ValidationError(
+            message="Reset service temporarily unavailable. Try again later."
+        )
 
     key = _reset_redis_key(token)
     email = await redis_client.get(key)

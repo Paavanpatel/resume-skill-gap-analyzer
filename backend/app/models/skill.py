@@ -36,9 +36,7 @@ class Skill(Base, UUIDMixin, TimestampMixin):
     # 1.0 = standard importance, higher = more critical when missing.
     # "Python" in a Python job might be 3.0, "Jira" might be 0.5.
     # Used by the gap analyzer (Phase 6) to rank missing skills.
-    weight: Mapped[float] = mapped_column(
-        Float, default=1.0, nullable=False
-    )
+    weight: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
 
     # ── Metadata ─────────────────────────────────────────────
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

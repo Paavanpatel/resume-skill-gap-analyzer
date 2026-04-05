@@ -49,6 +49,7 @@ _admin = require_role("admin")
 
 # ── User management ──────────────────────────────────────────
 
+
 @router.get("/users", response_model=AdminUserListResponse)
 async def list_users(
     admin: User = Depends(_admin),
@@ -65,9 +66,7 @@ async def list_users(
 
     if search:
         pattern = f"%{search}%"
-        base = base.where(
-            (User.email.ilike(pattern)) | (User.full_name.ilike(pattern))
-        )
+        base = base.where((User.email.ilike(pattern)) | (User.full_name.ilike(pattern)))
     if tier:
         base = base.where(User.tier == tier)
     if role:
@@ -82,12 +81,14 @@ async def list_users(
     # Fetch page
     offset = (page - 1) * page_size
     rows = (
-        await session.execute(
-            base.order_by(User.created_at.desc())
-            .offset(offset)
-            .limit(page_size)
+        (
+            await session.execute(
+                base.order_by(User.created_at.desc()).offset(offset).limit(page_size)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     # Batch-fetch analysis counts
     user_ids = [u.id for u in rows]
@@ -231,6 +232,7 @@ async def deactivate_user(
 
 # ── Analytics ────────────────────────────────────────────────
 
+
 @router.get("/analytics", response_model=AnalyticsOverview)
 async def get_analytics(
     admin: User = Depends(_admin),
@@ -241,7 +243,9 @@ async def get_analytics(
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
     # User counts
-    total_users = (await session.execute(select(func.count()).select_from(User))).scalar_one()
+    total_users = (
+        await session.execute(select(func.count()).select_from(User))
+    ).scalar_one()
     active_users = (
         await session.execute(
             select(func.count()).select_from(User).where(User.is_active == True)  # noqa: E712
@@ -255,30 +259,32 @@ async def get_analytics(
 
     # Users by tier
     tier_rows = (
-        await session.execute(
-            select(User.tier, func.count()).group_by(User.tier)
-        )
+        await session.execute(select(User.tier, func.count()).group_by(User.tier))
     ).all()
     users_by_tier = {tier: count for tier, count in tier_rows}
 
     # Users by role
     role_rows = (
-        await session.execute(
-            select(User.role, func.count()).group_by(User.role)
-        )
+        await session.execute(select(User.role, func.count()).group_by(User.role))
     ).all()
     users_by_role = {role: count for role, count in role_rows}
 
     # Analysis counts
-    total_analyses = (await session.execute(select(func.count()).select_from(Analysis))).scalar_one()
+    total_analyses = (
+        await session.execute(select(func.count()).select_from(Analysis))
+    ).scalar_one()
     completed_analyses = (
         await session.execute(
-            select(func.count()).select_from(Analysis).where(Analysis.status == "completed")
+            select(func.count())
+            .select_from(Analysis)
+            .where(Analysis.status == "completed")
         )
     ).scalar_one()
     failed_analyses = (
         await session.execute(
-            select(func.count()).select_from(Analysis).where(Analysis.status == "failed")
+            select(func.count())
+            .select_from(Analysis)
+            .where(Analysis.status == "failed")
         )
     ).scalar_one()
 
@@ -353,6 +359,7 @@ async def get_analytics(
 
 # ── Analysis management ──────────────────────────────────────
 
+
 @router.get("/analyses", response_model=AdminAnalysisListResponse)
 async def list_analyses(
     admin: User = Depends(_admin),
@@ -382,9 +389,7 @@ async def list_analyses(
     offset = (page - 1) * page_size
     rows = (
         await session.execute(
-            base.order_by(Analysis.created_at.desc())
-            .offset(offset)
-            .limit(page_size)
+            base.order_by(Analysis.created_at.desc()).offset(offset).limit(page_size)
         )
     ).all()
 
@@ -421,9 +426,7 @@ async def retry_analysis(
     session: AsyncSession = Depends(get_db_session),
 ):
     """Reset a failed analysis back to queued for re-processing."""
-    result = await session.execute(
-        select(Analysis).where(Analysis.id == analysis_id)
-    )
+    result = await session.execute(select(Analysis).where(Analysis.id == analysis_id))
     analysis = result.scalar_one_or_none()
     if not analysis:
         raise NotFoundError(message="Analysis not found.", resource_type="Analysis")
@@ -446,9 +449,7 @@ async def delete_analysis(
     session: AsyncSession = Depends(get_db_session),
 ):
     """Permanently delete an analysis."""
-    result = await session.execute(
-        select(Analysis).where(Analysis.id == analysis_id)
-    )
+    result = await session.execute(select(Analysis).where(Analysis.id == analysis_id))
     analysis = result.scalar_one_or_none()
     if not analysis:
         raise NotFoundError(message="Analysis not found.", resource_type="Analysis")
@@ -461,18 +462,21 @@ async def delete_analysis(
 
 # ── Storage stats ────────────────────────────────────────────
 
+
 @router.get("/storage/stats", response_model=StorageStats)
 async def get_storage_stats(
     admin: User = Depends(_admin),
 ):
     """Return storage backend usage statistics (file count + total bytes)."""
     from app.services.file_storage import get_storage
+
     storage = get_storage()
     stats = await storage.get_stats()
     return StorageStats(**stats)
 
 
 # ── Maintenance ──────────────────────────────────────────────
+
 
 @router.post("/sweep-stale")
 async def sweep_stale_analyses_endpoint(

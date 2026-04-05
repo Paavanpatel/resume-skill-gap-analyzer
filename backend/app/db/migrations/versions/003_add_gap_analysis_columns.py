@@ -7,6 +7,7 @@ Revision ID: 003_gap_analysis
 Revises: 002_advisor_result
 Create Date: 2026-03-19
 """
+
 from typing import Sequence, Union
 
 from alembic import op

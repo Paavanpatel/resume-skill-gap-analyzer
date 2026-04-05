@@ -37,17 +37,18 @@ logger = logging.getLogger(__name__)
 # Strips dot-separated language suffixes so "React.js" == "React", "Node.js" == "Node".
 # Only matches a literal dot followed by the suffix to avoid stripping letters from
 # skill names like "TypeScript" or "express".
-_TECH_SUFFIX_RE = re.compile(r'\.(js|ts|py|rb|go)$', re.IGNORECASE)
+_TECH_SUFFIX_RE = re.compile(r"\.(js|ts|py|rb|go)$", re.IGNORECASE)
 
 
 def _strip_tech_suffix(name: str) -> str:
     """Return the lowercased skill name with common dot-extension variants removed."""
-    return _TECH_SUFFIX_RE.sub('', name.strip()).lower()
+    return _TECH_SUFFIX_RE.sub("", name.strip()).lower()
 
 
 @dataclass
 class ExtractionResult:
     """Complete result from the skill extraction pipeline."""
+
     resume_skills: list[NormalizedSkill]
     job_skills: list[NormalizedSkill]
     matched_skills: list[NormalizedSkill]
@@ -107,22 +108,27 @@ class ExtractionResult:
         Used by Phase 9 endpoints (roadmap, advisor) that need to rebuild
         the extraction data from what's stored in the JSONB columns.
         """
-        def _to_skills(raw: list | None, source: str = "resume") -> list[NormalizedSkill]:
+
+        def _to_skills(
+            raw: list | None, source: str = "resume"
+        ) -> list[NormalizedSkill]:
             if not raw:
                 return []
             skills = []
             for s in raw:
                 if not isinstance(s, dict):
                     continue
-                skills.append(NormalizedSkill(
-                    name=s.get("name", ""),
-                    category=s.get("category", "general"),
-                    confidence=float(s.get("confidence", 0.8)),
-                    weight=float(s.get("weight", 1.0)),
-                    in_taxonomy=True,
-                    source=s.get("source", source),
-                    required=s.get("required"),
-                ))
+                skills.append(
+                    NormalizedSkill(
+                        name=s.get("name", ""),
+                        category=s.get("category", "general"),
+                        confidence=float(s.get("confidence", 0.8)),
+                        weight=float(s.get("weight", 1.0)),
+                        in_taxonomy=True,
+                        source=s.get("source", source),
+                        required=s.get("required"),
+                    )
+                )
             return skills
 
         return cls(
@@ -187,7 +193,8 @@ async def _extract_skills_from_text(
     if not isinstance(raw_skills, list):
         logger.warning(
             "LLM returned non-list 'skills' field from %s: %s",
-            source, type(raw_skills).__name__,
+            source,
+            type(raw_skills).__name__,
         )
         raw_skills = []
 
@@ -243,11 +250,13 @@ async def extract_skills(
             source="job_description",
         )
 
-        (raw_resume_skills, resume_response), (raw_job_skills, job_response) = (
-            await asyncio.gather(resume_task, job_task)
-        )
+        (
+            (raw_resume_skills, resume_response),
+            (raw_job_skills, job_response),
+        ) = await asyncio.gather(resume_task, job_task)
     except Exception as e:
         from app.core.exceptions import AppError
+
         if isinstance(e, AppError):  # Already a typed application error
             raise
         raise ParsingError(

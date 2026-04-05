@@ -97,17 +97,20 @@ def _clear_refresh_cookie(response: Response) -> None:
 # ── Request schemas ─────────────────────────────────────────
 class RefreshRequest(BaseModel):
     """Request body for token refresh (legacy support)."""
+
     refresh_token: str | None = None
 
 
 class LogoutRequest(BaseModel):
     """Request body for logout. Optional refresh token for full invalidation."""
+
     refresh_token: str | None = None
 
 
 # ── Response schemas ────────────────────────────────────────
 class AccessTokenResponse(BaseModel):
     """Response with access token only (refresh token is in httpOnly cookie)."""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int
@@ -115,16 +118,19 @@ class AccessTokenResponse(BaseModel):
 
 class LoginResponse(BaseModel):
     """Login response includes access token and user profile."""
+
     tokens: AccessTokenResponse
     user: UserResponse
 
 
 class MessageResponse(BaseModel):
     """Simple message response for operations without data payload."""
+
     message: str
 
 
 # ── Endpoints ───────────────────────────────────────────────
+
 
 @router.post(
     "/register",
@@ -432,6 +438,7 @@ async def update_preferences_endpoint(
 
 # ── Email verification endpoints ─────────────────────────────
 
+
 @router.post(
     "/verify-email",
     response_model=UserResponse,
@@ -480,10 +487,13 @@ async def resend_verification_endpoint(
         session=session,
         redis_client=redis_client,
     )
-    return MessageResponse(message="If this email is registered and unverified, a new code has been sent.")
+    return MessageResponse(
+        message="If this email is registered and unverified, a new code has been sent."
+    )
 
 
 # ── Password reset endpoints ──────────────────────────────────
+
 
 @router.post(
     "/forgot-password",
@@ -506,7 +516,9 @@ async def forgot_password_endpoint(
         session=session,
         redis_client=redis_client,
     )
-    return MessageResponse(message="If an account with this email exists, a reset link has been sent.")
+    return MessageResponse(
+        message="If an account with this email exists, a reset link has been sent."
+    )
 
 
 @router.post(
@@ -534,4 +546,6 @@ async def reset_password_endpoint(
         session=session,
         redis_client=redis_client,
     )
-    return MessageResponse(message="Password reset successfully. You can now log in with your new password.")
+    return MessageResponse(
+        message="Password reset successfully. You can now log in with your new password."
+    )
