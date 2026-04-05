@@ -19,7 +19,7 @@ import sys
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db_session, async_engine
+from app.db.session import async_engine, get_db_session
 from app.models.user import User
 
 VALID_ROLES = ("user", "admin", "super_admin")

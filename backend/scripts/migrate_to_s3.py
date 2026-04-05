@@ -70,7 +70,9 @@ async def migrate(dry_run: bool, delete_local: bool) -> None:
             continue
 
         size = local_path.stat().st_size
-        print(f"  {'WOULD UPLOAD' if dry_run else 'UPLOADING'}  {key}  ({size:,} bytes)")
+        print(
+            f"  {'WOULD UPLOAD' if dry_run else 'UPLOADING'}  {key}  ({size:,} bytes)"
+        )
 
         if dry_run:
             ok += 1
@@ -92,15 +94,15 @@ async def migrate(dry_run: bool, delete_local: bool) -> None:
             except OSError as exc:
                 print(f"    WARNING: could not delete local file: {exc}")
 
-    print(
-        f"\nDone. Migrated: {ok}  Skipped: {skipped}  Failed: {failed}"
-    )
+    print(f"\nDone. Migrated: {ok}  Skipped: {skipped}  Failed: {failed}")
     if failed:
         sys.exit(1)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Migrate resume files from local storage to S3.")
+    parser = argparse.ArgumentParser(
+        description="Migrate resume files from local storage to S3."
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",

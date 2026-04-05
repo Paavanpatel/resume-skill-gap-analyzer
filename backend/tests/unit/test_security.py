@@ -10,6 +10,7 @@ These tests verify:
 """
 
 import time
+from uuid import UUID
 
 import pytest
 
@@ -22,8 +23,6 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from uuid import UUID
-
 
 TEST_USER_ID = UUID("12345678-1234-1234-1234-123456789abc")
 TEST_EMAIL = "test@example.com"
@@ -163,8 +162,10 @@ class TestJWTTokenExpiration:
 
     def test_expired_token_raises_error(self):
         """Manually creating an expired token and decoding it raises TOKEN_EXPIRED."""
-        import jwt as pyjwt
         from datetime import datetime, timedelta, timezone
+
+        import jwt as pyjwt
+
         from app.core.config import get_settings
 
         settings = get_settings()

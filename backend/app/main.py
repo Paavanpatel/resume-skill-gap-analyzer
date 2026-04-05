@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down %s...", settings.app_name)
 
 
-def create_app() -> FastAPI:
+def create_app(testing: bool = False) -> FastAPI:
     """Application factory. Creates and configures the FastAPI instance."""
     settings = get_settings()
 
@@ -56,12 +56,14 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
 
     # Rate limiting (Redis-backed, fail-open if Redis unavailable)
-    app.add_middleware(
-        RateLimitMiddleware,
-        redis_url=settings.redis_url,
-        general_limit=settings.rate_limit_per_minute,
-        analysis_limit=settings.rate_limit_analysis_per_hour,
-    )
+    # Skipped during testing to prevent test requests hitting the real Redis limit.
+    if not testing:
+        app.add_middleware(
+            RateLimitMiddleware,
+            redis_url=settings.redis_url,
+            general_limit=settings.rate_limit_per_minute,
+            analysis_limit=settings.rate_limit_analysis_per_hour,
+        )
 
     # Request ID tracking and request logging
     app.add_middleware(RequestIdMiddleware)

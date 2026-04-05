@@ -54,7 +54,9 @@ class TestRegisterUser:
 
         with (
             patch("app.services.auth_service.UserRepository") as MockRepo,
-            patch("app.services.auth_service.hash_password", return_value="$2b$12$hashed"),
+            patch(
+                "app.services.auth_service.hash_password", return_value="$2b$12$hashed"
+            ),
         ):
             repo = MockRepo.return_value
             repo.email_exists = AsyncMock(return_value=False)
@@ -97,7 +99,9 @@ class TestRegisterUser:
 
         with (
             patch("app.services.auth_service.UserRepository") as MockRepo,
-            patch("app.services.auth_service.hash_password", return_value="$2b$12$hashed"),
+            patch(
+                "app.services.auth_service.hash_password", return_value="$2b$12$hashed"
+            ),
         ):
             repo = MockRepo.return_value
             repo.email_exists = AsyncMock(return_value=False)
@@ -128,8 +132,14 @@ class TestLoginUser:
         with (
             patch("app.services.auth_service.UserRepository") as MockRepo,
             patch("app.services.auth_service.verify_password", return_value=True),
-            patch("app.services.auth_service.create_access_token", return_value="access.jwt.token"),
-            patch("app.services.auth_service.create_refresh_token", return_value="refresh.jwt.token"),
+            patch(
+                "app.services.auth_service.create_access_token",
+                return_value="access.jwt.token",
+            ),
+            patch(
+                "app.services.auth_service.create_refresh_token",
+                return_value="refresh.jwt.token",
+            ),
         ):
             repo = MockRepo.return_value
             repo.get_by_email = AsyncMock(return_value=mock_user)
@@ -199,8 +209,14 @@ class TestRefreshTokens:
         with (
             patch("app.services.auth_service.decode_token") as mock_decode,
             patch("app.services.auth_service.UserRepository") as MockRepo,
-            patch("app.services.auth_service.create_access_token", return_value="new.access"),
-            patch("app.services.auth_service.create_refresh_token", return_value="new.refresh"),
+            patch(
+                "app.services.auth_service.create_access_token",
+                return_value="new.access",
+            ),
+            patch(
+                "app.services.auth_service.create_refresh_token",
+                return_value="new.refresh",
+            ),
         ):
             mock_decode.return_value = {
                 "sub": user_id,
@@ -221,7 +237,11 @@ class TestRefreshTokens:
         session = AsyncMock()
 
         with patch("app.services.auth_service.decode_token") as mock_decode:
-            mock_decode.return_value = {"sub": "123", "type": "access", "exp": 9999999999}
+            mock_decode.return_value = {
+                "sub": "123",
+                "type": "access",
+                "exp": 9999999999,
+            }
 
             with pytest.raises(AuthenticationError, match="refresh token"):
                 await refresh_tokens("access.token", session)
@@ -234,7 +254,11 @@ class TestRefreshTokens:
         redis_client.get = AsyncMock(return_value="revoked")
 
         with patch("app.services.auth_service.decode_token") as mock_decode:
-            mock_decode.return_value = {"sub": "123", "type": "refresh", "exp": 9999999999}
+            mock_decode.return_value = {
+                "sub": "123",
+                "type": "refresh",
+                "exp": 9999999999,
+            }
 
             with pytest.raises(AuthenticationError, match="revoked"):
                 await refresh_tokens("blacklisted.token", session, redis_client)
@@ -249,7 +273,11 @@ class TestRefreshTokens:
             patch("app.services.auth_service.decode_token") as mock_decode,
             patch("app.services.auth_service.UserRepository") as MockRepo,
         ):
-            mock_decode.return_value = {"sub": user_id, "type": "refresh", "exp": 9999999999}
+            mock_decode.return_value = {
+                "sub": user_id,
+                "type": "refresh",
+                "exp": 9999999999,
+            }
             repo = MockRepo.return_value
             repo.get_by_id = AsyncMock(return_value=None)
 

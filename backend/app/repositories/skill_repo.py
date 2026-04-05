@@ -5,7 +5,7 @@ Handles queries against the skills table, including
 alias-aware searching and category filtering.
 """
 
-from sqlalchemy import or_, select, func
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.skill import Skill

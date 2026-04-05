@@ -9,12 +9,19 @@ Covers:
 - call_llm() provider fallback logic
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 
 from app.services.llm_client import (
-    CircuitBreaker, RedisCircuitBreaker, LLMError, LLMResponse,
-    _call_openai, _call_anthropic, call_llm, _circuit_breaker,
+    CircuitBreaker,
+    LLMError,
+    LLMResponse,
+    RedisCircuitBreaker,
+    _call_anthropic,
+    _call_openai,
+    _circuit_breaker,
+    call_llm,
 )
 from app.services.prompts import (
     build_job_extraction_prompt,
@@ -28,7 +35,8 @@ class TestLLMResponseParseJson:
     def test_clean_json(self):
         response = LLMResponse(
             content='{"skills": [{"name": "Python"}]}',
-            provider="openai", model="gpt-4o",
+            provider="openai",
+            model="gpt-4o",
         )
         data = response.parse_json()
         assert data["skills"][0]["name"] == "Python"
@@ -36,7 +44,8 @@ class TestLLMResponseParseJson:
     def test_markdown_wrapped_json(self):
         response = LLMResponse(
             content='```json\n{"skills": [{"name": "Docker"}]}\n```',
-            provider="openai", model="gpt-4o",
+            provider="openai",
+            model="gpt-4o",
         )
         data = response.parse_json()
         assert data["skills"][0]["name"] == "Docker"
@@ -44,7 +53,8 @@ class TestLLMResponseParseJson:
     def test_markdown_no_language_tag(self):
         response = LLMResponse(
             content='```\n{"skills": []}\n```',
-            provider="openai", model="gpt-4o",
+            provider="openai",
+            model="gpt-4o",
         )
         data = response.parse_json()
         assert data["skills"] == []
@@ -52,7 +62,8 @@ class TestLLMResponseParseJson:
     def test_whitespace_around_json(self):
         response = LLMResponse(
             content='  \n  {"skills": []} \n  ',
-            provider="openai", model="gpt-4o",
+            provider="openai",
+            model="gpt-4o",
         )
         data = response.parse_json()
         assert data["skills"] == []
@@ -60,15 +71,19 @@ class TestLLMResponseParseJson:
     def test_invalid_json_raises_error(self):
         response = LLMResponse(
             content="This is not JSON at all",
-            provider="openai", model="gpt-4o",
+            provider="openai",
+            model="gpt-4o",
         )
         with pytest.raises(LLMError):
             response.parse_json()
 
     def test_total_tokens_property(self):
         response = LLMResponse(
-            content="", provider="openai", model="gpt-4o",
-            input_tokens=100, output_tokens=50,
+            content="",
+            provider="openai",
+            model="gpt-4o",
+            input_tokens=100,
+            output_tokens=50,
         )
         assert response.total_tokens == 150
 
@@ -110,6 +125,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_recovery_after_timeout(self):
         import asyncio
+
         cb = CircuitBreaker(failure_threshold=1, recovery_timeout_seconds=0.1)
         await cb.record_failure()
         assert await cb.should_use_fallback() is True
@@ -149,9 +165,11 @@ class TestRedisCircuitBreaker:
     def _make_breaker(self, **kwargs) -> tuple["RedisCircuitBreaker", _FakeRedis]:
         fake = _FakeRedis()
         cb = RedisCircuitBreaker(**kwargs)
+
         # Inject fake Redis by patching _get_redis on this instance
         async def _fake_get_redis():
             return fake
+
         cb._get_redis = _fake_get_redis
         return cb, fake
 
@@ -168,7 +186,7 @@ class TestRedisCircuitBreaker:
         await cb.record_failure()
         assert await cb.should_use_fallback() is False  # still closed at 2
         await cb.record_failure()
-        assert await cb.should_use_fallback() is True   # open at 3
+        assert await cb.should_use_fallback() is True  # open at 3
 
     @pytest.mark.asyncio
     async def test_recovery_after_timeout(self):
@@ -198,6 +216,7 @@ class TestRedisCircuitBreaker:
         # _get_redis returns None → Redis unavailable
         async def _no_redis():
             return None
+
         cb._get_redis = _no_redis
 
         await cb.record_failure()
@@ -205,7 +224,7 @@ class TestRedisCircuitBreaker:
         assert await cb.should_use_fallback() is False  # in-process: 2 < threshold
 
         await cb.record_failure()
-        assert await cb.should_use_fallback() is True   # in-process: 3 >= threshold
+        assert await cb.should_use_fallback() is True  # in-process: 3 >= threshold
 
     @pytest.mark.asyncio
     async def test_redis_error_falls_back_to_in_process(self):
@@ -215,12 +234,16 @@ class TestRedisCircuitBreaker:
         class _BrokenRedis:
             async def incr(self, key):
                 raise ConnectionError("Redis is gone")
+
             async def expire(self, key, ttl):
                 raise ConnectionError("Redis is gone")
+
             async def set(self, key, value, ex=None):
                 raise ConnectionError("Redis is gone")
+
             async def get(self, key):
                 raise ConnectionError("Redis is gone")
+
             async def delete(self, *keys):
                 raise ConnectionError("Redis is gone")
 
@@ -256,8 +279,12 @@ class TestCallOpenAI:
         mock_settings = MagicMock()
         mock_settings.openai_api_key = "sk-test-key"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             result = await _call_openai(
                 messages=[{"role": "user", "content": "test"}],
                 model="gpt-4o",
@@ -294,8 +321,12 @@ class TestCallOpenAI:
         mock_settings = MagicMock()
         mock_settings.openai_api_key = "sk-test-key"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             with pytest.raises(LLMError, match="status 429"):
                 await _call_openai([{"role": "user", "content": "test"}], "gpt-4o")
 
@@ -316,8 +347,12 @@ class TestCallOpenAI:
         mock_settings = MagicMock()
         mock_settings.openai_api_key = "sk-test-key"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             result = await _call_openai([{"role": "user", "content": "test"}], "gpt-4o")
 
         assert result.input_tokens == 0
@@ -345,8 +380,12 @@ class TestCallAnthropic:
         mock_settings = MagicMock()
         mock_settings.anthropic_api_key = "sk-ant-test"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             result = await _call_anthropic(
                 messages=[{"role": "user", "content": "test"}],
                 model="claude-sonnet-4-20250514",
@@ -365,7 +404,9 @@ class TestCallAnthropic:
 
         with patch("app.services.llm_client.get_settings", return_value=mock_settings):
             with pytest.raises(LLMError, match="not configured"):
-                await _call_anthropic([{"role": "user", "content": "test"}], "claude-sonnet-4-20250514")
+                await _call_anthropic(
+                    [{"role": "user", "content": "test"}], "claude-sonnet-4-20250514"
+                )
 
     @pytest.mark.asyncio
     async def test_api_error_raises(self):
@@ -382,10 +423,16 @@ class TestCallAnthropic:
         mock_settings = MagicMock()
         mock_settings.anthropic_api_key = "sk-ant-test"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             with pytest.raises(LLMError, match="status 500"):
-                await _call_anthropic([{"role": "user", "content": "test"}], "claude-sonnet-4-20250514")
+                await _call_anthropic(
+                    [{"role": "user", "content": "test"}], "claude-sonnet-4-20250514"
+                )
 
     @pytest.mark.asyncio
     async def test_with_system_prompt(self):
@@ -405,8 +452,12 @@ class TestCallAnthropic:
         mock_settings = MagicMock()
         mock_settings.anthropic_api_key = "sk-ant-test"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             await _call_anthropic(
                 messages=[{"role": "user", "content": "test"}],
                 model="claude-sonnet-4-20250514",
@@ -439,8 +490,12 @@ class TestCallAnthropic:
         mock_settings = MagicMock()
         mock_settings.anthropic_api_key = "sk-ant-test"
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client.httpx.AsyncClient", return_value=mock_client):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client.httpx.AsyncClient", return_value=mock_client
+            ),
+        ):
             result = await _call_anthropic(
                 messages=[{"role": "user", "content": "test"}],
                 model="claude-sonnet-4-20250514",
@@ -462,15 +517,24 @@ class TestCallLLM:
         mock_settings.openai_api_key = "sk-test"
 
         mock_result = LLMResponse(
-            content='{"test": true}', provider="openai", model="gpt-4o",
-            input_tokens=10, output_tokens=5,
+            content='{"test": true}',
+            provider="openai",
+            model="gpt-4o",
+            input_tokens=10,
+            output_tokens=5,
         )
 
         # Reset circuit breaker state
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", new_callable=AsyncMock, return_value=mock_result):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client._call_openai",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ),
+        ):
             result = await call_llm(messages=[{"role": "user", "content": "test"}])
 
         assert result.provider == "openai"
@@ -487,17 +551,28 @@ class TestCallLLM:
         mock_settings.anthropic_api_key = "sk-ant-test"
 
         mock_fallback_result = LLMResponse(
-            content='{"test": true}', provider="anthropic", model="claude-sonnet-4-20250514",
-            input_tokens=10, output_tokens=5,
+            content='{"test": true}',
+            provider="anthropic",
+            model="claude-sonnet-4-20250514",
+            input_tokens=10,
+            output_tokens=5,
         )
 
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", new_callable=AsyncMock,
-                   side_effect=LLMError("OpenAI API returned status 500")), \
-             patch("app.services.llm_client._call_anthropic", new_callable=AsyncMock,
-                   return_value=mock_fallback_result):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client._call_openai",
+                new_callable=AsyncMock,
+                side_effect=LLMError("OpenAI API returned status 500"),
+            ),
+            patch(
+                "app.services.llm_client._call_anthropic",
+                new_callable=AsyncMock,
+                return_value=mock_fallback_result,
+            ),
+        ):
             result = await call_llm(messages=[{"role": "user", "content": "test"}])
 
         assert result.provider == "anthropic"
@@ -515,11 +590,19 @@ class TestCallLLM:
 
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", new_callable=AsyncMock,
-                   side_effect=LLMError("OpenAI down")), \
-             patch("app.services.llm_client._call_anthropic", new_callable=AsyncMock,
-                   side_effect=LLMError("Anthropic down")):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client._call_openai",
+                new_callable=AsyncMock,
+                side_effect=LLMError("OpenAI down"),
+            ),
+            patch(
+                "app.services.llm_client._call_anthropic",
+                new_callable=AsyncMock,
+                side_effect=LLMError("Anthropic down"),
+            ),
+        ):
             with pytest.raises(LLMError, match="All AI providers"):
                 await call_llm(messages=[{"role": "user", "content": "test"}])
 
@@ -534,9 +617,14 @@ class TestCallLLM:
 
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", new_callable=AsyncMock,
-                   side_effect=LLMError("OpenAI API key is not configured.")):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client._call_openai",
+                new_callable=AsyncMock,
+                side_effect=LLMError("OpenAI API key is not configured."),
+            ),
+        ):
             with pytest.raises(LLMError, match="not configured"):
                 await call_llm(messages=[{"role": "user", "content": "test"}])
 
@@ -550,15 +638,19 @@ class TestCallLLM:
         mock_settings.openai_api_key = "sk-test"
 
         mock_result = LLMResponse(
-            content='{}', provider="openai", model="gpt-4o",
+            content="{}",
+            provider="openai",
+            model="gpt-4o",
         )
 
         mock_call = AsyncMock(return_value=mock_result)
 
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", mock_call):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch("app.services.llm_client._call_openai", mock_call),
+        ):
             await call_llm(
                 messages=[{"role": "user", "content": "test"}],
                 system_prompt="Be helpful",
@@ -566,7 +658,11 @@ class TestCallLLM:
 
         # Verify system message was prepended
         call_args = mock_call.call_args
-        messages_sent = call_args.kwargs.get("messages") or call_args[1]["messages"] if len(call_args[1]) > 0 else call_args.kwargs["messages"]
+        messages_sent = (
+            call_args.kwargs.get("messages") or call_args[1]["messages"]
+            if len(call_args[1]) > 0
+            else call_args.kwargs["messages"]
+        )
         assert messages_sent[0]["role"] == "system"
         assert messages_sent[0]["content"] == "Be helpful"
 
@@ -580,13 +676,21 @@ class TestCallLLM:
         mock_settings.openai_api_key = "sk-test"
 
         mock_result = LLMResponse(
-            content='{}', provider="openai", model="gpt-4o",
+            content="{}",
+            provider="openai",
+            model="gpt-4o",
         )
 
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", new_callable=AsyncMock, return_value=mock_result):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client._call_openai",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ),
+        ):
             result = await call_llm(messages=[{"role": "user", "content": "test"}])
 
         assert result.provider == "openai"
@@ -603,16 +707,26 @@ class TestCallLLM:
         mock_settings.anthropic_api_key = "sk-ant-test"
 
         mock_result = LLMResponse(
-            content='{}', provider="anthropic", model="claude-sonnet-4-20250514",
+            content="{}",
+            provider="anthropic",
+            model="claude-sonnet-4-20250514",
         )
 
         await _circuit_breaker.record_success()
 
-        with patch("app.services.llm_client.get_settings", return_value=mock_settings), \
-             patch("app.services.llm_client._call_openai", new_callable=AsyncMock,
-                   side_effect=ConnectionError("network down")), \
-             patch("app.services.llm_client._call_anthropic", new_callable=AsyncMock,
-                   return_value=mock_result):
+        with (
+            patch("app.services.llm_client.get_settings", return_value=mock_settings),
+            patch(
+                "app.services.llm_client._call_openai",
+                new_callable=AsyncMock,
+                side_effect=ConnectionError("network down"),
+            ),
+            patch(
+                "app.services.llm_client._call_anthropic",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ),
+        ):
             result = await call_llm(messages=[{"role": "user", "content": "test"}])
 
         assert result.provider == "anthropic"
@@ -631,6 +745,7 @@ class TestLLMError:
 
     def test_is_app_error(self):
         from app.core.exceptions import AppError
+
         err = LLMError()
         assert isinstance(err, AppError)
 

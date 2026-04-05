@@ -18,11 +18,10 @@ Design decisions:
 
 import logging
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import redis.asyncio as aioredis
 
 from app.core.config import get_settings
 from app.core.dependencies import CurrentUser, get_redis

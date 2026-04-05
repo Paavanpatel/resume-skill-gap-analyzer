@@ -8,20 +8,24 @@ Tests:
 - Empty/no-gap edge cases
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.roadmap_generator import (
-    _estimate_weeks,
-    generate_rule_based_roadmap,
-    generate_llm_roadmap,
-    RoadmapPhase,
-    GeneratedRoadmap,
-)
-from app.services.gap_analyzer import GapAnalysisResult, CategoryBreakdown, ScoreExplanation
-from app.services.skill_normalizer import NormalizedSkill
-from app.services.skill_extractor import ExtractionResult
+import pytest
 
+from app.services.gap_analyzer import (
+    CategoryBreakdown,
+    GapAnalysisResult,
+    ScoreExplanation,
+)
+from app.services.roadmap_generator import (
+    GeneratedRoadmap,
+    RoadmapPhase,
+    _estimate_weeks,
+    generate_llm_roadmap,
+    generate_rule_based_roadmap,
+)
+from app.services.skill_extractor import ExtractionResult
+from app.services.skill_normalizer import NormalizedSkill
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
@@ -29,15 +33,24 @@ from app.services.skill_extractor import ExtractionResult
 def _make_extraction(matched=3, missing=5) -> ExtractionResult:
     matched_skills = [
         NormalizedSkill(
-            name=f"MatchedSkill{i}", category="programming", confidence=0.9,
-            weight=2.0, in_taxonomy=True, source="resume",
+            name=f"MatchedSkill{i}",
+            category="programming",
+            confidence=0.9,
+            weight=2.0,
+            in_taxonomy=True,
+            source="resume",
         )
         for i in range(matched)
     ]
     missing_skills = [
         NormalizedSkill(
-            name=f"MissingSkill{i}", category="devops", confidence=0.0,
-            weight=2.0, in_taxonomy=True, source="job_description", required=True,
+            name=f"MissingSkill{i}",
+            category="devops",
+            confidence=0.0,
+            weight=2.0,
+            in_taxonomy=True,
+            source="job_description",
+            required=True,
         )
         for i in range(missing)
     ]
@@ -56,37 +69,53 @@ def _make_extraction(matched=3, missing=5) -> ExtractionResult:
 def _make_gap_result(critical=2, important=1, nice=1) -> GapAnalysisResult:
     breakdowns = []
     if critical:
-        breakdowns.append(CategoryBreakdown(
-            category="devops", display_name="DevOps",
-            total_job_skills=critical + 1, matched_count=1,
-            missing_count=critical, match_percentage=30.0,
-            matched_skills=["Docker"],
-            missing_skills=[f"Skill{i}" for i in range(critical)],
-            priority="critical",
-        ))
+        breakdowns.append(
+            CategoryBreakdown(
+                category="devops",
+                display_name="DevOps",
+                total_job_skills=critical + 1,
+                matched_count=1,
+                missing_count=critical,
+                match_percentage=30.0,
+                matched_skills=["Docker"],
+                missing_skills=[f"Skill{i}" for i in range(critical)],
+                priority="critical",
+            )
+        )
     if important:
-        breakdowns.append(CategoryBreakdown(
-            category="cloud", display_name="Cloud",
-            total_job_skills=important + 1, matched_count=1,
-            missing_count=important, match_percentage=50.0,
-            matched_skills=["AWS"],
-            missing_skills=[f"CloudSkill{i}" for i in range(important)],
-            priority="important",
-        ))
+        breakdowns.append(
+            CategoryBreakdown(
+                category="cloud",
+                display_name="Cloud",
+                total_job_skills=important + 1,
+                matched_count=1,
+                missing_count=important,
+                match_percentage=50.0,
+                matched_skills=["AWS"],
+                missing_skills=[f"CloudSkill{i}" for i in range(important)],
+                priority="important",
+            )
+        )
     if nice:
-        breakdowns.append(CategoryBreakdown(
-            category="soft_skills", display_name="Soft Skills",
-            total_job_skills=nice + 1, matched_count=1,
-            missing_count=nice, match_percentage=50.0,
-            matched_skills=["Communication"],
-            missing_skills=[f"SoftSkill{i}" for i in range(nice)],
-            priority="nice_to_have",
-        ))
+        breakdowns.append(
+            CategoryBreakdown(
+                category="soft_skills",
+                display_name="Soft Skills",
+                total_job_skills=nice + 1,
+                matched_count=1,
+                missing_count=nice,
+                match_percentage=50.0,
+                matched_skills=["Communication"],
+                missing_skills=[f"SoftSkill{i}" for i in range(nice)],
+                priority="nice_to_have",
+            )
+        )
 
     return GapAnalysisResult(
         category_breakdowns=breakdowns,
         score_explanation=ScoreExplanation(
-            match_score=50.0, ats_score=40.0,
+            match_score=50.0,
+            ats_score=40.0,
             match_summary="Moderate match",
             ats_summary="Below average",
             strengths=["Good Python"],
@@ -178,7 +207,9 @@ class TestLLMRoadmap:
     async def test_falls_back_on_llm_error(self):
         extraction = _make_extraction()
         gap = _make_gap_result(critical=2)
-        with patch("app.services.llm_client.call_llm", side_effect=Exception("API down")):
+        with patch(
+            "app.services.llm_client.call_llm", side_effect=Exception("API down")
+        ):
             roadmap = await generate_llm_roadmap(extraction, gap, "Job description")
         # Should fall back to rule-based
         assert isinstance(roadmap, GeneratedRoadmap)
@@ -204,7 +235,11 @@ class TestLLMRoadmap:
             ]
         }
 
-        with patch("app.services.llm_client.call_llm", new_callable=AsyncMock, return_value=mock_response):
+        with patch(
+            "app.services.llm_client.call_llm",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             extraction = _make_extraction()
             gap = _make_gap_result(critical=2)
             roadmap = await generate_llm_roadmap(extraction, gap, "Job description")
@@ -218,7 +253,11 @@ class TestLLMRoadmap:
         mock_response = MagicMock()
         mock_response.parse_json.return_value = {"phases": []}
 
-        with patch("app.services.llm_client.call_llm", new_callable=AsyncMock, return_value=mock_response):
+        with patch(
+            "app.services.llm_client.call_llm",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             extraction = _make_extraction()
             gap = _make_gap_result(critical=2)
             roadmap = await generate_llm_roadmap(extraction, gap, "Job description")

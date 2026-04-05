@@ -8,8 +8,9 @@ Tests the rate limiter's:
 - Rate limit response format
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.core.middleware import RateLimitMiddleware
 
@@ -60,6 +61,7 @@ class TestClientIdentification:
     def test_jwt_user_id_extraction(self):
         """Authenticated request uses user ID from JWT."""
         import jwt as pyjwt
+
         from app.core.config import get_settings
 
         settings = get_settings()

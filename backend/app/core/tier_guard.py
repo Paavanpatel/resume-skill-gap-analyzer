@@ -18,7 +18,7 @@ Usage in endpoints:
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
-from app.core.exceptions import ErrorCode, AppError
+from app.core.exceptions import AppError, ErrorCode
 from app.models.user import User
 
 # ── Tier ordering ─────────────────────────────────────────────

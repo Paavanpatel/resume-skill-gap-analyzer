@@ -15,21 +15,23 @@ Covers:
 import pytest
 
 from app.services.ats_checker import (
+    _TOTAL_CHECKS,
     ATSCheckResult,
     ATSIssue,
-    check_ats_compatibility,
     _check_contact_info,
+    _check_date_formats,
     _check_essential_sections,
     _check_formatting_issues,
     _check_resume_length,
     _check_summary_section,
-    _check_date_formats,
-    _TOTAL_CHECKS,
+    check_ats_compatibility,
 )
 from app.services.section_parser import ParsedResume, ParsedSection
 
 
-def _make_resume(text: str, sections: list[tuple[str, str]] | None = None) -> ParsedResume:
+def _make_resume(
+    text: str, sections: list[tuple[str, str]] | None = None
+) -> ParsedResume:
     """Helper to create a ParsedResume for testing."""
     if sections is None:
         sections = []
@@ -49,19 +51,26 @@ class TestEssentialSections:
 
     def test_all_present(self):
         """No issues when all essential sections exist."""
-        resume = _make_resume("text", [
-            ("experience", "Worked at X"),
-            ("education", "BS in CS"),
-            ("skills", "Python, Docker"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("experience", "Worked at X"),
+                ("education", "BS in CS"),
+                ("skills", "Python, Docker"),
+            ],
+        )
         issues = _check_essential_sections(resume)
         assert len(issues) == 0
 
     def test_missing_experience(self):
         """Missing experience is an error."""
-        resume = _make_resume("text", [
-            ("education", "BS"), ("skills", "Python"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("education", "BS"),
+                ("skills", "Python"),
+            ],
+        )
         issues = _check_essential_sections(resume)
         assert len(issues) == 1
         assert issues[0].severity == "error"
@@ -69,18 +78,26 @@ class TestEssentialSections:
 
     def test_missing_education(self):
         """Missing education is a warning."""
-        resume = _make_resume("text", [
-            ("experience", "Worked"), ("skills", "Python"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("experience", "Worked"),
+                ("skills", "Python"),
+            ],
+        )
         issues = _check_essential_sections(resume)
         assert len(issues) == 1
         assert issues[0].severity == "warning"
 
     def test_missing_skills(self):
         """Missing skills is a warning."""
-        resume = _make_resume("text", [
-            ("experience", "Worked"), ("education", "BS"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("experience", "Worked"),
+                ("education", "BS"),
+            ],
+        )
         issues = _check_essential_sections(resume)
         assert len(issues) == 1
         assert "skills" in issues[0].title.lower()
@@ -119,7 +136,12 @@ class TestContactInfo:
 
     def test_various_phone_formats(self):
         """Different phone formats are all detected."""
-        for phone in ["555-123-4567", "(555) 123-4567", "555.123.4567", "+1 555 123 4567"]:
+        for phone in [
+            "555-123-4567",
+            "(555) 123-4567",
+            "555.123.4567",
+            "+1 555 123 4567",
+        ]:
             resume = _make_resume(f"john@test.com {phone}")
             issues = _check_contact_info(resume)
             phone_issues = [i for i in issues if "phone" in i.title.lower()]
@@ -127,7 +149,11 @@ class TestContactInfo:
 
     def test_various_email_formats(self):
         """Different email formats are detected."""
-        for email in ["user@domain.com", "first.last@company.org", "user+tag@test.co.uk"]:
+        for email in [
+            "user@domain.com",
+            "first.last@company.org",
+            "user+tag@test.co.uk",
+        ]:
             resume = _make_resume(f"{email} 555-123-4567")
             issues = _check_contact_info(resume)
             email_issues = [i for i in issues if "email" in i.title.lower()]
@@ -187,7 +213,9 @@ class TestFormattingIssues:
 
     def test_clean_text(self):
         """No issues with clean text."""
-        resume = _make_resume("Clean resume with normal formatting and standard bullets.")
+        resume = _make_resume(
+            "Clean resume with normal formatting and standard bullets."
+        )
         issues = _check_formatting_issues(resume)
         assert len(issues) == 0
 
@@ -195,7 +223,11 @@ class TestFormattingIssues:
         """Pipe/box characters suggest table layout."""
         resume = _make_resume("Name │ Role │ Company\n" * 20)
         issues = _check_formatting_issues(resume)
-        table_issues = [i for i in issues if "table" in i.title.lower() or "column" in i.title.lower()]
+        table_issues = [
+            i
+            for i in issues
+            if "table" in i.title.lower() or "column" in i.title.lower()
+        ]
         assert len(table_issues) == 1
 
     def test_fancy_bullets(self):
@@ -212,25 +244,34 @@ class TestDateFormats:
 
     def test_standard_dates(self):
         """Standard date formats are accepted."""
-        resume = _make_resume("text", [
-            ("experience", "Software Engineer\nJan 2020 - Present\nDid stuff"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("experience", "Software Engineer\nJan 2020 - Present\nDid stuff"),
+            ],
+        )
         issues = _check_date_formats(resume)
         assert len(issues) == 0
 
     def test_year_range_dates(self):
         """Year-only ranges are accepted."""
-        resume = _make_resume("text", [
-            ("experience", "Developer\n2019 - 2023\nBuilt things"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("experience", "Developer\n2019 - 2023\nBuilt things"),
+            ],
+        )
         issues = _check_date_formats(resume)
         assert len(issues) == 0
 
     def test_no_dates(self):
         """Experience without dates is a warning."""
-        resume = _make_resume("text", [
-            ("experience", "Software Engineer at Company\nDid various things"),
-        ])
+        resume = _make_resume(
+            "text",
+            [
+                ("experience", "Software Engineer at Company\nDid various things"),
+            ],
+        )
         issues = _check_date_formats(resume)
         assert len(issues) == 1
         assert issues[0].severity == "warning"
@@ -247,16 +288,18 @@ class TestATSCheckIntegration:
 
     def test_perfect_resume(self):
         """A well-structured resume gets a high format score."""
-        text = (
-            "John Doe\njohn@example.com\n(555) 123-4567\n\n"
-            + " ".join(["word"] * 500)
+        text = "John Doe\njohn@example.com\n(555) 123-4567\n\n" + " ".join(
+            ["word"] * 500
         )
-        resume = _make_resume(text, [
-            ("summary", "Experienced software engineer"),
-            ("experience", "Software Engineer\nJan 2020 - Present\nBuilt APIs"),
-            ("education", "BS Computer Science"),
-            ("skills", "Python, Docker, AWS"),
-        ])
+        resume = _make_resume(
+            text,
+            [
+                ("summary", "Experienced software engineer"),
+                ("experience", "Software Engineer\nJan 2020 - Present\nBuilt APIs"),
+                ("education", "BS Computer Science"),
+                ("skills", "Python, Docker, AWS"),
+            ],
+        )
         result = check_ats_compatibility(resume)
 
         assert isinstance(result, ATSCheckResult)
@@ -285,10 +328,15 @@ class TestATSCheckIntegration:
 
     def test_to_dict(self):
         """Result serializes for JSONB storage."""
-        resume = _make_resume("john@test.com 555-123-4567 " + " ".join(["word"] * 500), [
-            ("summary", "Dev"), ("experience", "Jan 2020 - Present"),
-            ("education", "BS"), ("skills", "Python"),
-        ])
+        resume = _make_resume(
+            "john@test.com 555-123-4567 " + " ".join(["word"] * 500),
+            [
+                ("summary", "Dev"),
+                ("experience", "Jan 2020 - Present"),
+                ("education", "BS"),
+                ("skills", "Python"),
+            ],
+        )
         result = check_ats_compatibility(resume)
         d = result.to_dict()
         assert "issues" in d
@@ -297,16 +345,18 @@ class TestATSCheckIntegration:
 
     def test_passed_checks_equals_total_when_no_failures(self):
         """When no checks fail, passed_checks == total_checks == 6."""
-        text = (
-            "John Doe\njohn@example.com\n(555) 123-4567\n\n"
-            + " ".join(["word"] * 500)
+        text = "John Doe\njohn@example.com\n(555) 123-4567\n\n" + " ".join(
+            ["word"] * 500
         )
-        resume = _make_resume(text, [
-            ("summary", "Experienced software engineer"),
-            ("experience", "Software Engineer\nJan 2020 - Present\nBuilt APIs"),
-            ("education", "BS Computer Science"),
-            ("skills", "Python, Docker, AWS"),
-        ])
+        resume = _make_resume(
+            text,
+            [
+                ("summary", "Experienced software engineer"),
+                ("experience", "Software Engineer\nJan 2020 - Present\nBuilt APIs"),
+                ("education", "BS Computer Science"),
+                ("skills", "Python, Docker, AWS"),
+            ],
+        )
         result = check_ats_compatibility(resume)
 
         assert result.total_checks == 6
@@ -326,9 +376,12 @@ class TestATSCheckIntegration:
         """
         # "Name │ Role │ Company\n" x20 = 80 words, │ ratio ≈ 8% → triggers table warning
         table_text = "Name │ Role │ Company\n" * 20
-        resume = _make_resume(table_text, [
-            ("experience", "Software Engineer at Acme\nBuilt various systems"),
-        ])
+        resume = _make_resume(
+            table_text,
+            [
+                ("experience", "Software Engineer at Acme\nBuilt various systems"),
+            ],
+        )
         result = check_ats_compatibility(resume)
 
         assert result.total_checks == _TOTAL_CHECKS

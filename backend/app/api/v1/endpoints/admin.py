@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import cast, func, select, Date
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_role
@@ -27,6 +27,7 @@ from app.core.exceptions import AuthorizationError, NotFoundError, ValidationErr
 from app.db.session import get_db_session, get_read_db_session
 from app.models.analysis import Analysis
 from app.models.user import User
+from app.repositories.user_repo import UserRepository
 from app.schemas.admin import (
     AdminAnalysisListResponse,
     AdminAnalysisResponse,
@@ -36,7 +37,6 @@ from app.schemas.admin import (
     AnalyticsOverview,
     StorageStats,
 )
-from app.repositories.user_repo import UserRepository
 from app.services.stale_sweeper import sweep_stale_analyses
 
 logger = logging.getLogger(__name__)

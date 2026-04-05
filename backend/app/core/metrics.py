@@ -21,11 +21,11 @@ Usage:
 """
 
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,
     Histogram,
     generate_latest,
-    CONTENT_TYPE_LATEST,
 )
 
 # Isolated registry — does not include default Python process metrics

@@ -19,7 +19,7 @@ from fastapi.responses import PlainTextResponse
 
 from app.core.dependencies import require_role
 from app.core.log_buffer import LogBuffer
-from app.core.metrics import get_metrics_text, REGISTRY
+from app.core.metrics import REGISTRY, get_metrics_text
 
 logger = logging.getLogger(__name__)
 

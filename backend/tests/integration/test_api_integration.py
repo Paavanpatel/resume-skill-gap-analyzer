@@ -9,12 +9,12 @@ Error response format:
     {"error": {"code": "...", "message": "..."}, "request_id": "..."}
 """
 
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-from datetime import datetime, timezone
 
 import httpx
+import pytest
 from fastapi import FastAPI
 
 
@@ -60,7 +60,13 @@ def mock_analysis(mock_user):
         {"name": "Python", "confidence": 0.95, "category": "programming_language"}
     ]
     analysis.missing_skills = [
-        {"name": "Docker", "confidence": 0.85, "category": "devops", "weight": 1.0, "required": True}
+        {
+            "name": "Docker",
+            "confidence": 0.85,
+            "category": "devops",
+            "weight": 1.0,
+            "required": True,
+        }
     ]
     analysis.suggestions = []
     analysis.category_breakdowns = []
@@ -94,22 +100,24 @@ class TestHealthEndpoint:
     #     assert data["status"] == "healthy"
     #     assert "app" in data
 
+
 @pytest.mark.asyncio
 async def test_health_check(test_client):
     client, app = test_client[:2]  # Unpack safely
-    
-    with patch('asyncpg.connect') as mock_pg, \
-         patch('redis.asyncio.from_url') as mock_redis:
+
+    with (
+        patch("asyncpg.connect") as mock_pg,
+        patch("redis.asyncio.from_url") as mock_redis,
+    ):
         # Mock successful connections
         mock_pg.return_value.execute = AsyncMock()
         mock_pg.return_value.close = AsyncMock()
         mock_redis.return_value.ping = AsyncMock()
         mock_redis.return_value.aclose = AsyncMock()
-        
+
         response = await client.get("/api/v1/health/ready")
         assert response.status_code == 200
         assert response.json()["status"] in ("healthy", "degraded")
-        
 
 
 class TestAuthEndpoints:
@@ -140,6 +148,7 @@ class TestAuthEndpoints:
 
         # Clear the dependency override to test without auth
         from app.core.dependencies import get_current_user
+
         original_override = app.dependency_overrides.pop(get_current_user, None)
 
         try:
@@ -168,7 +177,9 @@ class TestAnalysisEndpoints:
         """GET /analysis/history requires authentication (mocked)."""
         client, app, mock_db, mock_redis = test_client
 
-        with patch("app.api.v1.endpoints.analysis.AnalysisRepository") as mock_repo_class:
+        with patch(
+            "app.api.v1.endpoints.analysis.AnalysisRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_by_user = AsyncMock(return_value=[])
             mock_repo.count_by_user = AsyncMock(return_value=0)
@@ -193,7 +204,9 @@ class TestAnalysisEndpoints:
         """GET /analysis/{id} returns 404 when not found."""
         client, app, mock_db, mock_redis = test_client
 
-        with patch("app.api.v1.endpoints.analysis.AnalysisRepository") as mock_repo_class:
+        with patch(
+            "app.api.v1.endpoints.analysis.AnalysisRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_by_id = AsyncMock(return_value=None)
             mock_repo_class.return_value = mock_repo
@@ -211,7 +224,7 @@ class TestAnalysisEndpoints:
         resume_id = uuid4()
         response = await client.post(
             f"/api/v1/analysis/{resume_id}",
-            json={"job_title": "Engineer"}  # Missing required job_description
+            json={"job_title": "Engineer"},  # Missing required job_description
         )
 
         assert response.status_code == 422
@@ -350,7 +363,7 @@ class TestCORS:
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -363,8 +376,7 @@ class TestCORS:
         client, app, mock_db, mock_redis = test_client
 
         response = await client.get(
-            "/api/v1/health/live",
-            headers={"Origin": "http://localhost:3000"}
+            "/api/v1/health/live", headers={"Origin": "http://localhost:3000"}
         )
 
         assert response.status_code == 200
@@ -384,7 +396,9 @@ class TestSecurityHeaders:
         assert response.status_code == 200
         # Check some common security headers
         headers = response.headers
-        assert "x-content-type-options" in headers or len(headers) > 0  # At least some headers
+        assert (
+            "x-content-type-options" in headers or len(headers) > 0
+        )  # At least some headers
 
 
 class TestEndpointIntegration:
@@ -418,10 +432,7 @@ class TestEndpointIntegration:
 
                 response = await client.post(
                     "/api/v1/auth/login",
-                    json={
-                        "email": "test@example.com",
-                        "password": "password123"
-                    }
+                    json={"email": "test@example.com", "password": "password123"},
                 )
 
         assert response.status_code == 200
@@ -449,7 +460,9 @@ class TestEndpointIntegration:
         client, app, mock_db, mock_redis = test_client
 
         # List analyses (history endpoint)
-        with patch("app.api.v1.endpoints.analysis.AnalysisRepository") as mock_repo_class:
+        with patch(
+            "app.api.v1.endpoints.analysis.AnalysisRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_by_user = AsyncMock(return_value=[])
             mock_repo.count_by_user = AsyncMock(return_value=0)
@@ -461,7 +474,9 @@ class TestEndpointIntegration:
         # Check status of a non-existent analysis
         analysis_id = uuid4()
 
-        with patch("app.api.v1.endpoints.analysis.AnalysisRepository") as mock_repo_class:
+        with patch(
+            "app.api.v1.endpoints.analysis.AnalysisRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_by_id = AsyncMock(return_value=None)
             mock_repo_class.return_value = mock_repo

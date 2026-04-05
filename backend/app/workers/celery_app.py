@@ -70,5 +70,5 @@ def on_worker_process_init(**kwargs):
 # looks for files named 'tasks.py', but ours are named analysis_task.py
 # and parse_task.py.
 import app.workers.analysis_task  # noqa: F401, E402
-import app.workers.parse_task  # noqa: F401, E402
 import app.workers.backup_task  # noqa: F401, E402
+import app.workers.parse_task  # noqa: F401, E402

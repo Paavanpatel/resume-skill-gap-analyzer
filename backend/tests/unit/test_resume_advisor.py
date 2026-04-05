@@ -8,20 +8,24 @@ Tests:
 - Edge cases (no skills, no gaps)
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from app.services.gap_analyzer import (
+    CategoryBreakdown,
+    GapAnalysisResult,
+    ScoreExplanation,
+)
 from app.services.resume_advisor import (
-    generate_rule_based_advice,
-    generate_llm_advice,
-    generate_resume_advice,
     AdvisorResult,
     SectionRewrite,
+    generate_llm_advice,
+    generate_resume_advice,
+    generate_rule_based_advice,
 )
-from app.services.gap_analyzer import GapAnalysisResult, CategoryBreakdown, ScoreExplanation
-from app.services.skill_normalizer import NormalizedSkill
 from app.services.skill_extractor import ExtractionResult
-
+from app.services.skill_normalizer import NormalizedSkill
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
@@ -29,15 +33,24 @@ from app.services.skill_extractor import ExtractionResult
 def _make_extraction(matched=3, missing=4) -> ExtractionResult:
     matched_skills = [
         NormalizedSkill(
-            name=f"Python{i}", category="programming", confidence=0.9,
-            weight=2.0, in_taxonomy=True, source="resume",
+            name=f"Python{i}",
+            category="programming",
+            confidence=0.9,
+            weight=2.0,
+            in_taxonomy=True,
+            source="resume",
         )
         for i in range(matched)
     ]
     missing_skills = [
         NormalizedSkill(
-            name=f"Docker{i}", category="devops", confidence=0.0,
-            weight=2.0, in_taxonomy=True, source="job_description", required=True,
+            name=f"Docker{i}",
+            category="devops",
+            confidence=0.0,
+            weight=2.0,
+            in_taxonomy=True,
+            source="job_description",
+            required=True,
         )
         for i in range(missing)
     ]
@@ -57,8 +70,11 @@ def _make_gap_result() -> GapAnalysisResult:
     return GapAnalysisResult(
         category_breakdowns=[
             CategoryBreakdown(
-                category="devops", display_name="DevOps",
-                total_job_skills=4, matched_count=0, missing_count=4,
+                category="devops",
+                display_name="DevOps",
+                total_job_skills=4,
+                matched_count=0,
+                missing_count=4,
                 match_percentage=0.0,
                 matched_skills=[],
                 missing_skills=["Docker", "Kubernetes", "CI/CD", "Terraform"],
@@ -66,9 +82,12 @@ def _make_gap_result() -> GapAnalysisResult:
             ),
         ],
         score_explanation=ScoreExplanation(
-            match_score=40.0, ats_score=35.0,
-            match_summary="Weak", ats_summary="Low",
-            strengths=[], weaknesses=["Missing DevOps"],
+            match_score=40.0,
+            ats_score=35.0,
+            match_summary="Weak",
+            ats_summary="Low",
+            strengths=[],
+            weaknesses=["Missing DevOps"],
             overall_verdict="weak_match",
         ),
     )
@@ -90,7 +109,9 @@ class TestRuleBasedAdvice:
         extraction = _make_extraction(matched=1, missing=2)
         gap = _make_gap_result()
         result = generate_rule_based_advice("Resume text...", extraction, gap)
-        skills_rewrite = next((r for r in result.rewrites if r.section == "skills"), None)
+        skills_rewrite = next(
+            (r for r in result.rewrites if r.section == "skills"), None
+        )
         assert skills_rewrite is not None
         assert "Docker0" in skills_rewrite.rewritten
 
@@ -106,8 +127,10 @@ class TestRuleBasedAdvice:
         gap = GapAnalysisResult(
             category_breakdowns=[],
             score_explanation=ScoreExplanation(
-                match_score=95, ats_score=90,
-                match_summary="Strong", ats_summary="Good",
+                match_score=95,
+                ats_score=90,
+                match_summary="Strong",
+                ats_summary="Good",
                 strengths=["All skills matched"],
                 weaknesses=[],
                 overall_verdict="strong_match",
@@ -126,8 +149,11 @@ class TestRuleBasedAdvice:
 
     def test_rewrite_to_dict(self):
         rewrite = SectionRewrite(
-            section="skills", original="Python", rewritten="Python, Docker",
-            changes_made=["Added Docker"], confidence=0.7,
+            section="skills",
+            original="Python",
+            rewritten="Python, Docker",
+            changes_made=["Added Docker"],
+            confidence=0.7,
         )
         d = rewrite.to_dict()
         assert d["section"] == "skills"
@@ -154,7 +180,11 @@ class TestLLMAdvice:
             "overall_summary": "Added DevOps focus to summary.",
         }
 
-        with patch("app.services.llm_client.call_llm", new_callable=AsyncMock, return_value=mock_response):
+        with patch(
+            "app.services.llm_client.call_llm",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             extraction = _make_extraction()
             result = await generate_llm_advice("Resume", "Job desc", extraction, 50.0)
 
@@ -164,7 +194,9 @@ class TestLLMAdvice:
 
     @pytest.mark.asyncio
     async def test_llm_failure_returns_empty(self):
-        with patch("app.services.llm_client.call_llm", side_effect=Exception("API down")):
+        with patch(
+            "app.services.llm_client.call_llm", side_effect=Exception("API down")
+        ):
             extraction = _make_extraction()
             result = await generate_llm_advice("Resume", "Job desc", extraction, 50.0)
         assert len(result.rewrites) == 0
@@ -212,7 +244,11 @@ class TestConfidenceClamping:
             "overall_summary": "Test",
         }
 
-        with patch("app.services.llm_client.call_llm", new_callable=AsyncMock, return_value=mock_response):
+        with patch(
+            "app.services.llm_client.call_llm",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             extraction = _make_extraction()
             result = await generate_llm_advice("Resume", "Job desc", extraction, 50.0)
 

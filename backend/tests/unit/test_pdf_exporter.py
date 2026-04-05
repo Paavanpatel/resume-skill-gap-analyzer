@@ -12,7 +12,6 @@ import pytest
 
 from app.services.pdf_exporter import generate_pdf_report
 
-
 # ── Fixtures ─────────────────────────────────────────────────────
 
 

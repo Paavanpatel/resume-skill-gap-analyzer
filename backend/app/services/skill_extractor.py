@@ -19,7 +19,7 @@ import re
 import time
 from dataclasses import dataclass
 
-from app.core.exceptions import ParsingError, ErrorCode
+from app.core.exceptions import ErrorCode, ParsingError
 from app.services.llm_client import LLMResponse, call_llm
 from app.services.prompts import (
     SKILL_EXTRACTION_SYSTEM,

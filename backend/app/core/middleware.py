@@ -74,8 +74,8 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         # if metrics.py ever imports from middleware in the future)
         try:
             from app.core.metrics import (
-                http_requests_total,
                 http_request_duration_seconds,
+                http_requests_total,
             )
 
             # Normalise path for high-cardinality routes (e.g. /analysis/{id})

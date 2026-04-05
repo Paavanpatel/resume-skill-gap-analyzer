@@ -28,19 +28,37 @@ from app.services.skill_normalizer import NormalizedSkill, TaxonomyEntry
 def sample_taxonomy():
     """Taxonomy entries for testing."""
     return [
-        TaxonomyEntry(name="Python", category="programming_language", weight=2.5, aliases=["py"]),
-        TaxonomyEntry(name="JavaScript", category="programming_language", weight=2.0, aliases=["js"]),
-        TaxonomyEntry(name="React", category="framework", weight=1.8, aliases=["reactjs"]),
-        TaxonomyEntry(name="Node.js", category="framework", weight=1.8, aliases=["nodejs", "node"]),
+        TaxonomyEntry(
+            name="Python", category="programming_language", weight=2.5, aliases=["py"]
+        ),
+        TaxonomyEntry(
+            name="JavaScript",
+            category="programming_language",
+            weight=2.0,
+            aliases=["js"],
+        ),
+        TaxonomyEntry(
+            name="React", category="framework", weight=1.8, aliases=["reactjs"]
+        ),
+        TaxonomyEntry(
+            name="Node.js", category="framework", weight=1.8, aliases=["nodejs", "node"]
+        ),
         TaxonomyEntry(name="Docker", category="devops", weight=1.5, aliases=[]),
-        TaxonomyEntry(name="PostgreSQL", category="database", weight=1.8, aliases=["postgres"]),
-        TaxonomyEntry(name="AWS", category="devops", weight=2.0, aliases=["amazon web services"]),
+        TaxonomyEntry(
+            name="PostgreSQL", category="database", weight=1.8, aliases=["postgres"]
+        ),
+        TaxonomyEntry(
+            name="AWS", category="devops", weight=2.0, aliases=["amazon web services"]
+        ),
     ]
 
 
-def _make_llm_response(skills: list[dict], provider="openai", model="gpt-4o", tokens=500):
+def _make_llm_response(
+    skills: list[dict], provider="openai", model="gpt-4o", tokens=500
+):
     """Create a mock LLMResponse that returns parsed skills."""
     import json
+
     from app.services.llm_client import LLMResponse
 
     return LLMResponse(
@@ -58,48 +76,72 @@ class TestComputePriority:
     def test_high_priority_required_and_heavy(self):
         """Required skills with weight >= 2.0 are HIGH priority."""
         skill = NormalizedSkill(
-            name="Python", category="programming_language",
-            confidence=0.95, weight=2.5, in_taxonomy=True, required=True,
+            name="Python",
+            category="programming_language",
+            confidence=0.95,
+            weight=2.5,
+            in_taxonomy=True,
+            required=True,
         )
         assert _compute_priority(skill) == "high"
 
     def test_high_priority_required_at_threshold(self):
         """Required with weight exactly 2.0 is HIGH."""
         skill = NormalizedSkill(
-            name="AWS", category="devops",
-            confidence=0.9, weight=2.0, in_taxonomy=True, required=True,
+            name="AWS",
+            category="devops",
+            confidence=0.9,
+            weight=2.0,
+            in_taxonomy=True,
+            required=True,
         )
         assert _compute_priority(skill) == "high"
 
     def test_medium_priority_required_low_weight(self):
         """Required skills with weight < 2.0 are MEDIUM."""
         skill = NormalizedSkill(
-            name="Docker", category="devops",
-            confidence=0.8, weight=1.5, in_taxonomy=True, required=True,
+            name="Docker",
+            category="devops",
+            confidence=0.8,
+            weight=1.5,
+            in_taxonomy=True,
+            required=True,
         )
         assert _compute_priority(skill) == "medium"
 
     def test_medium_priority_preferred_high_weight(self):
         """Preferred skills with weight >= 1.5 are MEDIUM."""
         skill = NormalizedSkill(
-            name="React", category="framework",
-            confidence=0.7, weight=1.8, in_taxonomy=True, required=False,
+            name="React",
+            category="framework",
+            confidence=0.7,
+            weight=1.8,
+            in_taxonomy=True,
+            required=False,
         )
         assert _compute_priority(skill) == "medium"
 
     def test_low_priority_preferred_low_weight(self):
         """Preferred skills with weight < 1.5 are LOW."""
         skill = NormalizedSkill(
-            name="Jira", category="tool",
-            confidence=0.5, weight=1.0, in_taxonomy=False, required=False,
+            name="Jira",
+            category="tool",
+            confidence=0.5,
+            weight=1.0,
+            in_taxonomy=False,
+            required=False,
         )
         assert _compute_priority(skill) == "low"
 
     def test_low_priority_no_required_flag(self):
         """Skills with required=None are treated as not required."""
         skill = NormalizedSkill(
-            name="Git", category="tool",
-            confidence=0.6, weight=1.2, in_taxonomy=False, required=None,
+            name="Git",
+            category="tool",
+            confidence=0.6,
+            weight=1.2,
+            in_taxonomy=False,
+            required=None,
         )
         assert _compute_priority(skill) == "low"
 
@@ -112,32 +154,50 @@ class TestExtractionResultSerialization:
         result = ExtractionResult(
             resume_skills=[
                 NormalizedSkill(
-                    name="Python", category="programming_language",
-                    confidence=0.95, weight=2.5, in_taxonomy=True, source="resume",
+                    name="Python",
+                    category="programming_language",
+                    confidence=0.95,
+                    weight=2.5,
+                    in_taxonomy=True,
+                    source="resume",
                 ),
             ],
             job_skills=[
                 NormalizedSkill(
-                    name="Python", category="programming_language",
-                    confidence=0.95, weight=2.5, in_taxonomy=True,
-                    source="job_description", required=True,
+                    name="Python",
+                    category="programming_language",
+                    confidence=0.95,
+                    weight=2.5,
+                    in_taxonomy=True,
+                    source="job_description",
+                    required=True,
                 ),
                 NormalizedSkill(
-                    name="Go", category="programming_language",
-                    confidence=0.8, weight=1.0, in_taxonomy=False,
-                    source="job_description", required=False,
+                    name="Go",
+                    category="programming_language",
+                    confidence=0.8,
+                    weight=1.0,
+                    in_taxonomy=False,
+                    source="job_description",
+                    required=False,
                 ),
             ],
             matched_skills=[
                 NormalizedSkill(
-                    name="Python", category="programming_language",
-                    confidence=0.95, weight=2.5, in_taxonomy=True,
+                    name="Python",
+                    category="programming_language",
+                    confidence=0.95,
+                    weight=2.5,
+                    in_taxonomy=True,
                 ),
             ],
             missing_skills=[
                 NormalizedSkill(
-                    name="Go", category="programming_language",
-                    confidence=0.8, weight=1.0, in_taxonomy=False,
+                    name="Go",
+                    category="programming_language",
+                    confidence=0.8,
+                    weight=1.0,
+                    in_taxonomy=False,
                     required=False,
                 ),
             ],
@@ -176,17 +236,40 @@ class TestExtractSkillsPipeline:
     @pytest.mark.asyncio
     async def test_basic_extraction_flow(self, sample_taxonomy):
         """End-to-end extraction with matching and missing skills."""
-        resume_response = _make_llm_response([
-            {"name": "Python", "confidence": 0.95, "category": "programming_language"},
-            {"name": "React", "confidence": 0.8, "category": "framework"},
-            {"name": "Docker", "confidence": 0.7, "category": "devops"},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {
+                    "name": "Python",
+                    "confidence": 0.95,
+                    "category": "programming_language",
+                },
+                {"name": "React", "confidence": 0.8, "category": "framework"},
+                {"name": "Docker", "confidence": 0.7, "category": "devops"},
+            ]
+        )
 
-        job_response = _make_llm_response([
-            {"name": "Python", "confidence": 0.95, "category": "programming_language", "required": True},
-            {"name": "AWS", "confidence": 0.9, "category": "devops", "required": True},
-            {"name": "React", "confidence": 0.7, "category": "framework", "required": False},
-        ])
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "Python",
+                    "confidence": 0.95,
+                    "category": "programming_language",
+                    "required": True,
+                },
+                {
+                    "name": "AWS",
+                    "confidence": 0.9,
+                    "category": "devops",
+                    "required": True,
+                },
+                {
+                    "name": "React",
+                    "confidence": 0.7,
+                    "category": "framework",
+                    "required": False,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -218,19 +301,30 @@ class TestExtractSkillsPipeline:
         # Metadata
         assert result.provider == "openai"
         assert result.total_tokens == 1000  # 500 + 500
-        assert result.extraction_time_ms >= 0  # 0 is valid with mocked instant LLM calls
+        assert (
+            result.extraction_time_ms >= 0
+        )  # 0 is valid with mocked instant LLM calls
 
     @pytest.mark.asyncio
     async def test_alias_resolution_in_matching(self, sample_taxonomy):
         """Skills matched via aliases are correctly identified as matches."""
         # Resume says "postgres", job says "PostgreSQL" -- both should resolve
-        resume_response = _make_llm_response([
-            {"name": "postgres", "confidence": 0.9, "category": "database"},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {"name": "postgres", "confidence": 0.9, "category": "database"},
+            ]
+        )
 
-        job_response = _make_llm_response([
-            {"name": "PostgreSQL", "confidence": 0.9, "category": "database", "required": True},
-        ])
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "PostgreSQL",
+                    "confidence": 0.9,
+                    "category": "database",
+                    "required": True,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -249,14 +343,32 @@ class TestExtractSkillsPipeline:
     @pytest.mark.asyncio
     async def test_no_overlap(self, sample_taxonomy):
         """When resume and job have zero overlap, all job skills are missing."""
-        resume_response = _make_llm_response([
-            {"name": "Python", "confidence": 0.95, "category": "programming_language"},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {
+                    "name": "Python",
+                    "confidence": 0.95,
+                    "category": "programming_language",
+                },
+            ]
+        )
 
-        job_response = _make_llm_response([
-            {"name": "JavaScript", "confidence": 0.9, "category": "programming_language", "required": True},
-            {"name": "React", "confidence": 0.8, "category": "framework", "required": True},
-        ])
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "JavaScript",
+                    "confidence": 0.9,
+                    "category": "programming_language",
+                    "required": True,
+                },
+                {
+                    "name": "React",
+                    "confidence": 0.8,
+                    "category": "framework",
+                    "required": True,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -274,7 +386,12 @@ class TestExtractSkillsPipeline:
     async def test_perfect_overlap(self, sample_taxonomy):
         """When resume has all job skills, nothing is missing."""
         skills = [
-            {"name": "Python", "confidence": 0.95, "category": "programming_language", "required": True},
+            {
+                "name": "Python",
+                "confidence": 0.95,
+                "category": "programming_language",
+                "required": True,
+            },
         ]
 
         resume_response = _make_llm_response(skills)
@@ -340,12 +457,21 @@ class TestFuzzyVariantMatching:
     @pytest.mark.asyncio
     async def test_react_vs_react_js(self, sample_taxonomy):
         """Resume 'React' matches job 'React.js' even though .js isn't a taxonomy alias."""
-        resume_response = _make_llm_response([
-            {"name": "React", "confidence": 0.9, "category": "framework"},
-        ])
-        job_response = _make_llm_response([
-            {"name": "React.js", "confidence": 0.9, "category": "framework", "required": True},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {"name": "React", "confidence": 0.9, "category": "framework"},
+            ]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "React.js",
+                    "confidence": 0.9,
+                    "category": "framework",
+                    "required": True,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -362,15 +488,22 @@ class TestFuzzyVariantMatching:
     async def test_node_vs_node_js(self, sample_taxonomy):
         """Resume 'Node' matches job 'Node.js' via fuzzy suffix stripping."""
         # Use a taxonomy without Node so both pass through as unknown skills
-        taxonomy_no_node = [
-            e for e in sample_taxonomy if "node" not in e.name.lower()
-        ]
-        resume_response = _make_llm_response([
-            {"name": "Node", "confidence": 0.85, "category": "framework"},
-        ])
-        job_response = _make_llm_response([
-            {"name": "Node.js", "confidence": 0.85, "category": "framework", "required": True},
-        ])
+        taxonomy_no_node = [e for e in sample_taxonomy if "node" not in e.name.lower()]
+        resume_response = _make_llm_response(
+            [
+                {"name": "Node", "confidence": 0.85, "category": "framework"},
+            ]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "Node.js",
+                    "confidence": 0.85,
+                    "category": "framework",
+                    "required": True,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -386,12 +519,21 @@ class TestFuzzyVariantMatching:
     @pytest.mark.asyncio
     async def test_postgresql_vs_postgres(self, sample_taxonomy):
         """'PostgreSQL' and 'Postgres' both resolve to canonical 'PostgreSQL' via alias."""
-        resume_response = _make_llm_response([
-            {"name": "PostgreSQL", "confidence": 0.9, "category": "database"},
-        ])
-        job_response = _make_llm_response([
-            {"name": "Postgres", "confidence": 0.9, "category": "database", "required": True},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {"name": "PostgreSQL", "confidence": 0.9, "category": "database"},
+            ]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "Postgres",
+                    "confidence": 0.9,
+                    "category": "database",
+                    "required": True,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -408,13 +550,31 @@ class TestFuzzyVariantMatching:
     @pytest.mark.asyncio
     async def test_no_false_positives_different_skills(self, sample_taxonomy):
         """Completely different skills still register as missing."""
-        resume_response = _make_llm_response([
-            {"name": "Python", "confidence": 0.95, "category": "programming_language"},
-        ])
-        job_response = _make_llm_response([
-            {"name": "Go", "confidence": 0.9, "category": "programming_language", "required": True},
-            {"name": "Rust", "confidence": 0.8, "category": "programming_language", "required": False},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {
+                    "name": "Python",
+                    "confidence": 0.95,
+                    "category": "programming_language",
+                },
+            ]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "Go",
+                    "confidence": 0.9,
+                    "category": "programming_language",
+                    "required": True,
+                },
+                {
+                    "name": "Rust",
+                    "confidence": 0.8,
+                    "category": "programming_language",
+                    "required": False,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]
@@ -431,12 +591,21 @@ class TestFuzzyVariantMatching:
     @pytest.mark.asyncio
     async def test_vue_js_vs_vue(self, sample_taxonomy):
         """Off-taxonomy 'Vue' matches off-taxonomy 'Vue.js' via fuzzy matching."""
-        resume_response = _make_llm_response([
-            {"name": "Vue", "confidence": 0.8, "category": "framework"},
-        ])
-        job_response = _make_llm_response([
-            {"name": "Vue.js", "confidence": 0.8, "category": "framework", "required": True},
-        ])
+        resume_response = _make_llm_response(
+            [
+                {"name": "Vue", "confidence": 0.8, "category": "framework"},
+            ]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "Vue.js",
+                    "confidence": 0.8,
+                    "category": "framework",
+                    "required": True,
+                },
+            ]
+        )
 
         with patch("app.services.skill_extractor.call_llm") as mock_llm:
             mock_llm.side_effect = [resume_response, job_response]

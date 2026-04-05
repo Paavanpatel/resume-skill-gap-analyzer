@@ -26,6 +26,7 @@ from uuid import UUID
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.websockets import publish_progress
 from app.core.exceptions import NotFoundError, ParsingError
 from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
@@ -33,11 +34,10 @@ from app.repositories.resume_repo import ResumeRepository
 from app.repositories.skill_repo import SkillRepository
 from app.services.ats_checker import check_ats_compatibility
 from app.services.gap_analyzer import analyze_gap
-from app.services.section_parser import parse_sections, ParsedResume
-from app.services.skill_extractor import extract_skills, ExtractionResult
+from app.services.section_parser import ParsedResume, parse_sections
+from app.services.skill_extractor import ExtractionResult, extract_skills
 from app.services.skill_normalizer import build_taxonomy_index
 from app.services.suggestion_engine import generate_suggestions
-from app.api.v1.websockets import publish_progress
 
 logger = logging.getLogger(__name__)
 

@@ -108,9 +108,9 @@ async def generate_roadmap_endpoint(
         )
 
     # Build extraction and gap analysis data from stored analysis
+    from app.services.gap_analyzer import analyze_gap
     from app.services.roadmap_generator import generate_roadmap
     from app.services.skill_extractor import ExtractionResult
-    from app.services.gap_analyzer import analyze_gap
 
     extraction = ExtractionResult.from_analysis(analysis)
     match_score = analysis.match_score or 0.0
@@ -202,9 +202,9 @@ async def generate_advisor_endpoint(
             resource_type="resume",
         )
 
+    from app.services.gap_analyzer import analyze_gap
     from app.services.resume_advisor import generate_resume_advice
     from app.services.skill_extractor import ExtractionResult
-    from app.services.gap_analyzer import analyze_gap
 
     extraction = ExtractionResult.from_analysis(analysis)
     match_score = analysis.match_score or 0.0

@@ -17,7 +17,6 @@ from dataclasses import dataclass
 from app.services.skill_extractor import ExtractionResult
 from app.services.skill_normalizer import NormalizedSkill
 
-
 # ── Data structures ──────────────────────────────────────────────
 
 
@@ -234,8 +233,7 @@ def explain_scores(
 
     # ATS score explanation
     ats_summary = (
-        f"ATS keyword match: {total_matched}/{total_job} skills "
-        f"({ats_score:.0f}%). "
+        f"ATS keyword match: {total_matched}/{total_job} skills ({ats_score:.0f}%). "
     )
     if ats_score >= 70:
         ats_summary += "Your resume should pass most ATS keyword filters."

@@ -26,19 +26,20 @@ from __future__ import annotations
 import io
 import logging
 from datetime import datetime, timezone
+
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
+    HRFlowable,
+    KeepTogether,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
-    HRFlowable,
-    KeepTogether,
 )
 
 logger = logging.getLogger(__name__)

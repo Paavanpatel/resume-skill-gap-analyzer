@@ -213,6 +213,7 @@ async def handle_webhook_event(
 
         # Look up the user by stripe_customer_id
         from sqlalchemy import select
+
         from app.models.user import User as UserModel
 
         result = await session.execute(

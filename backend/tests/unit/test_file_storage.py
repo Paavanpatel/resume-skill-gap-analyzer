@@ -5,18 +5,19 @@ Covers save_upload, read_file, delete_file, filename sanitization,
 path traversal prevention, and error handling.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from app.core.exceptions import StorageError
 from app.services.file_storage import (
     _sanitize_filename,
     _verify_path_within_root,
-    save_upload,
-    read_file,
     delete_file,
+    read_file,
+    save_upload,
 )
-from app.core.exceptions import StorageError
 
 
 class TestSanitizeFilename:
@@ -96,7 +97,9 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             result = await save_upload(b"hello world", "user-123", "resume.pdf")
 
         assert "uploads/user-123" in result
@@ -110,7 +113,9 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             result = await save_upload(b"data", "user-123", "../../etc/passwd")
 
         assert ".." not in result
@@ -120,7 +125,9 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             await save_upload(b"data", "new-user-456", "test.pdf")
 
         assert (tmp_path / "uploads" / "new-user-456").is_dir()
@@ -130,8 +137,10 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings), \
-             patch("pathlib.Path.mkdir", side_effect=OSError("permission denied")):
+        with (
+            patch("app.services.file_storage.get_settings", return_value=mock_settings),
+            patch("pathlib.Path.mkdir", side_effect=OSError("permission denied")),
+        ):
             with pytest.raises(StorageError, match="temporarily unavailable"):
                 await save_upload(b"data", "user-1", "file.pdf")
 
@@ -140,8 +149,10 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings), \
-             patch("pathlib.Path.write_bytes", side_effect=OSError("disk full")):
+        with (
+            patch("app.services.file_storage.get_settings", return_value=mock_settings),
+            patch("pathlib.Path.write_bytes", side_effect=OSError("disk full")),
+        ):
             with pytest.raises(StorageError, match="Could not save"):
                 await save_upload(b"data", "user-1", "file.pdf")
 
@@ -150,7 +161,9 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             result = await save_upload(b"", "user-1", "empty.pdf")
 
         full_path = tmp_path / result
@@ -162,7 +175,9 @@ class TestSaveUpload:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             result = await save_upload(b"data", "user-1", "resume.pdf")
 
         # Result should be relative, not absolute
@@ -182,7 +197,9 @@ class TestReadFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             content = await read_file("uploads/user-1/test.pdf")
 
         assert content == b"pdf content here"
@@ -192,7 +209,9 @@ class TestReadFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             with pytest.raises(StorageError, match="not found"):
                 await read_file("uploads/user-1/nonexistent.pdf")
 
@@ -201,7 +220,9 @@ class TestReadFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             with pytest.raises(StorageError):
                 await read_file("../../etc/passwd")
 
@@ -214,8 +235,10 @@ class TestReadFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings), \
-             patch("pathlib.Path.read_bytes", side_effect=OSError("io error")):
+        with (
+            patch("app.services.file_storage.get_settings", return_value=mock_settings),
+            patch("pathlib.Path.read_bytes", side_effect=OSError("io error")),
+        ):
             with pytest.raises(StorageError, match="Could not read"):
                 await read_file("uploads/test.pdf")
 
@@ -232,7 +255,9 @@ class TestDeleteFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             await delete_file("uploads/test.pdf")
 
         assert not test_file.exists()
@@ -242,7 +267,9 @@ class TestDeleteFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             await delete_file("uploads/nonexistent.pdf")
 
     @pytest.mark.asyncio
@@ -254,8 +281,10 @@ class TestDeleteFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings), \
-             patch("pathlib.Path.unlink", side_effect=OSError("permission denied")):
+        with (
+            patch("app.services.file_storage.get_settings", return_value=mock_settings),
+            patch("pathlib.Path.unlink", side_effect=OSError("permission denied")),
+        ):
             with pytest.raises(StorageError, match="Could not delete"):
                 await delete_file("uploads/test.pdf")
 
@@ -264,6 +293,8 @@ class TestDeleteFile:
         mock_settings = MagicMock()
         mock_settings.storage_local_path = str(tmp_path)
 
-        with patch("app.services.file_storage.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.file_storage.get_settings", return_value=mock_settings
+        ):
             with pytest.raises(StorageError):
                 await delete_file("../../etc/passwd")

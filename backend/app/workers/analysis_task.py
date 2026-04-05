@@ -98,6 +98,7 @@ async def _run_analysis(analysis_id: str) -> dict:
     from uuid import UUID
 
     import redis.asyncio as aioredis
+
     from app.core.config import get_settings
     from app.db.session import WriteSession
     from app.services.analysis_service import run_analysis

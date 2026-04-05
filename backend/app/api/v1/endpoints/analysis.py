@@ -31,10 +31,10 @@ from app.db.session import get_db_session, get_read_db_session
 from app.repositories.analysis_repo import AnalysisRepository
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.analysis import (
-    AnalysisRequest,
-    AnalysisResponse,
     AnalysisHistoryItem,
     AnalysisHistoryResponse,
+    AnalysisRequest,
+    AnalysisResponse,
     AnalysisStatusResponse,
     AnalysisSubmitResponse,
 )

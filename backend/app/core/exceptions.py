@@ -23,7 +23,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 # ── Error codes ───────────────────────────────────────────────
 # Machine-readable codes the frontend can use in switch statements.
 # Grouped by domain so they're easy to scan.

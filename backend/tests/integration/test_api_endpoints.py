@@ -25,9 +25,9 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.schemas.user import UserCreate, UserLogin
-from app.models.user import User
 from app.core.exceptions import AuthenticationError
+from app.models.user import User
+from app.schemas.user import UserCreate, UserLogin
 
 
 def _err_msg(data: dict) -> str:
@@ -53,26 +53,27 @@ def _err_msg(data: dict) -> str:
 #     assert "app" in data
 #     assert "environment" in data
 
+
 @pytest.mark.asyncio
 async def test_health_check(test_client):
     """Test GET /api/v1/health redirects to /api/v1/health/ready."""
     client, app = test_client[:2]  # Unpack safely
-    
+
     # Test the legacy /api/v1/health endpoint redirects to /api/v1/health/ready
     response = await client.get("/api/v1/health", follow_redirects=False)
-    
+
     # Should get a 307 redirect
     assert response.status_code == 307
     assert response.headers.get("location") == "/api/v1/health/ready"
-    
+
     # Now follow the redirect
     response = await client.get("/api/v1/health", follow_redirects=True)
-    
+
     # After following redirect, should eventually get a response
     # (may be 200 or 503 depending on service availability, so just check it's not a redirect)
     assert response.status_code in [200, 503, 502]
 
-        
+
 # ──────────────────────────────────────────────────────────────
 # Authentication Tests
 # ──────────────────────────────────────────────────────────────
@@ -251,6 +252,7 @@ async def test_get_me_unauthenticated(test_client):
 
     # Remove the auth override so real auth logic runs
     from app.core.dependencies import get_current_user
+
     original = app.dependency_overrides.pop(get_current_user, None)
 
     try:
@@ -357,7 +359,9 @@ async def test_logout(test_client, mock_user, access_token):
 
 
 @pytest.mark.asyncio
-async def test_resume_upload_success(test_client, mock_user, access_token, mock_db_session):
+async def test_resume_upload_success(
+    test_client, mock_user, access_token, mock_db_session
+):
     """Test POST /api/v1/resume/upload successfully uploads and parses resume."""
     client, app, db_session, _ = test_client
 
@@ -371,18 +375,21 @@ async def test_resume_upload_success(test_client, mock_user, access_token, mock_
     mock_resume.file_type = "pdf"
     mock_resume.file_size_bytes = 50000
     mock_resume.file_path = "/storage/path/resume.pdf"
-    mock_resume.parsed_sections = json.dumps({
-        "summary": "Senior Python Developer",
-        "experience": [],
-        "skills": ["Python", "FastAPI"],
-    })
+    mock_resume.parsed_sections = json.dumps(
+        {
+            "summary": "Senior Python Developer",
+            "experience": [],
+            "skills": ["Python", "FastAPI"],
+        }
+    )
     mock_resume.created_at = datetime.now(timezone.utc)
 
-    with patch("app.api.v1.endpoints.resume.validate_upload") as mock_validate, \
-         patch("app.api.v1.endpoints.resume.save_upload") as mock_save, \
-         patch("app.api.v1.endpoints.resume.parse_resume_content") as mock_parse, \
-         patch("app.api.v1.endpoints.resume.ResumeRepository") as mock_repo_class:
-
+    with (
+        patch("app.api.v1.endpoints.resume.validate_upload") as mock_validate,
+        patch("app.api.v1.endpoints.resume.save_upload") as mock_save,
+        patch("app.api.v1.endpoints.resume.parse_resume_content") as mock_parse,
+        patch("app.api.v1.endpoints.resume.ResumeRepository") as mock_repo_class,
+    ):
         mock_validate.return_value = MagicMock(
             file_type="pdf",
             file_size=50000,
@@ -390,7 +397,10 @@ async def test_resume_upload_success(test_client, mock_user, access_token, mock_
         mock_save.return_value = "/storage/path/resume.pdf"
         mock_parse.return_value = MagicMock(
             raw_text="Senior Python Developer with 5 years experience",
-            to_dict=lambda: {"summary": "Senior Python Developer", "skills": ["Python", "FastAPI"]},
+            to_dict=lambda: {
+                "summary": "Senior Python Developer",
+                "skills": ["Python", "FastAPI"],
+            },
         )
 
         mock_repo = MagicMock()
@@ -445,6 +455,7 @@ async def test_resume_upload_requires_auth(test_client):
 
     # Remove the auth override so real auth logic runs
     from app.core.dependencies import get_current_user
+
     original = app.dependency_overrides.pop(get_current_user, None)
 
     try:
@@ -462,7 +473,9 @@ async def test_resume_upload_requires_auth(test_client):
 
 
 @pytest.mark.asyncio
-async def test_resume_get_success(test_client, mock_user, access_token, mock_db_session):
+async def test_resume_get_success(
+    test_client, mock_user, access_token, mock_db_session
+):
     """Test GET /api/v1/resume/{resume_id} returns parsed resume."""
     client, app, db_session, _ = test_client
 
@@ -556,7 +569,9 @@ async def test_resume_list(test_client, mock_user, access_token, mock_db_session
 
 
 @pytest.mark.asyncio
-async def test_analysis_submit_success(test_client, mock_user, access_token, mock_db_session):
+async def test_analysis_submit_success(
+    test_client, mock_user, access_token, mock_db_session
+):
     """Test POST /api/v1/analysis/{resume_id} submits analysis task."""
     client, app, db_session, _ = test_client
 
@@ -565,16 +580,23 @@ async def test_analysis_submit_success(test_client, mock_user, access_token, moc
 
     mock_resume = MagicMock()
     mock_resume.user_id = mock_user.id
-    mock_resume.raw_text = "Senior Python Developer with 5 years experience in backend systems"
+    mock_resume.raw_text = (
+        "Senior Python Developer with 5 years experience in backend systems"
+    )
 
     mock_analysis = MagicMock()
     mock_analysis.id = analysis_id
     mock_analysis.status = "queued"
 
-    with patch("app.api.v1.endpoints.analysis.ResumeRepository") as mock_resume_repo_class, \
-         patch("app.api.v1.endpoints.analysis.AnalysisRepository") as mock_analysis_repo_class, \
-         patch.dict("sys.modules", {"app.workers.analysis_task": MagicMock()}):
-
+    with (
+        patch(
+            "app.api.v1.endpoints.analysis.ResumeRepository"
+        ) as mock_resume_repo_class,
+        patch(
+            "app.api.v1.endpoints.analysis.AnalysisRepository"
+        ) as mock_analysis_repo_class,
+        patch.dict("sys.modules", {"app.workers.analysis_task": MagicMock()}),
+    ):
         # Mock resume lookup
         mock_resume_repo = MagicMock()
         mock_resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
@@ -604,7 +626,9 @@ async def test_analysis_submit_success(test_client, mock_user, access_token, moc
 
 
 @pytest.mark.asyncio
-async def test_analysis_submit_resume_not_found(test_client, access_token, mock_db_session):
+async def test_analysis_submit_resume_not_found(
+    test_client, access_token, mock_db_session
+):
     """Test POST /api/v1/analysis/{resume_id} returns 404 for non-existent resume."""
     client, app, db_session, _ = test_client
 
@@ -629,7 +653,9 @@ async def test_analysis_submit_resume_not_found(test_client, access_token, mock_
 
 
 @pytest.mark.asyncio
-async def test_analysis_submit_insufficient_resume_text(test_client, mock_user, access_token, mock_db_session):
+async def test_analysis_submit_insufficient_resume_text(
+    test_client, mock_user, access_token, mock_db_session
+):
     """Test POST /api/v1/analysis with insufficient resume text returns validation error."""
     client, app, db_session, _ = test_client
 
@@ -658,7 +684,9 @@ async def test_analysis_submit_insufficient_resume_text(test_client, mock_user, 
 
 
 @pytest.mark.asyncio
-async def test_analysis_get_status(test_client, mock_user, access_token, mock_db_session):
+async def test_analysis_get_status(
+    test_client, mock_user, access_token, mock_db_session
+):
     """Test GET /api/v1/analysis/{analysis_id}/status returns status."""
     client, app, db_session, _ = test_client
 
@@ -685,7 +713,9 @@ async def test_analysis_get_status(test_client, mock_user, access_token, mock_db
 
 
 @pytest.mark.asyncio
-async def test_analysis_get_status_not_found(test_client, access_token, mock_db_session):
+async def test_analysis_get_status_not_found(
+    test_client, access_token, mock_db_session
+):
     """Test GET /api/v1/analysis/{analysis_id}/status returns 404."""
     client, app, db_session, _ = test_client
 
@@ -752,17 +782,37 @@ async def test_analysis_get(test_client, mock_user, access_token, mock_db_sessio
     mock_analysis.match_score = 75.5
     mock_analysis.ats_score = 82.0
     mock_analysis.matched_skills = [
-        {"name": "Python", "confidence": 0.95, "category": "programming_language", "source": "resume"},
+        {
+            "name": "Python",
+            "confidence": 0.95,
+            "category": "programming_language",
+            "source": "resume",
+        },
     ]
     mock_analysis.missing_skills = [
         {"name": "Kubernetes", "priority": "high", "category": "devops", "weight": 1.0},
     ]
     mock_analysis.resume_skills = [
-        {"name": "Python", "confidence": 0.95, "category": "programming_language", "source": "resume"},
+        {
+            "name": "Python",
+            "confidence": 0.95,
+            "category": "programming_language",
+            "source": "resume",
+        },
     ]
     mock_analysis.job_skills = [
-        {"name": "Python", "confidence": 0.9, "category": "programming_language", "source": "job_description"},
-        {"name": "Kubernetes", "confidence": 0.85, "category": "devops", "source": "job_description"},
+        {
+            "name": "Python",
+            "confidence": 0.9,
+            "category": "programming_language",
+            "source": "job_description",
+        },
+        {
+            "name": "Kubernetes",
+            "confidence": 0.85,
+            "category": "devops",
+            "source": "job_description",
+        },
     ]
     mock_analysis.suggestions = []
     mock_analysis.category_breakdowns = []
@@ -801,7 +851,7 @@ async def test_analysis_get(test_client, mock_user, access_token, mock_db_sessio
 async def test_roadmap_generate(test_client, mock_user, access_token, mock_db_session):
     """Test POST /insights/{analysis_id}/roadmap generates learning roadmap."""
     client, app, db_session, _ = test_client
-    
+
     # Upgrade user to Pro tier for this test
     mock_user.tier = "pro"
 
@@ -823,21 +873,29 @@ async def test_roadmap_generate(test_client, mock_user, access_token, mock_db_se
     mock_roadmap.analysis_id = analysis_id
     mock_roadmap.total_weeks = 12
     mock_roadmap.phases = [
-        {"week_range": "1-2", "focus": "Fundamentals", "objectives": ["Learn basics"], "resources": ["docs"]}
+        {
+            "week_range": "1-2",
+            "focus": "Fundamentals",
+            "objectives": ["Learn basics"],
+            "resources": ["docs"],
+        }
     ]
 
-    with patch("app.api.v1.endpoints.insights.AnalysisRepository") as mock_repo_class, \
-         patch("app.services.roadmap_generator.generate_roadmap") as mock_generate, \
-         patch("app.services.skill_extractor.ExtractionResult") as mock_extraction_class, \
-         patch("app.services.gap_analyzer.analyze_gap") as mock_gap:
-
+    with (
+        patch("app.api.v1.endpoints.insights.AnalysisRepository") as mock_repo_class,
+        patch("app.services.roadmap_generator.generate_roadmap") as mock_generate,
+        patch("app.services.skill_extractor.ExtractionResult") as mock_extraction_class,
+        patch("app.services.gap_analyzer.analyze_gap") as mock_gap,
+    ):
         mock_repo = MagicMock()
         mock_repo.get_by_id = AsyncMock(return_value=mock_analysis)
         mock_repo_class.return_value = mock_repo
 
         # Mock the select query for existing roadmap (returns None)
         db_session.execute = AsyncMock()
-        db_session.execute.return_value.scalar_one_or_none = MagicMock(return_value=None)
+        db_session.execute.return_value.scalar_one_or_none = MagicMock(
+            return_value=None
+        )
 
         mock_extraction_class.from_analysis = MagicMock()
         mock_generate.return_value = mock_roadmap
@@ -860,7 +918,7 @@ async def test_roadmap_generate(test_client, mock_user, access_token, mock_db_se
 async def test_roadmap_get(test_client, mock_user, access_token, mock_db_session):
     """Test GET /insights/{analysis_id}/roadmap retrieves existing roadmap."""
     client, app, db_session, _ = test_client
-    
+
     # Upgrade user to Pro tier for this test
     mock_user.tier = "pro"
 
@@ -908,6 +966,7 @@ async def test_protected_endpoint_no_token(test_client):
 
     # Remove the auth override so real auth logic runs
     from app.core.dependencies import get_current_user
+
     original = app.dependency_overrides.pop(get_current_user, None)
 
     try:
@@ -927,6 +986,7 @@ async def test_protected_endpoint_invalid_token(test_client):
 
     # Remove the auth override so real auth logic runs
     from app.core.dependencies import get_current_user
+
     original = app.dependency_overrides.pop(get_current_user, None)
 
     try:
@@ -941,7 +1001,9 @@ async def test_protected_endpoint_invalid_token(test_client):
 
 
 @pytest.mark.asyncio
-async def test_analysis_authorization_boundary(test_client, mock_user, access_token, mock_db_session):
+async def test_analysis_authorization_boundary(
+    test_client, mock_user, access_token, mock_db_session
+):
     """Verify users can only access their own analyses."""
     client, app, db_session, _ = test_client
 
