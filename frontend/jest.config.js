@@ -10,11 +10,10 @@ module.exports = {
   testMatch: ["**/src/**/*.(test|spec).(ts|tsx)"],
   transform: {
     "^.+\\.(ts|tsx)$": [
-      "@swc/jest",
+      "ts-jest",
       {
-        jsc: {
-          parser: { syntax: "typescript", tsx: true },
-          transform: { react: { runtime: "automatic" } },
+        tsconfig: {
+          jsx: "react-jsx",
         },
       },
     ],
