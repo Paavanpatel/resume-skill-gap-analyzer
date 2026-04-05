@@ -89,27 +89,21 @@ describe("HistoryCard", () => {
 
   it("renders checkbox in selectable mode", () => {
     const onSelect = jest.fn();
-    render(
-      <HistoryCard item={completedItem} selectable selected={false} onSelect={onSelect} />
-    );
+    render(<HistoryCard item={completedItem} selectable selected={false} onSelect={onSelect} />);
     const checkbox = screen.getByTestId("compare-checkbox-analysis-1");
     expect(checkbox).toBeInTheDocument();
   });
 
   it("calls onSelect when checkbox clicked", () => {
     const onSelect = jest.fn();
-    render(
-      <HistoryCard item={completedItem} selectable selected={false} onSelect={onSelect} />
-    );
+    render(<HistoryCard item={completedItem} selectable selected={false} onSelect={onSelect} />);
     const checkbox = screen.getByTestId("compare-checkbox-analysis-1");
     fireEvent.click(checkbox);
     expect(onSelect).toHaveBeenCalledWith("analysis-1");
   });
 
   it("shows selected state with ring", () => {
-    render(
-      <HistoryCard item={completedItem} selectable selected onSelect={jest.fn()} />
-    );
+    render(<HistoryCard item={completedItem} selectable selected onSelect={jest.fn()} />);
     const card = screen.getByTestId("history-card-analysis-1");
     expect(card.className).toContain("border-primary-500");
     expect(card.className).toContain("ring-2");

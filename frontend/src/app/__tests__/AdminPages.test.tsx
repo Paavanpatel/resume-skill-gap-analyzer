@@ -57,9 +57,12 @@ jest.mock("next/dynamic", () => (factory: any) => {
 // Mock all lucide-react icons to simple spans
 jest.mock("lucide-react", () => {
   const MockIcon = (props: any) => <span {...props} />;
-  return new Proxy({}, {
-    get: () => MockIcon,
-  });
+  return new Proxy(
+    {},
+    {
+      get: () => MockIcon,
+    }
+  );
 });
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -149,9 +152,7 @@ describe("AdminAnalysesPage", () => {
   });
 
   it("renders page heading", async () => {
-    const { default: AdminAnalysesPage } = await import(
-      "@/app/(admin)/admin/analyses/page"
-    );
+    const { default: AdminAnalysesPage } = await import("@/app/(admin)/admin/analyses/page");
     renderWithProviders(<AdminAnalysesPage />);
     await waitFor(() => {
       expect(screen.getByText("Analyses")).toBeInTheDocument();
@@ -159,9 +160,7 @@ describe("AdminAnalysesPage", () => {
   });
 
   it("renders analysis data after loading", async () => {
-    const { default: AdminAnalysesPage } = await import(
-      "@/app/(admin)/admin/analyses/page"
-    );
+    const { default: AdminAnalysesPage } = await import("@/app/(admin)/admin/analyses/page");
     renderWithProviders(<AdminAnalysesPage />);
     await waitFor(() => {
       expect(screen.getByText("user@example.com")).toBeInTheDocument();
@@ -175,9 +174,7 @@ describe("AdminAnalysesPage", () => {
       page: 1,
       page_size: 20,
     });
-    const { default: AdminAnalysesPage } = await import(
-      "@/app/(admin)/admin/analyses/page"
-    );
+    const { default: AdminAnalysesPage } = await import("@/app/(admin)/admin/analyses/page");
     renderWithProviders(<AdminAnalysesPage />);
     await waitFor(() => {
       expect(screen.getByText("No analyses found.")).toBeInTheDocument();
@@ -186,9 +183,7 @@ describe("AdminAnalysesPage", () => {
 
   it("shows error message if fetch fails", async () => {
     mockAdminGetAnalyses.mockRejectedValue(new Error("Server error"));
-    const { default: AdminAnalysesPage } = await import(
-      "@/app/(admin)/admin/analyses/page"
-    );
+    const { default: AdminAnalysesPage } = await import("@/app/(admin)/admin/analyses/page");
     renderWithProviders(<AdminAnalysesPage />);
     await waitFor(() => {
       expect(screen.getByText("Server error")).toBeInTheDocument();
@@ -221,9 +216,7 @@ describe("AdminUsersPage", () => {
   });
 
   it("renders page heading", async () => {
-    const { default: AdminUsersPage } = await import(
-      "@/app/(admin)/admin/users/page"
-    );
+    const { default: AdminUsersPage } = await import("@/app/(admin)/admin/users/page");
     renderWithProviders(<AdminUsersPage />);
     await waitFor(() => {
       expect(screen.getByText("Users")).toBeInTheDocument();
@@ -231,9 +224,7 @@ describe("AdminUsersPage", () => {
   });
 
   it("renders user data", async () => {
-    const { default: AdminUsersPage } = await import(
-      "@/app/(admin)/admin/users/page"
-    );
+    const { default: AdminUsersPage } = await import("@/app/(admin)/admin/users/page");
     renderWithProviders(<AdminUsersPage />);
     await waitFor(() => {
       expect(screen.getByText("user@example.com")).toBeInTheDocument();
@@ -241,9 +232,7 @@ describe("AdminUsersPage", () => {
   });
 
   it("renders search input", async () => {
-    const { default: AdminUsersPage } = await import(
-      "@/app/(admin)/admin/users/page"
-    );
+    const { default: AdminUsersPage } = await import("@/app/(admin)/admin/users/page");
     renderWithProviders(<AdminUsersPage />);
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/Search/i)).toBeInTheDocument();
@@ -252,9 +241,7 @@ describe("AdminUsersPage", () => {
 
   it("shows error if fetch fails", async () => {
     mockAdminGetUsers.mockRejectedValue(new Error("Unauthorized"));
-    const { default: AdminUsersPage } = await import(
-      "@/app/(admin)/admin/users/page"
-    );
+    const { default: AdminUsersPage } = await import("@/app/(admin)/admin/users/page");
     renderWithProviders(<AdminUsersPage />);
     await waitFor(() => {
       expect(screen.getByText("Unauthorized")).toBeInTheDocument();
@@ -294,9 +281,7 @@ describe("AdminSystemPage", () => {
   });
 
   it("renders system health heading", async () => {
-    const { default: AdminSystemPage } = await import(
-      "@/app/(admin)/admin/system/page"
-    );
+    const { default: AdminSystemPage } = await import("@/app/(admin)/admin/system/page");
     renderWithProviders(<AdminSystemPage />);
     await waitFor(() => {
       expect(screen.getByText("System Health")).toBeInTheDocument();
@@ -304,9 +289,7 @@ describe("AdminSystemPage", () => {
   });
 
   it("renders dependency health section", async () => {
-    const { default: AdminSystemPage } = await import(
-      "@/app/(admin)/admin/system/page"
-    );
+    const { default: AdminSystemPage } = await import("@/app/(admin)/admin/system/page");
     renderWithProviders(<AdminSystemPage />);
     await waitFor(() => {
       expect(screen.getByText("Dependency Health")).toBeInTheDocument();

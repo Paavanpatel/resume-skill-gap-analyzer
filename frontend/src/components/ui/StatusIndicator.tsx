@@ -87,10 +87,7 @@ export default function StatusIndicator({
   }, [open]);
 
   return (
-    <div
-      ref={ref}
-      className={cn("relative inline-flex", className)}
-    >
+    <div ref={ref} className={cn("relative inline-flex", className)}>
       {/* Dot button */}
       <button
         onClick={toggle}
@@ -129,12 +126,8 @@ export default function StatusIndicator({
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
-              System Health
-            </span>
-            <span className={cn("font-medium capitalize text-xs", cfg.text)}>
-              {cfg.label}
-            </span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">System Health</span>
+            <span className={cn("font-medium capitalize text-xs", cfg.text)}>{cfg.label}</span>
           </div>
 
           {/* Dependency checks */}
@@ -142,10 +135,10 @@ export default function StatusIndicator({
             <ul className="space-y-1.5">
               {Object.entries(checks).map(([dep, value]) => (
                 <li key={dep} className="flex items-center justify-between">
-                  <span className="capitalize text-gray-600 dark:text-gray-400">
-                    {dep}
-                  </span>
-                  <span className={cn("flex items-center gap-1.5 font-mono text-xs", checkColor(value))}>
+                  <span className="capitalize text-gray-600 dark:text-gray-400">{dep}</span>
+                  <span
+                    className={cn("flex items-center gap-1.5 font-mono text-xs", checkColor(value))}
+                  >
                     <span className="font-bold">{checkIcon(value)}</span>
                     <span className="truncate max-w-[120px]">{value}</span>
                   </span>
@@ -153,9 +146,7 @@ export default function StatusIndicator({
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-xs">
-              No check data available.
-            </p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">No check data available.</p>
           )}
 
           {/* Last checked */}

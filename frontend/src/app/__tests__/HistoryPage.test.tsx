@@ -91,12 +91,12 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     // // Should show skeleton loading state (not Loader2 anymore)
     // expect(document.querySelectorAll('[class*="animate"]').length).toBeGreaterThan(0);
     // // Should show skeleton loading state
-    expect(document.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
   });
 
   it("shows empty state when no analyses exist", async () => {
@@ -105,8 +105,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("No analyses yet")).toBeInTheDocument();
@@ -121,8 +121,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -142,8 +142,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -160,8 +160,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
@@ -174,8 +174,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("No analyses yet")).toBeInTheDocument();
@@ -191,8 +191,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -215,8 +215,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -238,8 +238,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -265,8 +265,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -290,8 +290,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();
@@ -327,8 +327,8 @@ describe("HistoryPage", () => {
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("history-result-count")).toBeInTheDocument();
@@ -341,13 +341,12 @@ describe("HistoryPage", () => {
     mockGetAnalysisHistory.mockResolvedValue(mockItems);
 
     // render(<HistoryPage />);
-      
+
     await act(async () => {
       render(<HistoryPage />);
       // Give the effect time to run
-      await new Promise(resolve => setTimeout(resolve, 0));
-    })
-
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Senior Developer")).toBeInTheDocument();

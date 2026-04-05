@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  CheckCircle2,
-  Sparkles,
-  Zap,
-  Building2,
-  ArrowLeft,
-} from "lucide-react";
+import { CheckCircle2, Sparkles, Zap, Building2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { createCheckoutSession, getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -25,10 +19,8 @@ const PLANS = [
     icon: <Zap className="h-6 w-6" />,
     description: "Perfect for trying out SkillGap.",
     featured: false,
-    color:
-      "border-gray-200 dark:border-surface-700",
-    badgeColor:
-      "bg-gray-100 dark:bg-surface-700 text-gray-700 dark:text-gray-300",
+    color: "border-gray-200 dark:border-surface-700",
+    badgeColor: "bg-gray-100 dark:bg-surface-700 text-gray-700 dark:text-gray-300",
     ctaLabel: "Get Started",
     ctaVariant: "outline" as const,
     features: [
@@ -38,11 +30,7 @@ const PLANS = [
       "Improvement suggestions",
       "Resume history",
     ],
-    locked: [
-      "AI Learning Roadmap",
-      "Resume Advisor rewrites",
-      "PDF export",
-    ],
+    locked: ["AI Learning Roadmap", "Resume Advisor rewrites", "PDF export"],
   },
   {
     id: "pro",
@@ -52,10 +40,8 @@ const PLANS = [
     icon: <Sparkles className="h-6 w-6" />,
     description: "For active job seekers who want every edge.",
     featured: true,
-    color:
-      "border-primary-500 dark:border-primary-500 ring-2 ring-primary-500/30",
-    badgeColor:
-      "bg-primary-600 text-white",
+    color: "border-primary-500 dark:border-primary-500 ring-2 ring-primary-500/30",
+    badgeColor: "bg-primary-600 text-white",
     ctaLabel: "Upgrade to Pro",
     ctaVariant: "primary" as const,
     features: [
@@ -79,10 +65,8 @@ const PLANS = [
     icon: <Building2 className="h-6 w-6" />,
     description: "Teams and power users with unlimited needs.",
     featured: false,
-    color:
-      "border-warning-400 dark:border-warning-500",
-    badgeColor:
-      "bg-warning-500 text-white",
+    color: "border-warning-400 dark:border-warning-500",
+    badgeColor: "bg-warning-500 text-white",
     ctaLabel: "Upgrade to Enterprise",
     ctaVariant: "outline" as const,
     features: [
@@ -118,9 +102,7 @@ export default function PricingPage() {
     setError("");
     setLoading(tierId);
     try {
-      const { url } = await createCheckoutSession(
-        tierId as "pro" | "enterprise"
-      );
+      const { url } = await createCheckoutSession(tierId as "pro" | "enterprise");
       window.location.href = url;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -215,9 +197,7 @@ export default function PricingPage() {
                 </div>
 
                 {/* Name + price */}
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  {plan.name}
-                </h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{plan.name}</h2>
                 <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
                   {plan.description}
                 </p>
@@ -225,9 +205,7 @@ export default function PricingPage() {
                   <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                     {plan.price}
                   </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    /{plan.period}
-                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">/{plan.period}</span>
                 </div>
 
                 {/* CTA */}
@@ -244,17 +222,16 @@ export default function PricingPage() {
                     isLoading && "opacity-60 cursor-wait"
                   )}
                 >
-                  {isLoading
-                    ? "Redirecting…"
-                    : isCurrent
-                      ? "Current plan"
-                      : plan.ctaLabel}
+                  {isLoading ? "Redirecting…" : isCurrent ? "Current plan" : plan.ctaLabel}
                 </button>
 
                 {/* Features */}
                 <ul className="mt-8 space-y-3 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
+                    <li
+                      key={f}
+                      className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300"
+                    >
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success-500 mt-0.5" />
                       {f}
                     </li>
@@ -277,7 +254,10 @@ export default function PricingPage() {
         {/* Footer note */}
         <p className="mt-10 text-center text-sm text-gray-400 dark:text-gray-500">
           All plans include a 14-day money-back guarantee.{" "}
-          <Link href="/dashboard" className="underline hover:text-gray-600 dark:hover:text-gray-300">
+          <Link
+            href="/dashboard"
+            className="underline hover:text-gray-600 dark:hover:text-gray-300"
+          >
             Back to dashboard
           </Link>
           .

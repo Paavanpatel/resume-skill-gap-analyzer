@@ -38,13 +38,42 @@ jest.mock("@/components/dashboard/ExportButton", () => {
 // ── Mock lucide-react icons ─────────────────────────────────
 jest.mock("lucide-react", () => {
   const icons = [
-    "Loader2", "ArrowLeft", "Clock", "CheckCircle2", "XCircle",
-    "AlertTriangle", "FileSearch", "FileText", "Briefcase", "Lightbulb",
-    "BarChart3", "Target", "BookOpen", "MessageSquare", "Sparkles",
-    "ChevronDown", "ChevronUp", "X", "Download", "Map", "Wand2",
-    "GraduationCap", "ExternalLink", "RefreshCw", "Play", "Copy",
-    "Check", "Star", "TrendingUp", "TrendingDown", "Minus",
-    "AlertCircle", "Info", "ArrowRight", "Plus", "Lock",
+    "Loader2",
+    "ArrowLeft",
+    "Clock",
+    "CheckCircle2",
+    "XCircle",
+    "AlertTriangle",
+    "FileSearch",
+    "FileText",
+    "Briefcase",
+    "Lightbulb",
+    "BarChart3",
+    "Target",
+    "BookOpen",
+    "MessageSquare",
+    "Sparkles",
+    "ChevronDown",
+    "ChevronUp",
+    "X",
+    "Download",
+    "Map",
+    "Wand2",
+    "GraduationCap",
+    "ExternalLink",
+    "RefreshCw",
+    "Play",
+    "Copy",
+    "Check",
+    "Star",
+    "TrendingUp",
+    "TrendingDown",
+    "Minus",
+    "AlertCircle",
+    "Info",
+    "ArrowRight",
+    "Plus",
+    "Lock",
   ];
   const mocks: Record<string, any> = {};
   icons.forEach((name) => {
@@ -65,8 +94,12 @@ jest.mock("@/context/AnalysisTrackerContext", () => ({
     track: (...args: any[]) => mockTrack(...args),
     dismiss: jest.fn(),
     dismissAll: jest.fn(),
-    activeCount: mockTrackedAnalyses.filter((a: any) => !a.dismissed && a.status?.status !== "completed" && a.status?.status !== "failed").length,
-    completedCount: mockTrackedAnalyses.filter((a: any) => !a.dismissed && a.status?.status === "completed").length,
+    activeCount: mockTrackedAnalyses.filter(
+      (a: any) => !a.dismissed && a.status?.status !== "completed" && a.status?.status !== "failed"
+    ).length,
+    completedCount: mockTrackedAnalyses.filter(
+      (a: any) => !a.dismissed && a.status?.status === "completed"
+    ).length,
   }),
 }));
 
@@ -91,14 +124,17 @@ const mockCompletedResult = {
   matched_skills: [
     { name: "Python", confidence: 0.95, category: "programming_language", source: "resume" },
   ],
-  missing_skills: [
-    { name: "Kubernetes", priority: "high", category: "devops" },
-  ],
+  missing_skills: [{ name: "Kubernetes", priority: "high", category: "devops" }],
   resume_skills: [
     { name: "Python", confidence: 0.95, category: "programming_language", source: "resume" },
   ],
   job_skills: [
-    { name: "Python", confidence: 0.9, category: "programming_language", source: "job_description" },
+    {
+      name: "Python",
+      confidence: 0.9,
+      category: "programming_language",
+      source: "job_description",
+    },
     { name: "Kubernetes", confidence: 0.85, category: "devops", source: "job_description" },
   ],
   suggestions: [
@@ -197,9 +233,7 @@ describe("AnalysisPage", () => {
     render(<AnalysisPage />);
 
     // First tip should be visible
-    expect(
-      screen.getByText(/Tailoring your resume to each job description/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Tailoring your resume to each job description/i)).toBeInTheDocument();
   });
 
   it("shows Back to Dashboard button during processing", async () => {
@@ -224,7 +258,6 @@ describe("AnalysisPage", () => {
   });
 
   it("shows current step text from status", async () => {
-
     act(() => {
       jest.useRealTimers();
     });
@@ -565,9 +598,7 @@ describe("AnalysisPage", () => {
     jest.useRealTimers();
     render(<AnalysisPage />);
 
-    expect(
-      screen.getByText(/feel free to navigate away/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/feel free to navigate away/i)).toBeInTheDocument();
   });
 
   it("Overview tab is active by default and shows category breakdowns", async () => {

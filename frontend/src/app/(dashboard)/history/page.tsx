@@ -3,12 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import {
-  History,
-  FileSearch,
-  GitCompareArrows,
-  X,
-} from "lucide-react";
+import { History, FileSearch, GitCompareArrows, X } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Skeleton, { ListItemSkeleton } from "@/components/ui/Skeleton";
@@ -23,14 +18,14 @@ import HistoryCard from "@/components/dashboard/HistoryCard";
 import HistoryPagination from "@/components/dashboard/HistoryPagination";
 import dynamic from "next/dynamic";
 
-const ScoreTrendChart = dynamic(
-  () => import("@/components/dashboard/ScoreTrendChart"),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" /> }
-);
-const ComparisonView = dynamic(
-  () => import("@/components/dashboard/ComparisonView"),
-  { ssr: false, loading: () => <div className="h-96 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" /> }
-);
+const ScoreTrendChart = dynamic(() => import("@/components/dashboard/ScoreTrendChart"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" />,
+});
+const ComparisonView = dynamic(() => import("@/components/dashboard/ComparisonView"), {
+  ssr: false,
+  loading: () => <div className="h-96 animate-pulse rounded-xl bg-gray-100 dark:bg-surface-800" />,
+});
 import { getAnalysisHistory, deleteAnalysis, retryAnalysis, getErrorMessage } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
@@ -146,34 +141,38 @@ export default function HistoryPage() {
     });
   }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
-    // Optimistic update: remove from UI immediately
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setSelectedIds((prev) => prev.filter((x) => x !== id));
-    try {
-      await deleteAnalysis(id);
-      toast("Analysis deleted.", "success");
-    } catch (err) {
-      // Rollback on failure by re-fetching
-      toast(getErrorMessage(err), "error");
-      const data = await getAnalysisHistory().catch(() => null);
-      if (data) setItems(data);
-    }
-  }, [toast]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      // Optimistic update: remove from UI immediately
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      setSelectedIds((prev) => prev.filter((x) => x !== id));
+      try {
+        await deleteAnalysis(id);
+        toast("Analysis deleted.", "success");
+      } catch (err) {
+        // Rollback on failure by re-fetching
+        toast(getErrorMessage(err), "error");
+        const data = await getAnalysisHistory().catch(() => null);
+        if (data) setItems(data);
+      }
+    },
+    [toast]
+  );
 
-  const handleRetry = useCallback(async (id: string) => {
-    try {
-      const result = await retryAnalysis(id);
-      // Mark as queued in UI immediately
-      setItems((prev) =>
-        prev.map((i) => (i.id === id ? { ...i, status: "queued" } : i))
-      );
-      track(result.job_id, "Resume Analysis");
-      toast("Analysis re-queued. We'll notify you when it's ready.", "info");
-    } catch (err) {
-      toast(getErrorMessage(err), "error");
-    }
-  }, [toast, track]);
+  const handleRetry = useCallback(
+    async (id: string) => {
+      try {
+        const result = await retryAnalysis(id);
+        // Mark as queued in UI immediately
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: "queued" } : i)));
+        track(result.job_id, "Resume Analysis");
+        toast("Analysis re-queued. We'll notify you when it's ready.", "info");
+      } catch (err) {
+        toast(getErrorMessage(err), "error");
+      }
+    },
+    [toast, track]
+  );
 
   // Loading state with skeletons
   if (isLoading) {
@@ -186,7 +185,10 @@ export default function HistoryPage() {
         {/* Stats bar skeleton */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 p-4">
+            <div
+              key={i}
+              className="rounded-xl border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 p-4"
+            >
               <div className="flex items-center gap-3">
                 <Skeleton variant="rect" width="40px" height="40px" />
                 <div className="space-y-1.5">

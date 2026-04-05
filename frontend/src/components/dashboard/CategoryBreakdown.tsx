@@ -30,10 +30,13 @@ export default function CategoryBreakdown({ breakdowns }: CategoryBreakdownProps
           const isExpanded = expandedCategory === cat.category;
           const pct = Math.round(cat.match_percentage);
           const barColor =
-            pct >= 80 ? "bg-green-500" :
-            pct >= 60 ? "bg-blue-500" :
-            pct >= 40 ? "bg-amber-500" :
-            "bg-red-500";
+            pct >= 80
+              ? "bg-green-500"
+              : pct >= 60
+                ? "bg-blue-500"
+                : pct >= 40
+                  ? "bg-amber-500"
+                  : "bg-red-500";
 
           return (
             <div
@@ -46,9 +49,7 @@ export default function CategoryBreakdown({ breakdowns }: CategoryBreakdownProps
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-800">
-                      {cat.display_name}
-                    </span>
+                    <span className="text-sm font-medium text-gray-800">{cat.display_name}</span>
                     <PriorityLabel priority={cat.priority} />
                   </div>
 
@@ -131,5 +132,9 @@ function PriorityLabel({ priority }: { priority: "critical" | "important" | "nic
     nice_to_have: { variant: "info" as const, label: "Nice to have" },
   };
   const { variant, label } = config[priority];
-  return <Badge variant={variant} className="text-xs">{label}</Badge>;
+  return (
+    <Badge variant={variant} className="text-xs">
+      {label}
+    </Badge>
+  );
 }

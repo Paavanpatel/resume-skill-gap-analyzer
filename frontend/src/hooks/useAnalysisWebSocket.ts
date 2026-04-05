@@ -18,11 +18,7 @@ import type { AnalysisStatusResponse } from "@/types/analysis";
 
 // ── Types ──────────────────────────────────────────────────
 
-export type WsConnectionStatus =
-  | "connecting"
-  | "connected"
-  | "disconnected"
-  | "error";
+export type WsConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
 export interface UseAnalysisWebSocketOptions {
   /** Analysis ID to subscribe to */
@@ -72,8 +68,7 @@ export function useAnalysisWebSocket({
   onComplete,
 }: UseAnalysisWebSocketOptions): UseAnalysisWebSocketResult {
   const [status, setStatus] = useState<AnalysisStatusResponse | null>(null);
-  const [connectionStatus, setConnectionStatus] =
-    useState<WsConnectionStatus>("disconnected");
+  const [connectionStatus, setConnectionStatus] = useState<WsConnectionStatus>("disconnected");
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectCountRef = useRef(0);
@@ -189,9 +184,7 @@ export function useAnalysisWebSocket({
 
         // Abnormal closure -- attempt reconnect
         if (reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
-          const delay =
-            BASE_RECONNECT_DELAY_MS *
-            Math.pow(2, reconnectCountRef.current);
+          const delay = BASE_RECONNECT_DELAY_MS * Math.pow(2, reconnectCountRef.current);
           reconnectCountRef.current++;
           setConnectionStatus("connecting");
 

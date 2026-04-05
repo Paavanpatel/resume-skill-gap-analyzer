@@ -34,9 +34,7 @@ export default function RateLimitBanner({ className }: RateLimitBannerProps) {
   const mins = Math.floor(secondsRemaining / 60);
   const secs = secondsRemaining % 60;
   const timeLabel =
-    mins > 0
-      ? `${mins}m ${secs.toString().padStart(2, "0")}s`
-      : `${secondsRemaining}s`;
+    mins > 0 ? `${mins}m ${secs.toString().padStart(2, "0")}s` : `${secondsRemaining}s`;
 
   return (
     <div
@@ -53,10 +51,7 @@ export default function RateLimitBanner({ className }: RateLimitBannerProps) {
     >
       <AlertTriangle className="h-4 w-4 shrink-0 text-warning-500 dark:text-warning-400" />
       <p className="flex-1">
-        Too many requests.{" "}
-        <span className="font-semibold">
-          Try again in {timeLabel}.
-        </span>
+        Too many requests. <span className="font-semibold">Try again in {timeLabel}.</span>
       </p>
       <button
         type="button"

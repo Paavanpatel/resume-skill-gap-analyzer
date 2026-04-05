@@ -43,10 +43,7 @@ export default function ScoreRing({
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
       <div
-        className={cn(
-          "relative rounded-full",
-          glow && score != null && getGlowClass(displayScore)
-        )}
+        className={cn("relative rounded-full", glow && score != null && getGlowClass(displayScore))}
         style={{ width: size, height: size }}
       >
         <svg width={size} height={size} className="-rotate-90">
@@ -81,9 +78,7 @@ export default function ScoreRing({
           </span>
         </div>
       </div>
-      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-        {label}
-      </span>
+      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</span>
     </div>
   );
 }

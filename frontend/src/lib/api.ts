@@ -18,8 +18,7 @@ import type {
   RoadmapResponse,
 } from "@/types/analysis";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -243,7 +242,7 @@ export async function uploadResume(file: File): Promise<ResumeUploadResponse> {
 
 export async function listResumes(
   skip: number = 0,
-  limit: number = 20,
+  limit: number = 20
 ): Promise<PaginatedResumeResponse> {
   const res = await apiClient.get("/resume/", { params: { skip, limit } });
   return res.data;
@@ -269,16 +268,12 @@ export async function submitAnalysis(
   return res.data;
 }
 
-export async function getAnalysisStatus(
-  analysisId: string
-): Promise<AnalysisStatusResponse> {
+export async function getAnalysisStatus(analysisId: string): Promise<AnalysisStatusResponse> {
   const res = await apiClient.get(`/analysis/${analysisId}/status`);
   return res.data;
 }
 
-export async function getAnalysisResult(
-  analysisId: string
-): Promise<AnalysisResult> {
+export async function getAnalysisResult(analysisId: string): Promise<AnalysisResult> {
   const res = await apiClient.get(`/analysis/${analysisId}`);
   return res.data;
 }
@@ -410,14 +405,16 @@ export interface AnalyticsOverview {
   registrations_per_day: { date: string; count: number }[];
 }
 
-export async function adminGetUsers(params: {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  tier?: string;
-  role?: string;
-  is_active?: boolean;
-} = {}): Promise<AdminUserListResponse> {
+export async function adminGetUsers(
+  params: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    tier?: string;
+    role?: string;
+    is_active?: boolean;
+  } = {}
+): Promise<AdminUserListResponse> {
   const res = await apiClient.get("/admin/users", { params });
   return res.data;
 }
@@ -445,12 +442,14 @@ export async function adminGetAnalytics(days: number = 30): Promise<AnalyticsOve
   return res.data;
 }
 
-export async function adminGetAnalyses(params: {
-  page?: number;
-  page_size?: number;
-  status?: string;
-  user_id?: string;
-} = {}): Promise<AdminAnalysisListResponse> {
+export async function adminGetAnalyses(
+  params: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+    user_id?: string;
+  } = {}
+): Promise<AdminAnalysisListResponse> {
   const res = await apiClient.get("/admin/analyses", { params });
   return res.data;
 }
@@ -558,11 +557,13 @@ export interface LogsResponse {
   note: string;
 }
 
-export async function adminGetLogs(params: {
-  limit?: number;
-  level?: string;
-  logger_prefix?: string;
-} = {}): Promise<LogsResponse> {
+export async function adminGetLogs(
+  params: {
+    limit?: number;
+    level?: string;
+    logger_prefix?: string;
+  } = {}
+): Promise<LogsResponse> {
   const res = await apiClient.get("/admin/system/logs", { params });
   return res.data;
 }

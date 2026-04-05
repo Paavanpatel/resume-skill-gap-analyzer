@@ -40,7 +40,10 @@ function getScoreAccentColor(score: number | null): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { variant: "success" | "warning" | "danger" | "info"; label: string }> = {
+  const config: Record<
+    string,
+    { variant: "success" | "warning" | "danger" | "info"; label: string }
+  > = {
     completed: { variant: "success", label: "Completed" },
     processing: { variant: "info", label: "Processing" },
     queued: { variant: "info", label: "Queued" },
@@ -106,8 +109,7 @@ export default function HistoryCard({
     { id: "view", label: "View Details", icon: <Eye className="h-4 w-4" /> },
     ...(item.status === "failed" || item.status === "queued"
       ? [{ id: "retry", label: "Retry Analysis", icon: <RefreshCw className="h-4 w-4" /> }]
-      : [{ id: "reanalyze", label: "Re-analyze", icon: <RefreshCw className="h-4 w-4" /> }]
-    ),
+      : [{ id: "reanalyze", label: "Re-analyze", icon: <RefreshCw className="h-4 w-4" /> }]),
     { id: "divider-1", label: "", divider: true },
     { id: "delete", label: "Delete", icon: <Trash2 className="h-4 w-4" />, danger: true },
   ];
@@ -162,7 +164,10 @@ export default function HistoryCard({
         <div className="flex items-center gap-4 p-4 pl-5">
           {/* Checkbox for comparison mode */}
           {selectable && (
-            <label className="flex shrink-0 cursor-pointer items-center" onClick={(e) => e.stopPropagation()}>
+            <label
+              className="flex shrink-0 cursor-pointer items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
               <input
                 type="checkbox"
                 checked={selected}
@@ -196,7 +201,9 @@ export default function HistoryCard({
               <StatusBadge status={item.status} />
             </div>
             {item.job_company && (
-              <p className="truncate text-sm text-gray-500 dark:text-gray-400">{item.job_company}</p>
+              <p className="truncate text-sm text-gray-500 dark:text-gray-400">
+                {item.job_company}
+              </p>
             )}
             <div className="mt-1 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
               <Clock className="h-3 w-3" />
@@ -264,7 +271,10 @@ export default function HistoryCard({
       >
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Are you sure you want to delete the analysis for{" "}
-          <strong className="text-gray-900 dark:text-white">{item.job_title || "Untitled Position"}</strong>?
+          <strong className="text-gray-900 dark:text-white">
+            {item.job_title || "Untitled Position"}
+          </strong>
+          ?
         </p>
         <ModalFooter>
           <Button variant="outline" onClick={() => setShowDeleteModal(false)} size="sm">

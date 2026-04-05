@@ -76,9 +76,7 @@ describe("ResetPasswordPage", () => {
 
   it("submit button is disabled when fields are empty", () => {
     render(<ResetPasswordPage />);
-    expect(
-      screen.getByRole("button", { name: /Reset password/i })
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Reset password/i })).toBeDisabled();
   });
 
   it("shows mismatch error when passwords don't match", () => {
@@ -114,10 +112,7 @@ describe("ResetPasswordPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Reset password/i }));
     await waitFor(() => {
-      expect(mockResetPassword).toHaveBeenCalledWith(
-        "valid-token-123",
-        STRONG_PASSWORD
-      );
+      expect(mockResetPassword).toHaveBeenCalledWith("valid-token-123", STRONG_PASSWORD);
     });
   });
 

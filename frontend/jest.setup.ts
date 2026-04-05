@@ -16,9 +16,7 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Mock global fetch to prevent network errors in tests
-global.fetch = jest.fn(() =>
-  Promise.reject(new Error("Network request not mocked"))
-) as jest.Mock;
+global.fetch = jest.fn(() => Promise.reject(new Error("Network request not mocked"))) as jest.Mock;
 
 // Suppress console.error for network-related errors to reduce noise
 const originalConsoleError = console.error;

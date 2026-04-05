@@ -15,7 +15,16 @@ import { Mail, Lock, AlertCircle, Clock } from "lucide-react";
 // Inline eye icons — avoids lucide-react export resolution issues in Docker builds
 function EyeSvg({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
       <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -24,7 +33,16 @@ function EyeSvg({ className }: { className?: string }) {
 
 function EyeOffSvg({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
       <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
       <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
       <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
@@ -85,9 +103,7 @@ export default function LoginPage() {
     if (!isLimited) return null;
     const mins = Math.floor(secondsRemaining / 60);
     const secs = secondsRemaining % 60;
-    return mins > 0
-      ? `${mins}m ${secs.toString().padStart(2, "0")}s`
-      : `${secondsRemaining}s`;
+    return mins > 0 ? `${mins}m ${secs.toString().padStart(2, "0")}s` : `${secondsRemaining}s`;
   })();
 
   return (
@@ -107,9 +123,7 @@ export default function LoginPage() {
         )}
       >
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Welcome back
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome back</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Sign in to your account to continue
           </p>
@@ -199,11 +213,7 @@ export default function LoginPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 tabIndex={-1}
               >
-                {showPassword ? (
-                  <EyeOffSvg className="h-4 w-4" />
-                ) : (
-                  <EyeSvg className="h-4 w-4" />
-                )}
+                {showPassword ? <EyeOffSvg className="h-4 w-4" /> : <EyeSvg className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -215,10 +225,7 @@ export default function LoginPage() {
               type="checkbox"
               className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
-            <label
-              htmlFor="remember-me"
-              className="text-sm text-gray-600 dark:text-gray-400"
-            >
+            <label htmlFor="remember-me" className="text-sm text-gray-600 dark:text-gray-400">
               Remember me
             </label>
           </div>

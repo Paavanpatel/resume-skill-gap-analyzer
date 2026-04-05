@@ -142,9 +142,7 @@ describe("PricingPage", () => {
 
   it("renders money-back guarantee note", () => {
     render(<PricingPage />);
-    expect(
-      screen.getByText(/14-day money-back guarantee/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/14-day money-back guarantee/)).toBeInTheDocument();
   });
 
   it("current plan button is disabled", () => {

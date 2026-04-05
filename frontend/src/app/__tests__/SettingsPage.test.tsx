@@ -228,12 +228,16 @@ describe("SettingsPage", () => {
     });
 
     it("renders current plan section", async () => {
-      await act(async () => { renderWithProviders(<SettingsPage />); });
+      await act(async () => {
+        renderWithProviders(<SettingsPage />);
+      });
       expect(screen.getByText("Current plan")).toBeInTheDocument();
     });
 
     it("shows upgrade link for free tier", async () => {
-      await act(async () => { renderWithProviders(<SettingsPage />); });
+      await act(async () => {
+        renderWithProviders(<SettingsPage />);
+      });
       expect(screen.getByText("Upgrade →")).toBeInTheDocument();
     });
 
@@ -250,7 +254,9 @@ describe("SettingsPage", () => {
         updateUser: mockUpdateUser,
         logout: mockLogout,
       });
-      await act(async () => { renderWithProviders(<SettingsPage />); });
+      await act(async () => {
+        renderWithProviders(<SettingsPage />);
+      });
       expect(screen.getByText("Manage Subscription →")).toBeInTheDocument();
     });
   });

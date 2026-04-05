@@ -133,18 +133,14 @@ export default function Navbar() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           {/* Left: Logo + Nav */}
           <div className="flex items-center gap-8">
-            <Link
-              href="/dashboard"
-              className="text-lg font-bold tracking-tighter"
-            >
+            <Link href="/dashboard" className="text-lg font-bold tracking-tighter">
               <span className="text-gradient">SkillGap</span>
             </Link>
 
             <nav className="hidden items-center gap-1 sm:flex">
               {navItems.map(({ href, label, icon: Icon }) => {
                 const isActive =
-                  pathname === href ||
-                  (href !== "/dashboard" && pathname.startsWith(href));
+                  pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
                 return (
                   <Link
@@ -228,9 +224,7 @@ export default function Navbar() {
           {/* Drawer */}
           <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-surface-800 shadow-xl dark:shadow-dark-lg animate-drawer-in sm:hidden">
             <div className="flex h-14 items-center justify-between px-4 border-b border-gray-200 dark:border-surface-700">
-              <span className="text-lg font-bold tracking-tighter text-gradient">
-                SkillGap
-              </span>
+              <span className="text-lg font-bold tracking-tighter text-gradient">SkillGap</span>
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-700"
@@ -252,9 +246,7 @@ export default function Navbar() {
                       {user.full_name}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {user?.email}
-                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                   {user?.tier && (
                     <span
                       className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${tierBadgeClass}`}

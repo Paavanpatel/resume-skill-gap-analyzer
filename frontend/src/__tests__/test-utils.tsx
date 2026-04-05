@@ -6,10 +6,8 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return <ToastProvider>{children}</ToastProvider>;
 };
 
-const customRender = (
-  ui: React.ReactElement,
-  options?: Omit<RenderOptions, "wrapper">
-) => render(ui, { wrapper: AllTheProviders, ...options });
+const customRender = (ui: React.ReactElement, options?: Omit<RenderOptions, "wrapper">) =>
+  render(ui, { wrapper: AllTheProviders, ...options });
 
 export * from "@testing-library/react";
 export { customRender as render };

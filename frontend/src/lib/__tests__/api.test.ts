@@ -28,9 +28,15 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: jest.fn((key: string) => store[key] ?? null),
-    setItem: jest.fn((key: string, value: string) => { store[key] = value; }),
-    removeItem: jest.fn((key: string) => { delete store[key]; }),
-    clear: jest.fn(() => { store = {}; }),
+    setItem: jest.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    removeItem: jest.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
   };
 })();
 
@@ -181,11 +187,9 @@ describe("Resume API functions", () => {
     (apiClient.post as jest.Mock).mockResolvedValue({ data: mockResp });
 
     const result = await uploadResume(file);
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/resume/upload",
-      expect.any(FormData),
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    expect(apiClient.post).toHaveBeenCalledWith("/resume/upload", expect.any(FormData), {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     expect(result).toEqual(mockResp);
   });
 

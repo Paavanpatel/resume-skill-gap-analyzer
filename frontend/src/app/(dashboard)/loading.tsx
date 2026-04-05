@@ -10,7 +10,11 @@
  */
 export default function DashboardLoading() {
   return (
-    <div className="mx-auto max-w-2xl space-y-8 animate-pulse" aria-busy="true" aria-label="Loading dashboard">
+    <div
+      className="mx-auto max-w-2xl space-y-8 animate-pulse"
+      aria-busy="true"
+      aria-label="Loading dashboard"
+    >
       {/* Usage widget skeleton */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-800">
         <div className="mb-3 h-4 w-24 rounded bg-gray-200 dark:bg-surface-600" />

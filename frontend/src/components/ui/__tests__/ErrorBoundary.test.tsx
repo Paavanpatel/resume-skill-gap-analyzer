@@ -102,7 +102,7 @@ describe("ErrorBoundary", () => {
         <ThrowingComponent shouldThrow />
       </ErrorBoundary>
     );
-    
+
     // Verify error boundary renders with fallback UI
     expect(screen.getByTestId("error-boundary-fallback")).toBeInTheDocument();
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();

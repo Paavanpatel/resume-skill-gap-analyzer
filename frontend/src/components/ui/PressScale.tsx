@@ -35,9 +35,11 @@ export default function PressScale({
         "hover:-translate-y-0.5",
         className
       )}
-      style={{
-        // Using CSS custom property so it works with Tailwind's active state
-      }}
+      style={
+        {
+          // Using CSS custom property so it works with Tailwind's active state
+        }
+      }
       data-testid="press-scale"
       onMouseDown={(e: React.MouseEvent) => {
         (e.currentTarget as HTMLElement).style.transform = `scale(${scale})`;

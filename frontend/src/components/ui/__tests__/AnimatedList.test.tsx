@@ -98,7 +98,11 @@ describe("AnimatedList", () => {
       <AnimatedList
         items={items}
         keyExtractor={(item) => item.id}
-        renderItem={(item, index) => <div>Item {index}: {item.name}</div>}
+        renderItem={(item, index) => (
+          <div>
+            Item {index}: {item.name}
+          </div>
+        )}
       />
     );
 

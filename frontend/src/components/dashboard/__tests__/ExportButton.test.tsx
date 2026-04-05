@@ -59,10 +59,9 @@ describe("ExportButton", () => {
     fireEvent.click(screen.getByRole("button"));
 
     await waitFor(() => {
-      expect(mockApiClientGet).toHaveBeenCalledWith(
-        "/insights/test-123/export",
-        { responseType: "blob" }
-      );
+      expect(mockApiClientGet).toHaveBeenCalledWith("/insights/test-123/export", {
+        responseType: "blob",
+      });
     });
     await waitFor(() => {
       expect(screen.getByText("Export PDF")).toBeInTheDocument();

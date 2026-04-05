@@ -29,13 +29,14 @@ import { useToast } from "@/components/ui/Toast";
 const tierColors = {
   free: "bg-gray-100 dark:bg-surface-700 text-gray-600 dark:text-gray-300",
   pro: "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300",
-  enterprise:
-    "bg-warning-100 dark:bg-warning-900/40 text-warning-700 dark:text-warning-300",
+  enterprise: "bg-warning-100 dark:bg-warning-900/40 text-warning-700 dark:text-warning-300",
 };
 
 function TierBadge({ tier }: { tier: "free" | "pro" | "enterprise" }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tierColors[tier]}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tierColors[tier]}`}
+    >
       {tier}
     </span>
   );
@@ -195,9 +196,7 @@ function SecurityTab() {
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Change password
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Change password</h3>
         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           You will be logged out after a successful change.
         </p>
@@ -252,12 +251,8 @@ function PreferencesTab() {
   const { toast } = useToast();
 
   const prefs = user?.preferences ?? {};
-  const [emailNotifications, setEmailNotifications] = useState(
-    prefs.email_notifications !== false
-  );
-  const [aiProvider, setAiProvider] = useState<string>(
-    (prefs.ai_provider as string) ?? "auto"
-  );
+  const [emailNotifications, setEmailNotifications] = useState(prefs.email_notifications !== false);
+  const [aiProvider, setAiProvider] = useState<string>((prefs.ai_provider as string) ?? "auto");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -281,9 +276,7 @@ function PreferencesTab() {
     <div className="space-y-6 max-w-lg">
       {/* Theme */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Appearance
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Appearance</h3>
         <div className="flex gap-2">
           {(["light", "dark", "system"] as const).map((t) => (
             <button
@@ -323,9 +316,7 @@ function PreferencesTab() {
 
       {/* AI provider */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          AI provider
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">AI provider</h3>
         <div className="space-y-2">
           {AI_PROVIDERS.map(({ value, label }) => (
             <label key={value} className="flex items-center gap-3 cursor-pointer">
@@ -431,16 +422,12 @@ function AccountTab() {
               Delete account
             </h3>
             <p className="mt-0.5 text-xs text-danger-700 dark:text-danger-400">
-              This will deactivate your account. Your data is retained for compliance but
-              you will no longer be able to log in.
+              This will deactivate your account. Your data is retained for compliance but you will
+              no longer be able to log in.
             </p>
           </div>
         </div>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => setModalOpen(true)}
-        >
+        <Button variant="danger" size="sm" onClick={() => setModalOpen(true)}>
           Delete my account
         </Button>
       </div>
@@ -505,7 +492,9 @@ function BillingTab() {
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
-    getUsageSummary().then(setUsage).catch(() => {});
+    getUsageSummary()
+      .then(setUsage)
+      .catch(() => {});
   }, []);
 
   async function handlePortal() {
@@ -523,25 +512,17 @@ function BillingTab() {
   if (!user) return null;
 
   const tierLabel =
-    user.tier === "free"
-      ? "Free"
-      : user.tier === "pro"
-        ? "Pro — $12/mo"
-        : "Enterprise — $49/mo";
+    user.tier === "free" ? "Free" : user.tier === "pro" ? "Pro — $12/mo" : "Enterprise — $49/mo";
 
   return (
     <div className="space-y-6 max-w-lg">
       {/* Current plan */}
       <div className="rounded-xl border border-gray-200 dark:border-surface-700 p-5 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Current plan
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Current plan</h3>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <TierBadge tier={user.tier} />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {tierLabel}
-            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{tierLabel}</span>
           </div>
           {user.tier === "free" ? (
             <a
@@ -624,9 +605,7 @@ const TABS = [
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState(
-    searchParams.get("tab") ?? "profile"
-  );
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") ?? "profile");
 
   return (
     <div className="space-y-6">
@@ -638,12 +617,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="rounded-2xl border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 p-6">
-        <Tabs
-          tabs={TABS}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          variant="underline"
-        >
+        <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} variant="underline">
           <TabPanel id="profile" activeTab={activeTab}>
             <ProfileTab />
           </TabPanel>

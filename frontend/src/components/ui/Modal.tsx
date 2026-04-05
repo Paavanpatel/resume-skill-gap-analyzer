@@ -124,10 +124,7 @@ export default function Modal({
                 </h2>
               )}
               {description && (
-                <p
-                  id="modal-description"
-                  className="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                >
+                <p id="modal-description" className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {description}
                 </p>
               )}
@@ -152,13 +149,7 @@ export default function Modal({
 }
 
 /** Convenience footer for modal action buttons */
-export function ModalFooter({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function ModalFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(

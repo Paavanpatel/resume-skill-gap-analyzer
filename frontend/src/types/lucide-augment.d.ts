@@ -37,6 +37,20 @@ declare module "lucide-react" {
   export const CheckCircle: LucideIcon;
   export const MailWarning: LucideIcon;
 
+  // Admin panel icons
+  export const Inbox: LucideIcon;
+  export const Users: LucideIcon;
+  export const ShieldCheck: LucideIcon;
+  export const Activity: LucideIcon;
+  export const HardDrive: LucideIcon;
+  export const Server: LucideIcon;
+  export const Database: LucideIcon;
+  export const Cpu: LucideIcon;
+  export const Layers: LucideIcon;
+  export const MinusCircle: LucideIcon;
+  export const UserX: LucideIcon;
+  export const UserCheck: LucideIcon;
+
   // Dashboard & History components
   export const GitCompareArrows: LucideIcon;
   export const ArrowUp: LucideIcon;

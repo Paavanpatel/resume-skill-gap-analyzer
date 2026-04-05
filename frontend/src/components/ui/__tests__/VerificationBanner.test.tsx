@@ -53,9 +53,7 @@ describe("VerificationBanner", () => {
     });
     render(<VerificationBanner />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(
-      screen.getByText("Please verify your email address.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Please verify your email address.")).toBeInTheDocument();
   });
 
   it("shows Enter code link", () => {

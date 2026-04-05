@@ -6,9 +6,7 @@ import type { HealthStatus } from "@/hooks/useHealthCheck";
 describe("StatusIndicator", () => {
   it("renders a button with aria-label for healthy status", () => {
     render(<StatusIndicator status="healthy" />);
-    expect(
-      screen.getByLabelText("System status: Healthy. Click for details.")
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("System status: Healthy. Click for details.")).toBeInTheDocument();
   });
 
   it("renders a button with aria-label for degraded status", () => {
@@ -27,16 +25,12 @@ describe("StatusIndicator", () => {
 
   it("renders a button with aria-label for unknown status", () => {
     render(<StatusIndicator status="unknown" />);
-    expect(
-      screen.getByLabelText("System status: Unknown. Click for details.")
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("System status: Unknown. Click for details.")).toBeInTheDocument();
   });
 
   it("shows popover when button is clicked", () => {
     render(<StatusIndicator status="healthy" />);
-    fireEvent.click(
-      screen.getByLabelText("System status: Healthy. Click for details.")
-    );
+    fireEvent.click(screen.getByLabelText("System status: Healthy. Click for details."));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("System Health")).toBeInTheDocument();
   });
@@ -52,18 +46,14 @@ describe("StatusIndicator", () => {
 
   it("popover shows status label", () => {
     render(<StatusIndicator status="degraded" />);
-    fireEvent.click(
-      screen.getByLabelText("System status: Degraded. Click for details.")
-    );
+    fireEvent.click(screen.getByLabelText("System status: Degraded. Click for details."));
     expect(screen.getByText("Degraded")).toBeInTheDocument();
   });
 
   it("shows dependency checks in popover", () => {
     const checks = { database: "ok", redis: "ok", celery: "no_workers" };
     render(<StatusIndicator status="degraded" checks={checks} />);
-    fireEvent.click(
-      screen.getByLabelText("System status: Degraded. Click for details.")
-    );
+    fireEvent.click(screen.getByLabelText("System status: Degraded. Click for details."));
     expect(screen.getByText("database")).toBeInTheDocument();
     expect(screen.getByText("redis")).toBeInTheDocument();
     expect(screen.getByText("celery")).toBeInTheDocument();
@@ -71,18 +61,14 @@ describe("StatusIndicator", () => {
 
   it("shows 'No check data available' when checks is null", () => {
     render(<StatusIndicator status="healthy" checks={null} />);
-    fireEvent.click(
-      screen.getByLabelText("System status: Healthy. Click for details.")
-    );
+    fireEvent.click(screen.getByLabelText("System status: Healthy. Click for details."));
     expect(screen.getByText("No check data available.")).toBeInTheDocument();
   });
 
   it("shows last checked time when provided", () => {
     const date = new Date("2024-01-01T10:30:00");
     render(<StatusIndicator status="healthy" lastChecked={date} />);
-    fireEvent.click(
-      screen.getByLabelText("System status: Healthy. Click for details.")
-    );
+    fireEvent.click(screen.getByLabelText("System status: Healthy. Click for details."));
     expect(screen.getByText(/Last checked/)).toBeInTheDocument();
   });
 
@@ -93,9 +79,7 @@ describe("StatusIndicator", () => {
         <button data-testid="outside">Outside</button>
       </div>
     );
-    fireEvent.click(
-      screen.getByLabelText("System status: Healthy. Click for details.")
-    );
+    fireEvent.click(screen.getByLabelText("System status: Healthy. Click for details."));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     fireEvent.mouseDown(screen.getByTestId("outside"));
@@ -119,9 +103,7 @@ describe("StatusIndicator", () => {
   });
 
   it("applies custom className", () => {
-    const { container } = render(
-      <StatusIndicator status="healthy" className="my-class" />
-    );
+    const { container } = render(<StatusIndicator status="healthy" className="my-class" />);
     expect(container.firstChild).toHaveClass("my-class");
   });
 });

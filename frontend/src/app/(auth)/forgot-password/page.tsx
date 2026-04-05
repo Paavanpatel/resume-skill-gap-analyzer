@@ -29,9 +29,7 @@ export default function ForgotPasswordPage() {
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const emailError =
-    touched && email.length > 0 && !emailValid
-      ? "Please enter a valid email address"
-      : undefined;
+    touched && email.length > 0 && !emailValid ? "Please enter a valid email address" : undefined;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,8 +83,8 @@ export default function ForgotPasswordPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Check your inbox</h1>
           <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
             If an account exists for{" "}
-            <span className="font-medium text-gray-700 dark:text-gray-300">{email}</span>, we&apos;ve
-            sent a password reset link. It expires in 1 hour.
+            <span className="font-medium text-gray-700 dark:text-gray-300">{email}</span>,
+            we&apos;ve sent a password reset link. It expires in 1 hour.
           </p>
 
           <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">

@@ -26,16 +26,12 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import {
-  useAnalysisTracker,
-  type TrackedAnalysis,
-} from "@/context/AnalysisTrackerContext";
+import { useAnalysisTracker, type TrackedAnalysis } from "@/context/AnalysisTrackerContext";
 import { cn } from "@/lib/utils";
 
 export default function FloatingAnalysisTracker() {
   const { isAuthenticated } = useAuth();
-  const { analyses, dismiss, dismissAll, activeCount, completedCount } =
-    useAnalysisTracker();
+  const { analyses, dismiss, dismissAll, activeCount, completedCount } = useAnalysisTracker();
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
 
@@ -103,9 +99,7 @@ export default function FloatingAnalysisTracker() {
         ) : completedCount > 0 ? (
           <>
             <CheckCircle2 className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {completedCount} ready to view
-            </span>
+            <span className="text-sm font-medium">{completedCount} ready to view</span>
           </>
         ) : (
           <>
@@ -113,11 +107,7 @@ export default function FloatingAnalysisTracker() {
             <span className="text-sm font-medium">Analysis tracker</span>
           </>
         )}
-        {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5" />
-        ) : (
-          <ChevronUp className="h-3.5 w-3.5" />
-        )}
+        {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
       </button>
     </div>
   );
@@ -175,8 +165,7 @@ function AnalysisItem({
   onView: () => void;
 }) {
   const s = analysis.status;
-  const isActive =
-    !s || (s.status !== "completed" && s.status !== "failed");
+  const isActive = !s || (s.status !== "completed" && s.status !== "failed");
   const isCompleted = s?.status === "completed";
   const isFailed = s?.status === "failed";
 
@@ -195,12 +184,8 @@ function AnalysisItem({
         {/* Status icon + label */}
         <div className="flex items-start gap-2.5 min-w-0">
           <div className="mt-0.5 shrink-0">
-            {isActive && (
-              <Loader2 className="h-4 w-4 animate-spin text-primary-500" />
-            )}
-            {isCompleted && (
-              <CheckCircle2 className="h-4 w-4 text-success-500" />
-            )}
+            {isActive && <Loader2 className="h-4 w-4 animate-spin text-primary-500" />}
+            {isCompleted && <CheckCircle2 className="h-4 w-4 text-success-500" />}
             {isFailed && <XCircle className="h-4 w-4 text-danger-500" />}
           </div>
           <div className="min-w-0">
@@ -222,10 +207,7 @@ function AnalysisItem({
                 </>
               )}
               {isCompleted && `Completed in ${elapsedLabel}`}
-              {isFailed &&
-                (s?.error_message
-                  ? s.error_message.slice(0, 60)
-                  : "Analysis failed")}
+              {isFailed && (s?.error_message ? s.error_message.slice(0, 60) : "Analysis failed")}
             </p>
           </div>
         </div>

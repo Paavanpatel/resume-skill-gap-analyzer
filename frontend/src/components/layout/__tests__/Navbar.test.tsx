@@ -367,198 +367,198 @@ describe("Navbar", () => {
       expect(mockLogout).toHaveBeenCalled();
     });
 
-  //   it("includes settings option in dropdown", () => {
-  //     render(<Navbar />);
-  //     const settingsItem = screen.getByTestId("dropdown-item-settings");
-  //     expect(settingsItem).toBeInTheDocument();
-  //   });
+    //   it("includes settings option in dropdown", () => {
+    //     render(<Navbar />);
+    //     const settingsItem = screen.getByTestId("dropdown-item-settings");
+    //     expect(settingsItem).toBeInTheDocument();
+    //   });
 
-  //   it("includes billing option in dropdown", () => {
-  //     render(<Navbar />);
-  //     const billingItem = screen.getByTestId("dropdown-item-billing");
-  //     expect(billingItem).toBeInTheDocument();
-  //   });
+    //   it("includes billing option in dropdown", () => {
+    //     render(<Navbar />);
+    //     const billingItem = screen.getByTestId("dropdown-item-billing");
+    //     expect(billingItem).toBeInTheDocument();
+    //   });
 
-  //   it("renders user icon in dropdown", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-user")).toBeInTheDocument();
-  //   });
+    //   it("renders user icon in dropdown", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-user")).toBeInTheDocument();
+    //   });
 
-  //   it("renders settings icon in dropdown", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-settings")).toBeInTheDocument();
-  //   });
+    //   it("renders settings icon in dropdown", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-settings")).toBeInTheDocument();
+    //   });
 
-  //   it("renders credit card icon in dropdown", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-creditcard")).toBeInTheDocument();
-  //   });
+    //   it("renders credit card icon in dropdown", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-creditcard")).toBeInTheDocument();
+    //   });
 
-  //   it("renders logout icon in dropdown", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-logout")).toBeInTheDocument();
-  //   });
+    //   it("renders logout icon in dropdown", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-logout")).toBeInTheDocument();
+    //   });
 
-  //   it("navigates to billing when billing item selected", () => {
-  //     render(<Navbar />);
-  //     const billingItem = screen.getByTestId("dropdown-item-billing");
-  //     fireEvent.click(billingItem);
-  //     expect(mockPush).toHaveBeenCalledWith("/settings?tab=billing");
-  //   });
+    //   it("navigates to billing when billing item selected", () => {
+    //     render(<Navbar />);
+    //     const billingItem = screen.getByTestId("dropdown-item-billing");
+    //     fireEvent.click(billingItem);
+    //     expect(mockPush).toHaveBeenCalledWith("/settings?tab=billing");
+    //   });
 
-  //   it("navigates to settings when settings item selected", () => {
-  //     render(<Navbar />);
-  //     const settingsItem = screen.getByTestId("dropdown-item-settings");
-  //     fireEvent.click(settingsItem);
-  //     expect(mockPush).toHaveBeenCalledWith("/settings");
-  //   });
-  // });
+    //   it("navigates to settings when settings item selected", () => {
+    //     render(<Navbar />);
+    //     const settingsItem = screen.getByTestId("dropdown-item-settings");
+    //     fireEvent.click(settingsItem);
+    //     expect(mockPush).toHaveBeenCalledWith("/settings");
+    //   });
+    // });
 
-  // describe("Admin dropdown items", () => {
-  //   it("does not show admin option for regular users", () => {
-  //     render(<Navbar />);
-  //     const adminItem = screen.queryByTestId("dropdown-item-admin");
-  //     expect(adminItem).not.toBeInTheDocument();
-  //   });
+    // describe("Admin dropdown items", () => {
+    //   it("does not show admin option for regular users", () => {
+    //     render(<Navbar />);
+    //     const adminItem = screen.queryByTestId("dropdown-item-admin");
+    //     expect(adminItem).not.toBeInTheDocument();
+    //   });
 
-  //   it("shows admin option for admin users", () => {
-  //     jest.doMock("@/context/AuthContext", () => ({
-  //       useAuth: () => ({
-  //         user: {
-  //           email: "admin@example.com",
-  //           full_name: "Admin User",
-  //           role: "admin",
-  //         },
-  //         logout: mockLogout,
-  //         isAuthenticated: true,
-  //         isLoading: false,
-  //       }),
-  //     }));
+    //   it("shows admin option for admin users", () => {
+    //     jest.doMock("@/context/AuthContext", () => ({
+    //       useAuth: () => ({
+    //         user: {
+    //           email: "admin@example.com",
+    //           full_name: "Admin User",
+    //           role: "admin",
+    //         },
+    //         logout: mockLogout,
+    //         isAuthenticated: true,
+    //         isLoading: false,
+    //       }),
+    //     }));
 
-  //     render(<Navbar />);
-  //     // The dropdown-item-admin should be rendered if role is admin
-  //     // Note: This requires mocking to be reset and reimplemented
-  //     // For now we verify the mock infrastructure is in place
-  //     expect(screen.getByTestId("icon-shield")).toBeInTheDocument();
-  //   });
+    //     render(<Navbar />);
+    //     // The dropdown-item-admin should be rendered if role is admin
+    //     // Note: This requires mocking to be reset and reimplemented
+    //     // For now we verify the mock infrastructure is in place
+    //     expect(screen.getByTestId("icon-shield")).toBeInTheDocument();
+    //   });
 
-  //   it("renders shield icon in dropdown", () => {
-  //     render(<Navbar />);
-  //     // Shield icon should be available in the mock
-  //     expect(screen.getByTestId("icon-shield")).toBeInTheDocument();
-  //   });
-  // });
+    //   it("renders shield icon in dropdown", () => {
+    //     render(<Navbar />);
+    //     // Shield icon should be available in the mock
+    //     expect(screen.getByTestId("icon-shield")).toBeInTheDocument();
+    //   });
+    // });
 
-  // describe("Tier and Icons", () => {
-  //   it("renders sparkles icon", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-sparkles")).toBeInTheDocument();
-  //   });
+    // describe("Tier and Icons", () => {
+    //   it("renders sparkles icon", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-sparkles")).toBeInTheDocument();
+    //   });
 
-  //   it("renders chevron down icon for dropdown trigger", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-chevrondown")).toBeInTheDocument();
-  //   });
+    //   it("renders chevron down icon for dropdown trigger", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-chevrondown")).toBeInTheDocument();
+    //   });
 
-  //   it("renders all required navigation icons", () => {
-  //     render(<Navbar />);
-  //     expect(screen.getByTestId("icon-barchart3")).toBeInTheDocument();
-  //     expect(screen.getByTestId("icon-filetext")).toBeInTheDocument();
-  //     expect(screen.getByTestId("icon-menu")).toBeInTheDocument();
-  //   });
-  // });
+    //   it("renders all required navigation icons", () => {
+    //     render(<Navbar />);
+    //     expect(screen.getByTestId("icon-barchart3")).toBeInTheDocument();
+    //     expect(screen.getByTestId("icon-filetext")).toBeInTheDocument();
+    //     expect(screen.getByTestId("icon-menu")).toBeInTheDocument();
+    //   });
+    // });
 
-  describe("Theme toggle", () => {
-    it("renders theme toggle on desktop", () => {
-      render(<Navbar />);
-      expect(screen.getAllByTestId("theme-toggle").length).toBeGreaterThan(0);
-    });
-
-    it("renders theme toggle in mobile drawer", async () => {
-      render(<Navbar />);
-
-      const menuButton = screen.getByLabelText("Open menu");
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const themeToggles = screen.getAllByTestId("theme-toggle");
-        expect(themeToggles.length).toBeGreaterThan(1); // Desktop + Mobile
+    describe("Theme toggle", () => {
+      it("renders theme toggle on desktop", () => {
+        render(<Navbar />);
+        expect(screen.getAllByTestId("theme-toggle").length).toBeGreaterThan(0);
       });
-    });
-  });
 
-  describe("Sticky header", () => {
-    it("renders as sticky header", () => {
-      const { container } = render(<Navbar />);
-      const header = container.querySelector("header");
-      expect(header).toHaveClass("sticky");
-      expect(header).toHaveClass("top-0");
-      expect(header).toHaveClass("z-40");
-    });
-  });
+      it("renders theme toggle in mobile drawer", async () => {
+        render(<Navbar />);
 
-  describe("Edge cases", () => {
-    it("renders initials correctly for single name", () => {
-      jest.doMock("@/context/AuthContext", () => ({
-        useAuth: () => ({
-          user: {
-            email: "test@example.com",
-            full_name: "User",
-          },
-          logout: mockLogout,
-          isAuthenticated: true,
-          isLoading: false,
-        }),
-      }));
+        const menuButton = screen.getByLabelText("Open menu");
+        fireEvent.click(menuButton);
 
-      render(<Navbar />);
-      expect(screen.getByText("TU")).toBeInTheDocument();
-    });
-
-    it("handles multiple spaces in full_name", () => {
-      render(<Navbar />);
-      expect(screen.getByText("TU")).toBeInTheDocument();
-    });
-  });
-
-  describe("Accessibility", () => {
-    it("mobile menu button has aria-label", () => {
-      render(<Navbar />);
-      const menuButton = screen.getByLabelText("Open menu");
-      expect(menuButton).toHaveAttribute("aria-label");
-    });
-
-    it("mobile close button has aria-label", async () => {
-      render(<Navbar />);
-
-      const menuButton = screen.getByLabelText("Open menu");
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const closeButton = screen.getByLabelText("Close menu");
-        expect(closeButton).toHaveAttribute("aria-label");
+        await waitFor(() => {
+          const themeToggles = screen.getAllByTestId("theme-toggle");
+          expect(themeToggles.length).toBeGreaterThan(1); // Desktop + Mobile
+        });
       });
     });
 
-    it("nav links are proper link elements", () => {
-      render(<Navbar />);
-      const newAnalysisLink = screen.getByText("New Analysis").closest("a");
-      expect(newAnalysisLink).toHaveAttribute("href");
-    });
-  });
-
-  describe("Mobile responsive behavior", () => {
-    it("hides desktop nav on mobile (sm:hidden)", () => {
-      const { container } = render(<Navbar />);
-      const desktopNav = container.querySelector("nav.hidden.sm\\:flex");
-      expect(desktopNav).toBeInTheDocument();
+    describe("Sticky header", () => {
+      it("renders as sticky header", () => {
+        const { container } = render(<Navbar />);
+        const header = container.querySelector("header");
+        expect(header).toHaveClass("sticky");
+        expect(header).toHaveClass("top-0");
+        expect(header).toHaveClass("z-40");
+      });
     });
 
-    it("shows mobile menu button (sm:hidden for desktop)", () => {
-      render(<Navbar />);
-      const menuButton = screen.getByLabelText("Open menu");
-      expect(menuButton).toBeInTheDocument();
+    describe("Edge cases", () => {
+      it("renders initials correctly for single name", () => {
+        jest.doMock("@/context/AuthContext", () => ({
+          useAuth: () => ({
+            user: {
+              email: "test@example.com",
+              full_name: "User",
+            },
+            logout: mockLogout,
+            isAuthenticated: true,
+            isLoading: false,
+          }),
+        }));
+
+        render(<Navbar />);
+        expect(screen.getByText("TU")).toBeInTheDocument();
+      });
+
+      it("handles multiple spaces in full_name", () => {
+        render(<Navbar />);
+        expect(screen.getByText("TU")).toBeInTheDocument();
+      });
+    });
+
+    describe("Accessibility", () => {
+      it("mobile menu button has aria-label", () => {
+        render(<Navbar />);
+        const menuButton = screen.getByLabelText("Open menu");
+        expect(menuButton).toHaveAttribute("aria-label");
+      });
+
+      it("mobile close button has aria-label", async () => {
+        render(<Navbar />);
+
+        const menuButton = screen.getByLabelText("Open menu");
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const closeButton = screen.getByLabelText("Close menu");
+          expect(closeButton).toHaveAttribute("aria-label");
+        });
+      });
+
+      it("nav links are proper link elements", () => {
+        render(<Navbar />);
+        const newAnalysisLink = screen.getByText("New Analysis").closest("a");
+        expect(newAnalysisLink).toHaveAttribute("href");
+      });
+    });
+
+    describe("Mobile responsive behavior", () => {
+      it("hides desktop nav on mobile (sm:hidden)", () => {
+        const { container } = render(<Navbar />);
+        const desktopNav = container.querySelector("nav.hidden.sm\\:flex");
+        expect(desktopNav).toBeInTheDocument();
+      });
+
+      it("shows mobile menu button (sm:hidden for desktop)", () => {
+        render(<Navbar />);
+        const menuButton = screen.getByLabelText("Open menu");
+        expect(menuButton).toBeInTheDocument();
+      });
     });
   });
-});
 });

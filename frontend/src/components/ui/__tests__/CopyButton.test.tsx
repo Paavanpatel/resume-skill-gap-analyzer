@@ -26,7 +26,6 @@ describe("CopyButton", () => {
       jest.runOnlyPendingTimers();
       jest.useRealTimers();
     });
-    
   });
 
   describe("Basic rendering", () => {
@@ -299,18 +298,14 @@ describe("CopyButton", () => {
 
   describe("Custom className", () => {
     it("applies custom className", () => {
-      render(
-        <CopyButton text="Copy me" className="custom-copy-btn" />
-      );
+      render(<CopyButton text="Copy me" className="custom-copy-btn" />);
 
       const button = screen.getByRole("button");
       expect(button).toHaveClass("custom-copy-btn");
     });
 
     it("preserves default classes with custom className", () => {
-      render(
-        <CopyButton text="Copy me" className="custom-class" />
-      );
+      render(<CopyButton text="Copy me" className="custom-class" />);
 
       const button = screen.getByRole("button");
       expect(button).toHaveClass("inline-flex");

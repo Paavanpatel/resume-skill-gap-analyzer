@@ -23,11 +23,7 @@ function TestModalWrapper({
       <button onClick={() => setIsOpen(true)} data-testid="open-button">
         Open Modal
       </button>
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        {...props}
-      >
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} {...props}>
         {props.children || <div>Modal content</div>}
       </Modal>
     </>
@@ -62,12 +58,7 @@ describe("Modal", () => {
   describe("Header content", () => {
     it("shows title and description when provided", () => {
       render(
-        <Modal
-          isOpen={true}
-          onClose={jest.fn()}
-          title="Test Title"
-          description="Test Description"
-        >
+        <Modal isOpen={true} onClose={jest.fn()} title="Test Title" description="Test Description">
           <div>Content</div>
         </Modal>
       );
@@ -88,11 +79,7 @@ describe("Modal", () => {
 
     it("uses modal-title id for accessibility", () => {
       render(
-        <Modal
-          isOpen={true}
-          onClose={jest.fn()}
-          title="Accessible Title"
-        >
+        <Modal isOpen={true} onClose={jest.fn()} title="Accessible Title">
           <div>Content</div>
         </Modal>
       );
@@ -103,11 +90,7 @@ describe("Modal", () => {
 
     it("uses modal-description id for accessibility", () => {
       render(
-        <Modal
-          isOpen={true}
-          onClose={jest.fn()}
-          description="Accessible Description"
-        >
+        <Modal isOpen={true} onClose={jest.fn()} description="Accessible Description">
           <div>Content</div>
         </Modal>
       );
@@ -122,11 +105,7 @@ describe("Modal", () => {
       const mockOnClose = jest.fn();
 
       const { rerender } = render(
-        <Modal
-          isOpen={true}
-          onClose={mockOnClose}
-          title="Test Modal"
-        >
+        <Modal isOpen={true} onClose={mockOnClose} title="Test Modal">
           <div>Content</div>
         </Modal>
       );
@@ -139,12 +118,7 @@ describe("Modal", () => {
 
     it("hides close button when hideCloseButton is true", () => {
       render(
-        <Modal
-          isOpen={true}
-          onClose={jest.fn()}
-          title="Test Modal"
-          hideCloseButton={true}
-        >
+        <Modal isOpen={true} onClose={jest.fn()} title="Test Modal" hideCloseButton={true}>
           <div>Content</div>
         </Modal>
       );
@@ -198,11 +172,7 @@ describe("Modal", () => {
       const mockOnClose = jest.fn();
 
       const { container } = render(
-        <Modal
-          isOpen={true}
-          onClose={mockOnClose}
-          closeOnBackdrop={true}
-        >
+        <Modal isOpen={true} onClose={mockOnClose} closeOnBackdrop={true}>
           <div>Content</div>
         </Modal>
       );
@@ -217,11 +187,7 @@ describe("Modal", () => {
       const mockOnClose = jest.fn();
 
       const { container } = render(
-        <Modal
-          isOpen={true}
-          onClose={mockOnClose}
-          closeOnBackdrop={false}
-        >
+        <Modal isOpen={true} onClose={mockOnClose} closeOnBackdrop={false}>
           <div>Content</div>
         </Modal>
       );
@@ -236,11 +202,7 @@ describe("Modal", () => {
       const mockOnClose = jest.fn();
 
       render(
-        <Modal
-          isOpen={true}
-          onClose={mockOnClose}
-          closeOnBackdrop={true}
-        >
+        <Modal isOpen={true} onClose={mockOnClose} closeOnBackdrop={true}>
           <div data-testid="modal-content">Content</div>
         </Modal>
       );

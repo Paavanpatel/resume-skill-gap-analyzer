@@ -4,14 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
-import {
-  Users,
-  BarChart3,
-  FileText,
-  ArrowLeft,
-  Shield,
-  Activity,
-} from "lucide-react";
+import { Users, BarChart3, FileText, ArrowLeft, Shield, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Skeleton from "@/components/ui/Skeleton";
 import ThemeToggle from "@/components/ui/ThemeToggle";

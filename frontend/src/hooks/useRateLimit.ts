@@ -34,9 +34,7 @@ export interface RateLimitState {
  *
  * @param onLimited Optional callback fired when a new rate limit is detected.
  */
-export function useRateLimit(
-  onLimited?: (retryAfterSeconds: number) => void
-): RateLimitState {
+export function useRateLimit(onLimited?: (retryAfterSeconds: number) => void): RateLimitState {
   const [state, setState] = useState<RateLimitState>({
     isLimited: false,
     secondsRemaining: 0,

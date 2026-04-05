@@ -53,7 +53,11 @@ export default function Dropdown({
     const rect = containerRef.current.getBoundingClientRect();
     setMenuStyle(
       align === "right"
-        ? { top: rect.bottom + window.scrollY + 6, left: rect.right + window.scrollX, transform: "translateX(-100%)" }
+        ? {
+            top: rect.bottom + window.scrollY + 6,
+            left: rect.right + window.scrollX,
+            transform: "translateX(-100%)",
+          }
         : { top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX }
     );
   }, [align]);
@@ -120,9 +124,7 @@ export default function Dropdown({
           break;
         case "ArrowUp":
           e.preventDefault();
-          setFocusIndex(
-            (prev) => (prev - 1 + selectableItems.length) % selectableItems.length
-          );
+          setFocusIndex((prev) => (prev - 1 + selectableItems.length) % selectableItems.length);
           break;
         case "Enter":
         case " ":
@@ -164,10 +166,7 @@ export default function Dropdown({
       {items.map((item, idx) => {
         if (item.divider) {
           return (
-            <div
-              key={`divider-${idx}`}
-              className="my-1 h-px bg-gray-100 dark:bg-surface-700"
-            />
+            <div key={`divider-${idx}`} className="my-1 h-px bg-gray-100 dark:bg-surface-700" />
           );
         }
 
@@ -198,9 +197,7 @@ export default function Dropdown({
                   : "bg-gray-50 dark:bg-surface-700")
             )}
           >
-            {item.icon && (
-              <span className="h-4 w-4 shrink-0">{item.icon}</span>
-            )}
+            {item.icon && <span className="h-4 w-4 shrink-0">{item.icon}</span>}
             {item.label}
           </button>
         );
@@ -211,9 +208,7 @@ export default function Dropdown({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {enhancedTrigger}
-      {typeof window !== "undefined" && menu
-        ? createPortal(menu, document.body)
-        : null}
+      {typeof window !== "undefined" && menu ? createPortal(menu, document.body) : null}
     </div>
   );
 }

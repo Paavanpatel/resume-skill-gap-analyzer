@@ -38,9 +38,7 @@ describe("AuthIllustration", () => {
 
   it("renders social proof text", () => {
     render(<AuthIllustration />);
-    expect(
-      screen.getByText(/Trusted by job seekers/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Trusted by job seekers/)).toBeInTheDocument();
   });
 
   it("applies custom className", () => {

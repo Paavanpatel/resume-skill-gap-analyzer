@@ -31,9 +31,7 @@ class MockWebSocket {
   }
 
   simulateMessage(data: object) {
-    this.onmessage?.(
-      new MessageEvent("message", { data: JSON.stringify(data) })
-    );
+    this.onmessage?.(new MessageEvent("message", { data: JSON.stringify(data) }));
   }
 
   simulateRawMessage(raw: string) {
@@ -50,8 +48,7 @@ class MockWebSocket {
   }
 }
 
-const latestWs = () =>
-  MockWebSocket.instances[MockWebSocket.instances.length - 1];
+const latestWs = () => MockWebSocket.instances[MockWebSocket.instances.length - 1];
 
 // ── Setup ──────────────────────────────────────────────────
 
@@ -87,16 +84,12 @@ describe("useAnalysisWebSocket", () => {
   });
 
   it("does not connect when enabled=false", () => {
-    renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, enabled: false })
-    );
+    renderHook(() => useAnalysisWebSocket({ ...defaultOptions, enabled: false }));
     expect(MockWebSocket.instances).toHaveLength(0);
   });
 
   it("does not connect when token is null", () => {
-    renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, token: null })
-    );
+    renderHook(() => useAnalysisWebSocket({ ...defaultOptions, token: null }));
     expect(MockWebSocket.instances).toHaveLength(0);
   });
 
@@ -145,13 +138,9 @@ describe("useAnalysisWebSocket", () => {
 
   it("calls onProgress callback with status update", async () => {
     const onProgress = jest.fn();
-    renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onProgress })
-    );
+    renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onProgress }));
     act(() => latestWs().simulateOpen());
-    act(() =>
-      latestWs().simulateMessage({ status: "processing", progress: 30 })
-    );
+    act(() => latestWs().simulateMessage({ status: "processing", progress: 30 }));
     await waitFor(() => {
       expect(onProgress).toHaveBeenCalledWith(
         expect.objectContaining({ status: "processing", progress: 30 })
@@ -161,9 +150,7 @@ describe("useAnalysisWebSocket", () => {
 
   it("ignores ping messages", async () => {
     const onProgress = jest.fn();
-    const { result } = renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onProgress })
-    );
+    const { result } = renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onProgress }));
     act(() => latestWs().simulateOpen());
     act(() => latestWs().simulateMessage({ type: "ping" }));
     await waitFor(() => {
@@ -174,13 +161,9 @@ describe("useAnalysisWebSocket", () => {
 
   it("handles completed terminal state", async () => {
     const onComplete = jest.fn();
-    const { result } = renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onComplete })
-    );
+    const { result } = renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onComplete }));
     act(() => latestWs().simulateOpen());
-    act(() =>
-      latestWs().simulateMessage({ status: "completed", progress: 100 })
-    );
+    act(() => latestWs().simulateMessage({ status: "completed", progress: 100 }));
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalled();
       expect(result.current.connectionStatus).toBe("disconnected");
@@ -189,9 +172,7 @@ describe("useAnalysisWebSocket", () => {
 
   it("handles failed terminal state", async () => {
     const onComplete = jest.fn();
-    const { result } = renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onComplete })
-    );
+    const { result } = renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onComplete }));
     act(() => latestWs().simulateOpen());
     act(() =>
       latestWs().simulateMessage({
@@ -200,9 +181,7 @@ describe("useAnalysisWebSocket", () => {
       })
     );
     await waitFor(() => {
-      expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "failed" })
-      );
+      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
       expect(result.current.connectionStatus).toBe("disconnected");
     });
   });
@@ -252,9 +231,7 @@ describe("useAnalysisWebSocket", () => {
 
   it("calls onFallback on code 4003 (auth boundary)", async () => {
     const onFallbackToPolling = jest.fn();
-    renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onFallbackToPolling })
-    );
+    renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onFallbackToPolling }));
     act(() => latestWs().simulateOpen());
     act(() => latestWs().simulateClose(4003));
     await waitFor(() => {
@@ -313,9 +290,7 @@ describe("useAnalysisWebSocket", () => {
 
   it("ignores malformed JSON messages", async () => {
     const onProgress = jest.fn();
-    const { result } = renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onProgress })
-    );
+    const { result } = renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onProgress }));
     act(() => latestWs().simulateOpen());
     act(() => latestWs().simulateRawMessage("not-valid-json{{{"));
     await waitFor(() => {
@@ -353,16 +328,12 @@ describe("useAnalysisWebSocket", () => {
 
   it("does not update state after unmount", async () => {
     const onProgress = jest.fn();
-    const { unmount } = renderHook(() =>
-      useAnalysisWebSocket({ ...defaultOptions, onProgress })
-    );
+    const { unmount } = renderHook(() => useAnalysisWebSocket({ ...defaultOptions, onProgress }));
     const ws = latestWs();
     act(() => ws.simulateOpen());
     unmount();
     // Fire message after unmount — should not throw or update
-    act(() =>
-      ws.simulateMessage({ status: "processing", progress: 50 })
-    );
+    act(() => ws.simulateMessage({ status: "processing", progress: 50 }));
     expect(onProgress).not.toHaveBeenCalled();
   });
 });

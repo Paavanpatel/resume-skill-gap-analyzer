@@ -17,12 +17,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import {
-  adminGetUsers,
-  adminUpdateUser,
-  adminDeactivateUser,
-  getErrorMessage,
-} from "@/lib/api";
+import { adminGetUsers, adminUpdateUser, adminDeactivateUser, getErrorMessage } from "@/lib/api";
 import type { AdminUser, AdminUserListResponse } from "@/lib/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/context/AuthContext";
@@ -46,7 +41,7 @@ function roleBadgeVariant(role: string) {
 export default function AdminUsersPage() {
   usePageTitle("Admin — Users");
   const { user: currentUser } = useAuth();
-  const { addToast } = useToast();
+  const { toast } = useToast();
 
   const [data, setData] = useState<AdminUserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,11 +117,11 @@ export default function AdminUsersPage() {
         return;
       }
       await adminUpdateUser(userId, updates);
-      addToast({ type: "success", message: "User updated." });
+      toast("User updated.", "success");
       setEditingId(null);
       fetchUsers();
     } catch (e) {
-      addToast({ type: "error", message: getErrorMessage(e) });
+      toast(getErrorMessage(e), "error");
     } finally {
       setSaving(false);
     }
@@ -136,11 +131,11 @@ export default function AdminUsersPage() {
     if (!deactivateUser) return;
     try {
       await adminDeactivateUser(deactivateUser.id);
-      addToast({ type: "success", message: `${deactivateUser.email} deactivated.` });
+      toast(`${deactivateUser.email} deactivated.`, "success");
       setDeactivateUser(null);
       fetchUsers();
     } catch (e) {
-      addToast({ type: "error", message: getErrorMessage(e) });
+      toast(getErrorMessage(e), "error");
     }
   };
 
@@ -174,31 +169,44 @@ export default function AdminUsersPage() {
         {/* Tier filter */}
         <select
           value={tierFilter}
-          onChange={(e) => { setTierFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setTierFilter(e.target.value);
+            setPage(1);
+          }}
           className="rounded-lg border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">All tiers</option>
           {TIERS.map((t) => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            <option key={t} value={t}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </option>
           ))}
         </select>
 
         {/* Role filter */}
         <select
           value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setRoleFilter(e.target.value);
+            setPage(1);
+          }}
           className="rounded-lg border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">All roles</option>
           {ROLES.map((r) => (
-            <option key={r} value={r}>{r.replace("_", " ")}</option>
+            <option key={r} value={r}>
+              {r.replace("_", " ")}
+            </option>
           ))}
         </select>
 
         {/* Active filter */}
         <select
           value={activeFilter}
-          onChange={(e) => { setActiveFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setActiveFilter(e.target.value);
+            setPage(1);
+          }}
           className="rounded-lg border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">All status</option>
@@ -223,9 +231,13 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
               <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Tier</th>
               <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Role</th>
-              <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400 text-right">Analyses</th>
+              <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400 text-right">
+                Analyses
+              </th>
               <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Joined</th>
-              <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400 text-right">Actions</th>
+              <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400 text-right">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -265,7 +277,9 @@ export default function AdminUsersPage() {
                           {u.full_name || "—"}
                           {isSelf && <span className="ml-1 text-xs text-gray-400">(you)</span>}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {u.email}
+                        </p>
                       </div>
                     </td>
 
@@ -273,12 +287,18 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         {u.is_active ? (
-                          <Badge variant="success" className="text-xs">Active</Badge>
+                          <Badge variant="success" className="text-xs">
+                            Active
+                          </Badge>
                         ) : (
-                          <Badge variant="danger" className="text-xs">Inactive</Badge>
+                          <Badge variant="danger" className="text-xs">
+                            Inactive
+                          </Badge>
                         )}
                         {u.is_verified && (
-                          <Badge variant="info" className="text-xs">Verified</Badge>
+                          <Badge variant="info" className="text-xs">
+                            Verified
+                          </Badge>
                         )}
                       </div>
                     </td>
@@ -292,7 +312,9 @@ export default function AdminUsersPage() {
                           className="rounded border border-gray-200 dark:border-surface-600 bg-white dark:bg-surface-700 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
                         >
                           {TIERS.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
                           ))}
                         </select>
                       ) : (
@@ -312,7 +334,9 @@ export default function AdminUsersPage() {
                           className="rounded border border-gray-200 dark:border-surface-600 bg-white dark:bg-surface-700 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
                         >
                           {ROLES.map((r) => (
-                            <option key={r} value={r}>{r.replace("_", " ")}</option>
+                            <option key={r} value={r}>
+                              {r.replace("_", " ")}
+                            </option>
                           ))}
                         </select>
                       ) : (
@@ -390,7 +414,7 @@ export default function AdminUsersPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Showing {((page - 1) * 20) + 1}–{Math.min(page * 20, data?.total || 0)} of {data?.total}
+            Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, data?.total || 0)} of {data?.total}
           </p>
           <div className="flex items-center gap-1">
             <button
@@ -416,14 +440,10 @@ export default function AdminUsersPage() {
 
       {/* Deactivate Confirmation Modal */}
       {deactivateUser && (
-        <Modal
-          isOpen
-          onClose={() => setDeactivateUser(null)}
-          title="Deactivate User"
-        >
+        <Modal isOpen onClose={() => setDeactivateUser(null)} title="Deactivate User">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Are you sure you want to deactivate <strong>{deactivateUser.email}</strong>?
-            They will be unable to log in until reactivated.
+            Are you sure you want to deactivate <strong>{deactivateUser.email}</strong>? They will
+            be unable to log in until reactivated.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setDeactivateUser(null)}>

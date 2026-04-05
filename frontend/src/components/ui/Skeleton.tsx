@@ -51,15 +51,7 @@ export default function Skeleton({
   }
 
   if (variant === "card") {
-    return (
-      <div
-        className={cn(
-          "skeleton rounded-xl",
-          "h-32 w-full",
-          className
-        )}
-      />
-    );
+    return <div className={cn("skeleton rounded-xl", "h-32 w-full", className)} />;
   }
 
   // Default: rect

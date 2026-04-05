@@ -49,12 +49,15 @@ function DeltaDisplay({ label, valueA, valueB, suffix = "%" }: DeltaProps) {
           <span
             className={cn(
               "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold",
-              improved && "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400",
-              regressed && "bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400"
+              improved &&
+                "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400",
+              regressed &&
+                "bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400"
             )}
           >
             {improved ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-            {Math.abs(Math.round(delta))}{suffix}
+            {Math.abs(Math.round(delta))}
+            {suffix}
           </span>
         )}
         {delta === 0 && (
@@ -96,7 +99,12 @@ function ScoreColumn({
         <div>
           <ScoreRing score={result.match_score} label="Match" size={80} strokeWidth={6} />
           <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
-            <AnimatedCounter value={result.match_score ?? 0} suffix="%" duration={800} animateOnView={false} />
+            <AnimatedCounter
+              value={result.match_score ?? 0}
+              suffix="%"
+              duration={800}
+              animateOnView={false}
+            />
           </p>
         </div>
         <div className="flex gap-6">
@@ -109,7 +117,9 @@ function ScoreColumn({
           <div className="text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400">Format</p>
             <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-              {result.ats_check?.format_score != null ? `${Math.round(result.ats_check.format_score)}%` : "--"}
+              {result.ats_check?.format_score != null
+                ? `${Math.round(result.ats_check.format_score)}%`
+                : "--"}
             </p>
           </div>
         </div>
@@ -130,13 +140,7 @@ function ScoreColumn({
   );
 }
 
-function SkillsDiff({
-  resultA,
-  resultB,
-}: {
-  resultA: AnalysisResult;
-  resultB: AnalysisResult;
-}) {
+function SkillsDiff({ resultA, resultB }: { resultA: AnalysisResult; resultB: AnalysisResult }) {
   const matchedA = new Set((resultA.matched_skills || []).map((s) => s.name.toLowerCase()));
   const matchedB = new Set((resultB.matched_skills || []).map((s) => s.name.toLowerCase()));
   const missingA = new Set((resultA.missing_skills || []).map((s) => s.name.toLowerCase()));
@@ -211,7 +215,10 @@ function SkillsDiff({
 }
 
 export default function ComparisonView({ analysisIds, onClose, className }: ComparisonViewProps) {
-  const [results, setResults] = useState<[AnalysisResult | null, AnalysisResult | null]>([null, null]);
+  const [results, setResults] = useState<[AnalysisResult | null, AnalysisResult | null]>([
+    null,
+    null,
+  ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -236,7 +243,10 @@ export default function ComparisonView({ analysisIds, onClose, className }: Comp
 
   if (loading) {
     return (
-      <Card className={cn("animate-pulse py-12 text-center", className)} data-testid="comparison-loading">
+      <Card
+        className={cn("animate-pulse py-12 text-center", className)}
+        data-testid="comparison-loading"
+      >
         <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
         <p className="mt-3 text-sm text-gray-500">Loading comparison...</p>
       </Card>
@@ -283,7 +293,11 @@ export default function ComparisonView({ analysisIds, onClose, className }: Comp
           Score Changes (A → B)
         </p>
         <div className="grid grid-cols-3 gap-3">
-          <DeltaDisplay label="Match Score" valueA={resultA.match_score} valueB={resultB.match_score} />
+          <DeltaDisplay
+            label="Match Score"
+            valueA={resultA.match_score}
+            valueB={resultB.match_score}
+          />
           <DeltaDisplay label="ATS Score" valueA={resultA.ats_score} valueB={resultB.ats_score} />
           <DeltaDisplay
             label="Format Score"

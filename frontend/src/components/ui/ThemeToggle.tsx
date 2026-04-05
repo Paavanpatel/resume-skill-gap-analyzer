@@ -11,10 +11,7 @@ interface ThemeToggleProps {
   className?: string;
 }
 
-export default function ThemeToggle({
-  variant = "icon",
-  className,
-}: ThemeToggleProps) {
+export default function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -22,14 +19,7 @@ export default function ThemeToggle({
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
   if (!mounted) {
-    return (
-      <div
-        className={cn(
-          "h-9 w-9 rounded-lg bg-gray-100 dark:bg-surface-700",
-          className
-        )}
-      />
-    );
+    return <div className={cn("h-9 w-9 rounded-lg bg-gray-100 dark:bg-surface-700", className)} />;
   }
 
   if (variant === "full") {

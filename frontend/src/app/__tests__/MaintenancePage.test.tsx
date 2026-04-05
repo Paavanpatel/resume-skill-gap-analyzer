@@ -10,9 +10,7 @@ describe("MaintenancePage", () => {
 
   it("renders maintenance description", () => {
     render(<MaintenancePage />);
-    expect(
-      screen.getByText(/We're making improvements/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/We're making improvements/)).toBeInTheDocument();
   });
 
   it("renders status indicators", () => {

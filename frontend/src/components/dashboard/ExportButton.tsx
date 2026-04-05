@@ -89,12 +89,7 @@ export default function ExportButton({ analysisId }: ExportButtonProps) {
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleExport}
-      isLoading={isDownloading}
-    >
+    <Button variant="outline" size="sm" onClick={handleExport} isLoading={isDownloading}>
       <FileText className="h-4 w-4" />
       {isDownloading ? "Exporting..." : "Export PDF"}
     </Button>

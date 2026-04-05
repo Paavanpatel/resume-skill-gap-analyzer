@@ -19,9 +19,7 @@ export default function OfflineBanner() {
   // Ref avoids adding wasOffline to the effect dependency array,
   // which would cause event listeners to be torn down and re-added
   // every time the user first goes offline.
-  const wasOfflineRef = useRef(
-    typeof window !== "undefined" && !navigator.onLine
-  );
+  const wasOfflineRef = useRef(typeof window !== "undefined" && !navigator.onLine);
 
   useEffect(() => {
     function handleOffline() {
@@ -55,9 +53,7 @@ export default function OfflineBanner() {
       aria-live="polite"
       className={cn(
         "fixed inset-x-0 top-0 z-[9999] flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-transform duration-300",
-        isOffline
-          ? "bg-danger-600 text-white"
-          : "bg-success-600 text-white"
+        isOffline ? "bg-danger-600 text-white" : "bg-success-600 text-white"
       )}
     >
       {isOffline ? (

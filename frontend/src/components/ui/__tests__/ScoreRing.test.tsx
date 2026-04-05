@@ -71,41 +71,31 @@ describe("ScoreRing", () => {
   });
 
   it("applies glow class for high score when glow=true", () => {
-    const { container } = render(
-      <ScoreRing score={85} label="Score" glow={true} />
-    );
+    const { container } = render(<ScoreRing score={85} label="Score" glow={true} />);
     const ring = container.querySelector(".relative.rounded-full");
     expect(ring?.className).toContain("shadow-glow-success");
   });
 
   it("applies glow class for medium-high score when glow=true", () => {
-    const { container } = render(
-      <ScoreRing score={65} label="Score" glow={true} />
-    );
+    const { container } = render(<ScoreRing score={65} label="Score" glow={true} />);
     const ring = container.querySelector(".relative.rounded-full");
     expect(ring?.className).toContain("shadow-glow");
   });
 
   it("applies glow class for medium score when glow=true", () => {
-    const { container } = render(
-      <ScoreRing score={45} label="Score" glow={true} />
-    );
+    const { container } = render(<ScoreRing score={45} label="Score" glow={true} />);
     const ring = container.querySelector(".relative.rounded-full");
     expect(ring?.className).toContain("shadow-glow-warning");
   });
 
   it("applies glow-danger class for low score when glow=true", () => {
-    const { container } = render(
-      <ScoreRing score={20} label="Score" glow={true} />
-    );
+    const { container } = render(<ScoreRing score={20} label="Score" glow={true} />);
     const ring = container.querySelector(".relative.rounded-full");
     expect(ring?.className).toContain("shadow-glow-danger");
   });
 
   it("applies custom className", () => {
-    const { container } = render(
-      <ScoreRing score={50} label="Score" className="custom-ring" />
-    );
+    const { container } = render(<ScoreRing score={50} label="Score" className="custom-ring" />);
     expect(container.firstChild).toHaveClass("custom-ring");
   });
 });

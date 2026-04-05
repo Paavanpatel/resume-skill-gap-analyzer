@@ -84,9 +84,7 @@ describe("AnimatedCounter", () => {
   });
 
   it("renders prefix + value + suffix together", () => {
-    render(
-      <AnimatedCounter value={50} prefix="#" suffix=" pts" animateOnView={false} />
-    );
+    render(<AnimatedCounter value={50} prefix="#" suffix=" pts" animateOnView={false} />);
     expect(screen.getByText("#50 pts")).toBeInTheDocument();
   });
 

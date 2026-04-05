@@ -19,9 +19,7 @@ module.exports = {
       },
     ],
   },
-  transformIgnorePatterns: [
-    "/node_modules/(?!(lucide-react)/)",
-  ],
+  transformIgnorePatterns: ["/node_modules/(?!(lucide-react)/)"],
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",

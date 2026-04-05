@@ -61,11 +61,7 @@ export default function PageTransition({
 
   return (
     <div
-      className={cn(
-        "transition-all ease-out",
-        isVisible ? to : from,
-        className
-      )}
+      className={cn("transition-all ease-out", isVisible ? to : from, className)}
       style={{ transitionDuration: `${duration}ms` }}
       data-testid="page-transition"
     >

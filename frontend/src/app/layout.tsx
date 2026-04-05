@@ -19,13 +19,7 @@ export const metadata: Metadata = {
   },
   description:
     "AI-powered resume analysis that identifies skill gaps, provides ATS scoring, and generates personalized improvement roadmaps.",
-  keywords: [
-    "resume analyzer",
-    "skill gap",
-    "ATS score",
-    "job matching",
-    "career development",
-  ],
+  keywords: ["resume analyzer", "skill gap", "ATS score", "job matching", "career development"],
   authors: [{ name: "RSGA Team" }],
   openGraph: {
     type: "website",
@@ -60,9 +54,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${inter.className} ${inter.variable} antialiased`}
-      >
+      <body className={`${inter.className} ${inter.variable} antialiased`}>
         <OfflineBanner />
         <SkipToContent />
         <ThemeProvider>

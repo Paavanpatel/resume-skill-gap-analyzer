@@ -13,9 +13,7 @@ describe("Skeleton", () => {
     });
 
     it("applies custom className to rect variant", () => {
-      const { container } = render(
-        <Skeleton className="custom-class" />
-      );
+      const { container } = render(<Skeleton className="custom-class" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveClass("custom-class");
@@ -23,27 +21,21 @@ describe("Skeleton", () => {
     });
 
     it("applies width and height styles to rect variant", () => {
-      const { container } = render(
-        <Skeleton width="200px" height="40px" />
-      );
+      const { container } = render(<Skeleton width="200px" height="40px" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveStyle({ width: "200px", height: "40px" });
     });
 
     it("applies default height when only height is provided", () => {
-      const { container } = render(
-        <Skeleton variant="rect" height="50px" />
-      );
+      const { container } = render(<Skeleton variant="rect" height="50px" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveStyle({ height: "50px" });
     });
 
     it("uses default height (20px) when not specified", () => {
-      const { container } = render(
-        <Skeleton variant="rect" width="100px" />
-      );
+      const { container } = render(<Skeleton variant="rect" width="100px" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveStyle({ height: "20px" });
@@ -52,9 +44,7 @@ describe("Skeleton", () => {
 
   describe("Circle variant", () => {
     it("renders circle variant", () => {
-      const { container } = render(
-        <Skeleton variant="circle" />
-      );
+      const { container } = render(<Skeleton variant="circle" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toBeInTheDocument();
@@ -62,9 +52,7 @@ describe("Skeleton", () => {
     });
 
     it("applies custom className to circle variant", () => {
-      const { container } = render(
-        <Skeleton variant="circle" className="custom-circle" />
-      );
+      const { container } = render(<Skeleton variant="circle" className="custom-circle" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveClass("custom-circle");
@@ -72,9 +60,7 @@ describe("Skeleton", () => {
     });
 
     it("uses default size (40px) for circle when width not provided", () => {
-      const { container } = render(
-        <Skeleton variant="circle" />
-      );
+      const { container } = render(<Skeleton variant="circle" />);
 
       const skeleton = container.querySelector(".skeleton") as HTMLElement;
       expect(skeleton?.style.width).toBe("40px");
@@ -82,9 +68,7 @@ describe("Skeleton", () => {
     });
 
     it("applies custom width and height to circle", () => {
-      const { container } = render(
-        <Skeleton variant="circle" width="80px" height="80px" />
-      );
+      const { container } = render(<Skeleton variant="circle" width="80px" height="80px" />);
 
       const skeleton = container.querySelector(".skeleton") as HTMLElement;
       expect(skeleton?.style.width).toBe("80px");
@@ -92,9 +76,7 @@ describe("Skeleton", () => {
     });
 
     it("uses width for height if height not provided", () => {
-      const { container } = render(
-        <Skeleton variant="circle" width="60px" />
-      );
+      const { container } = render(<Skeleton variant="circle" width="60px" />);
 
       const skeleton = container.querySelector(".skeleton") as HTMLElement;
       expect(skeleton?.style.width).toBe("60px");
@@ -104,9 +86,7 @@ describe("Skeleton", () => {
 
   describe("Card variant", () => {
     it("renders card variant", () => {
-      const { container } = render(
-        <Skeleton variant="card" />
-      );
+      const { container } = render(<Skeleton variant="card" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toBeInTheDocument();
@@ -114,9 +94,7 @@ describe("Skeleton", () => {
     });
 
     it("applies fixed height and width for card", () => {
-      const { container } = render(
-        <Skeleton variant="card" />
-      );
+      const { container } = render(<Skeleton variant="card" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveClass("h-32");
@@ -124,9 +102,7 @@ describe("Skeleton", () => {
     });
 
     it("applies custom className to card variant", () => {
-      const { container } = render(
-        <Skeleton variant="card" className="custom-card" />
-      );
+      const { container } = render(<Skeleton variant="card" className="custom-card" />);
 
       const skeleton = container.querySelector(".skeleton");
       expect(skeleton).toHaveClass("custom-card");
@@ -136,27 +112,21 @@ describe("Skeleton", () => {
 
   describe("Text variant with multiple lines", () => {
     it("renders multiple text lines", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={3} />
-      );
+      const { container } = render(<Skeleton variant="text" lines={3} />);
 
       const lines = container.querySelectorAll(".skeleton");
       expect(lines).toHaveLength(3);
     });
 
     it("renders single text line by default", () => {
-      const { container } = render(
-        <Skeleton variant="text" />
-      );
+      const { container } = render(<Skeleton variant="text" />);
 
       const lines = container.querySelectorAll(".skeleton");
       expect(lines).toHaveLength(1);
     });
 
     it("last text line is shorter (w-3/4)", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={3} />
-      );
+      const { container } = render(<Skeleton variant="text" lines={3} />);
 
       const lines = container.querySelectorAll(".skeleton");
       const lastLine = lines[lines.length - 1];
@@ -165,9 +135,7 @@ describe("Skeleton", () => {
     });
 
     it("non-last lines are full width", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={3} />
-      );
+      const { container } = render(<Skeleton variant="text" lines={3} />);
 
       const lines = container.querySelectorAll(".skeleton");
 
@@ -180,9 +148,7 @@ describe("Skeleton", () => {
     });
 
     it("applies correct height to text lines", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={2} />
-      );
+      const { container } = render(<Skeleton variant="text" lines={2} />);
 
       const lines = container.querySelectorAll(".skeleton");
       lines.forEach((line) => {
@@ -191,27 +157,21 @@ describe("Skeleton", () => {
     });
 
     it("applies spacing between lines", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={2} />
-      );
+      const { container } = render(<Skeleton variant="text" lines={2} />);
 
       const wrapper = container.querySelector(".space-y-2");
       expect(wrapper).toBeInTheDocument();
     });
 
     it("applies custom className to text wrapper", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={2} className="custom-text" />
-      );
+      const { container } = render(<Skeleton variant="text" lines={2} className="custom-text" />);
 
       const wrapper = container.querySelector(".space-y-2");
       expect(wrapper).toHaveClass("custom-text");
     });
 
     it("applies custom width to text lines", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={2} width="150px" />
-      );
+      const { container } = render(<Skeleton variant="text" lines={2} width="150px" />);
 
       const lines = container.querySelectorAll(".skeleton");
 
@@ -222,9 +182,7 @@ describe("Skeleton", () => {
     });
 
     it("applies custom height to text lines", () => {
-      const { container } = render(
-        <Skeleton variant="text" lines={2} height="16px" />
-      );
+      const { container } = render(<Skeleton variant="text" lines={2} height="16px" />);
 
       const lines = container.querySelectorAll(".skeleton");
       lines.forEach((line) => {
@@ -383,24 +341,16 @@ describe("Skeleton", () => {
 
   describe("Skeleton CSS classes", () => {
     it("all skeletons have skeleton base class", () => {
-      const { container: rectContainer } = render(
-        <Skeleton variant="rect" />
-      );
+      const { container: rectContainer } = render(<Skeleton variant="rect" />);
       expect(rectContainer.querySelector(".skeleton")).toBeInTheDocument();
 
-      const { container: circleContainer } = render(
-        <Skeleton variant="circle" />
-      );
+      const { container: circleContainer } = render(<Skeleton variant="circle" />);
       expect(circleContainer.querySelector(".skeleton")).toBeInTheDocument();
 
-      const { container: cardContainer } = render(
-        <Skeleton variant="card" />
-      );
+      const { container: cardContainer } = render(<Skeleton variant="card" />);
       expect(cardContainer.querySelector(".skeleton")).toBeInTheDocument();
 
-      const { container: textContainer } = render(
-        <Skeleton variant="text" />
-      );
+      const { container: textContainer } = render(<Skeleton variant="text" />);
       expect(textContainer.querySelector(".skeleton")).toBeInTheDocument();
     });
 
@@ -412,9 +362,7 @@ describe("Skeleton", () => {
       ];
 
       variants.forEach(([variant, roundedClass]) => {
-        const { container } = render(
-          <Skeleton variant={variant as any} />
-        );
+        const { container } = render(<Skeleton variant={variant as any} />);
         const skeleton = container.querySelector(".skeleton");
         expect(skeleton).toHaveClass(roundedClass);
       });

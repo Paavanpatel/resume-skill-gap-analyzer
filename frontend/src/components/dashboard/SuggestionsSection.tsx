@@ -47,15 +47,19 @@ export default function SuggestionsSection({ suggestions }: SuggestionsSectionPr
                     <SectionBadge section={s.section} />
                     {s.priority && (
                       <Badge
-                        variant={s.priority === "high" ? "danger" : s.priority === "medium" ? "warning" : "info"}
+                        variant={
+                          s.priority === "high"
+                            ? "danger"
+                            : s.priority === "medium"
+                              ? "warning"
+                              : "info"
+                        }
                         className="text-xs capitalize shrink-0"
                       >
                         {s.priority}
                       </Badge>
                     )}
-                    <span className="truncate text-sm font-medium text-gray-800">
-                      {s.reason}
-                    </span>
+                    <span className="truncate text-sm font-medium text-gray-800">{s.reason}</span>
                   </div>
                   {isExpanded ? (
                     <ChevronUp className="h-4 w-4 shrink-0 text-gray-400" />
@@ -68,13 +72,21 @@ export default function SuggestionsSection({ suggestions }: SuggestionsSectionPr
                   <div className="border-t border-gray-100 px-4 py-3 space-y-3">
                     {s.current && (
                       <div>
-                        <p className="mb-1 text-xs font-semibold uppercase text-gray-500">Current</p>
-                        <p className="rounded bg-red-50 px-3 py-2 text-sm text-gray-700">{s.current}</p>
+                        <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                          Current
+                        </p>
+                        <p className="rounded bg-red-50 px-3 py-2 text-sm text-gray-700">
+                          {s.current}
+                        </p>
                       </div>
                     )}
                     <div>
-                      <p className="mb-1 text-xs font-semibold uppercase text-gray-500">Suggested</p>
-                      <p className="rounded bg-green-50 px-3 py-2 text-sm text-gray-700">{s.suggested}</p>
+                      <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                        Suggested
+                      </p>
+                      <p className="rounded bg-green-50 px-3 py-2 text-sm text-gray-700">
+                        {s.suggested}
+                      </p>
                     </div>
                     {s.source && (
                       <p className="text-xs text-gray-400">

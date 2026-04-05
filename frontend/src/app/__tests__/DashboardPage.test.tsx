@@ -507,10 +507,10 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     fireEvent.click(screen.getByText(/drag and drop/i).closest("div")!);
-    
+
     // Wait for upload to complete and filename to appear
     await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
-    
+
     fireEvent.change(screen.getByPlaceholderText(/Paste the full job description/i), {
       target: { value: LONG_JD },
     });

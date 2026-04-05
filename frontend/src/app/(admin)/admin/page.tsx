@@ -20,46 +20,43 @@ import type { AnalyticsOverview, StorageStats } from "@/lib/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Lazy-load recharts to keep bundle small
-const ResponsiveContainer = dynamic(
-  () => import("recharts").then((m) => m.ResponsiveContainer),
-  { ssr: false }
-);
+const ResponsiveContainer = dynamic(() => import("recharts").then((m) => m.ResponsiveContainer), {
+  ssr: false,
+});
 const LineChart = dynamic(() => import("recharts").then((m) => m.LineChart), {
   ssr: false,
 });
-const Line = dynamic(() => import("recharts").then((m) => m.Line), {
+const Line = dynamic<any>(() => import("recharts").then((m) => m.Line), {
   ssr: false,
 });
 const BarChart = dynamic(() => import("recharts").then((m) => m.BarChart), {
   ssr: false,
 });
-const Bar = dynamic(() => import("recharts").then((m) => m.Bar), {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Bar = dynamic<any>(() => import("recharts").then((m) => m.Bar as any), {
   ssr: false,
 });
 const PieChart = dynamic(() => import("recharts").then((m) => m.PieChart), {
   ssr: false,
 });
-const Pie = dynamic(() => import("recharts").then((m) => m.Pie), {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Pie = dynamic<any>(() => import("recharts").then((m) => m.Pie as any), {
   ssr: false,
 });
 const Cell = dynamic(() => import("recharts").then((m) => m.Cell), {
   ssr: false,
 });
-const XAxis = dynamic(() => import("recharts").then((m) => m.XAxis), {
+const XAxis = dynamic<any>(() => import("recharts").then((m) => m.XAxis), {
   ssr: false,
 });
-const YAxis = dynamic(() => import("recharts").then((m) => m.YAxis), {
+const YAxis = dynamic<any>(() => import("recharts").then((m) => m.YAxis), {
   ssr: false,
 });
-const CartesianGrid = dynamic(
-  () => import("recharts").then((m) => m.CartesianGrid),
-  { ssr: false }
-);
-const Tooltip = dynamic(
-  () => import("recharts").then((m) => m.Tooltip),
-  { ssr: false }
-);
-const Legend = dynamic(() => import("recharts").then((m) => m.Legend), {
+const CartesianGrid = dynamic(() => import("recharts").then((m) => m.CartesianGrid), {
+  ssr: false,
+});
+const Tooltip = dynamic<any>(() => import("recharts").then((m) => m.Tooltip), { ssr: false });
+const Legend = dynamic<any>(() => import("recharts").then((m) => m.Legend), {
   ssr: false,
 });
 
@@ -117,10 +114,7 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    Promise.all([
-      adminGetAnalytics(days),
-      adminGetStorageStats(),
-    ])
+    Promise.all([adminGetAnalytics(days), adminGetStorageStats()])
       .then(([analytics, storage]) => {
         setData(analytics);
         setStorageStats(storage);
@@ -153,7 +147,7 @@ export default function AdminAnalyticsPage() {
         <Skeleton variant="text" width="200px" height="28px" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} variant="rectangular" height="88px" className="rounded-xl" />
+            <Skeleton key={i} variant="rect" height="88px" className="rounded-xl" />
           ))}
         </div>
       </div>
@@ -232,9 +226,11 @@ export default function AdminAnalyticsPage() {
           value={data.failed_analyses}
           icon={XCircle}
           color="bg-danger-500"
-          sub={data.total_analyses > 0
-            ? `${((data.failed_analyses / data.total_analyses) * 100).toFixed(1)}% failure rate`
-            : undefined}
+          sub={
+            data.total_analyses > 0
+              ? `${((data.failed_analyses / data.total_analyses) * 100).toFixed(1)}% failure rate`
+              : undefined
+          }
         />
         <KpiCard
           label="Active Users"
@@ -247,9 +243,11 @@ export default function AdminAnalyticsPage() {
           value={data.verified_users}
           icon={ShieldCheck}
           color="bg-success-500"
-          sub={data.total_users > 0
-            ? `${((data.verified_users / data.total_users) * 100).toFixed(0)}% verified`
-            : undefined}
+          sub={
+            data.total_users > 0
+              ? `${((data.verified_users / data.total_users) * 100).toFixed(0)}% verified`
+              : undefined
+          }
         />
       </div>
 
@@ -261,13 +259,20 @@ export default function AdminAnalyticsPage() {
               <HardDrive className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                File Storage
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">File Storage</h3>
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Backend: <span className="font-medium text-gray-600 dark:text-gray-300">{storageStats.backend.toUpperCase()}</span>
+                Backend:{" "}
+                <span className="font-medium text-gray-600 dark:text-gray-300">
+                  {storageStats.backend.toUpperCase()}
+                </span>
                 {storageStats.bucket && (
-                  <> &mdash; bucket: <span className="font-mono text-gray-600 dark:text-gray-300">{storageStats.bucket}</span></>
+                  <>
+                    {" "}
+                    &mdash; bucket:{" "}
+                    <span className="font-mono text-gray-600 dark:text-gray-300">
+                      {storageStats.bucket}
+                    </span>
+                  </>
                 )}
               </p>
             </div>
@@ -301,7 +306,10 @@ export default function AdminAnalyticsPage() {
           </div>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.analyses_per_day} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <BarChart
+                data={data.analyses_per_day}
+                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+              >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="currentColor"
@@ -313,7 +321,7 @@ export default function AdminAnalyticsPage() {
                   className="text-gray-400 dark:text-gray-500"
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v) => {
+                  tickFormatter={(v: string) => {
                     const d = new Date(v);
                     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                   }}
@@ -349,7 +357,10 @@ export default function AdminAnalyticsPage() {
           </div>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.registrations_per_day} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <LineChart
+                data={data.registrations_per_day}
+                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+              >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="currentColor"
@@ -361,7 +372,7 @@ export default function AdminAnalyticsPage() {
                   className="text-gray-400 dark:text-gray-500"
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v) => {
+                  tickFormatter={(v: string) => {
                     const d = new Date(v);
                     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                   }}
@@ -399,9 +410,7 @@ export default function AdminAnalyticsPage() {
         <Card>
           <div className="mb-4 flex items-center gap-2">
             <Users className="h-4 w-4 text-primary-500" />
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-              Users by Tier
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Users by Tier</h3>
           </div>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -414,7 +423,7 @@ export default function AdminAnalyticsPage() {
                   outerRadius={80}
                   paddingAngle={3}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
+                  label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`}
                   labelLine={false}
                 >
                   {tierData.map((entry, i) => (
@@ -447,7 +456,7 @@ export default function AdminAnalyticsPage() {
                   outerRadius={80}
                   paddingAngle={3}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
+                  label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`}
                   labelLine={false}
                 >
                   {statusData.map((entry, i) => (

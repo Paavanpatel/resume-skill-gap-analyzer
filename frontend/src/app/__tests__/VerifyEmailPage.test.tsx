@@ -68,9 +68,7 @@ describe("VerifyEmailPage", () => {
 
   it("submit button is disabled when OTP is incomplete", () => {
     render(<VerifyEmailPage />);
-    expect(
-      screen.getByRole("button", { name: /Verify email/i })
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Verify email/i })).toBeDisabled();
   });
 
   it("enables submit after all 6 digits entered", () => {
@@ -80,9 +78,7 @@ describe("VerifyEmailPage", () => {
         target: { value: `${i}` },
       });
     }
-    expect(
-      screen.getByRole("button", { name: /Verify email/i })
-    ).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Verify email/i })).not.toBeDisabled();
   });
 
   it("calls verifyEmail with correct otp on submit", async () => {
@@ -95,10 +91,7 @@ describe("VerifyEmailPage", () => {
     }
     fireEvent.click(screen.getByRole("button", { name: /Verify email/i }));
     await waitFor(() => {
-      expect(mockVerifyEmail).toHaveBeenCalledWith(
-        "test@example.com",
-        "123456"
-      );
+      expect(mockVerifyEmail).toHaveBeenCalledWith("test@example.com", "123456");
     });
   });
 

@@ -61,10 +61,7 @@ function getStrength(requirements: PasswordRequirement[]): {
   };
 }
 
-export default function PasswordStrengthMeter({
-  password,
-  className,
-}: PasswordStrengthMeterProps) {
+export default function PasswordStrengthMeter({ password, className }: PasswordStrengthMeterProps) {
   const requirements = useMemo(() => getRequirements(password), [password]);
   const strength = useMemo(() => getStrength(requirements), [requirements]);
 
@@ -80,17 +77,13 @@ export default function PasswordStrengthMeter({
               key={segment}
               className={cn(
                 "h-1.5 flex-1 rounded-full transition-all duration-300",
-                segment <= strength.score
-                  ? strength.barColor
-                  : "bg-gray-200 dark:bg-surface-700"
+                segment <= strength.score ? strength.barColor : "bg-gray-200 dark:bg-surface-700"
               )}
             />
           ))}
         </div>
         {strength.label && (
-          <p className={cn("text-xs font-medium", strength.color)}>
-            {strength.label}
-          </p>
+          <p className={cn("text-xs font-medium", strength.color)}>{strength.label}</p>
         )}
       </div>
 
@@ -106,11 +99,7 @@ export default function PasswordStrengthMeter({
                 : "text-gray-400 dark:text-gray-500"
             )}
           >
-            {req.met ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              <X className="h-3.5 w-3.5" />
-            )}
+            {req.met ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
             {req.label}
           </li>
         ))}

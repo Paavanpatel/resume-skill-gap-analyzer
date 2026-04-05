@@ -12,49 +12,34 @@ function TestToggleWrapper({
 }) {
   const [checked, setChecked] = useState(defaultChecked);
 
-  return (
-    <Toggle
-      checked={checked}
-      onChange={setChecked}
-      {...props}
-    />
-  );
+  return <Toggle checked={checked} onChange={setChecked} {...props} />;
 }
 
 describe("Toggle", () => {
   describe("Basic rendering", () => {
     it("renders toggle switch", () => {
-      render(
-        <TestToggleWrapper />
-      );
+      render(<TestToggleWrapper />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toBeInTheDocument();
     });
 
     it("shows label text when provided", () => {
-      render(
-        <TestToggleWrapper label="Enable Feature" />
-      );
+      render(<TestToggleWrapper label="Enable Feature" />);
 
       expect(screen.getByText("Enable Feature")).toBeInTheDocument();
     });
 
     it("shows description text when provided", () => {
       render(
-        <TestToggleWrapper
-          label="Enable Feature"
-          description="Turn this feature on or off"
-        />
+        <TestToggleWrapper label="Enable Feature" description="Turn this feature on or off" />
       );
 
       expect(screen.getByText("Turn this feature on or off")).toBeInTheDocument();
     });
 
     it("renders without label or description", () => {
-      const { container } = render(
-        <TestToggleWrapper />
-      );
+      const { container } = render(<TestToggleWrapper />);
 
       const textElements = container.querySelectorAll("span, p");
       // Should only have the toggle button, no text elements
@@ -66,13 +51,7 @@ describe("Toggle", () => {
     it("calls onChange with opposite value on click", () => {
       const handleChange = jest.fn();
 
-      render(
-        <Toggle
-          checked={false}
-          onChange={handleChange}
-          label="Test Toggle"
-        />
-      );
+      render(<Toggle checked={false} onChange={handleChange} label="Test Toggle" />);
 
       const toggleButton = screen.getByRole("switch");
       fireEvent.click(toggleButton);
@@ -83,13 +62,7 @@ describe("Toggle", () => {
     it("calls onChange when unchecking", () => {
       const handleChange = jest.fn();
 
-      render(
-        <Toggle
-          checked={true}
-          onChange={handleChange}
-          label="Test Toggle"
-        />
-      );
+      render(<Toggle checked={true} onChange={handleChange} label="Test Toggle" />);
 
       const toggleButton = screen.getByRole("switch");
       fireEvent.click(toggleButton);
@@ -100,36 +73,28 @@ describe("Toggle", () => {
 
   describe("Accessibility attributes", () => {
     it("has correct aria-checked attribute when checked", () => {
-      render(
-        <TestToggleWrapper defaultChecked={true} />
-      );
+      render(<TestToggleWrapper defaultChecked={true} />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveAttribute("aria-checked", "true");
     });
 
     it("has correct aria-checked attribute when unchecked", () => {
-      render(
-        <TestToggleWrapper defaultChecked={false} />
-      );
+      render(<TestToggleWrapper defaultChecked={false} />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveAttribute("aria-checked", "false");
     });
 
     it("sets aria-label to label prop when provided", () => {
-      render(
-        <TestToggleWrapper label="Enable notifications" />
-      );
+      render(<TestToggleWrapper label="Enable notifications" />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveAttribute("aria-label", "Enable notifications");
     });
 
     it("has role=switch attribute", () => {
-      render(
-        <TestToggleWrapper />
-      );
+      render(<TestToggleWrapper />);
 
       expect(screen.getByRole("switch")).toBeInTheDocument();
     });
@@ -140,12 +105,7 @@ describe("Toggle", () => {
       const handleChange = jest.fn();
 
       render(
-        <Toggle
-          checked={false}
-          onChange={handleChange}
-          disabled={true}
-          label="Disabled Toggle"
-        />
+        <Toggle checked={false} onChange={handleChange} disabled={true} label="Disabled Toggle" />
       );
 
       const toggleButton = screen.getByRole("switch");
@@ -155,18 +115,14 @@ describe("Toggle", () => {
     });
 
     it("has disabled attribute when disabled prop is true", () => {
-      render(
-        <TestToggleWrapper disabled={true} />
-      );
+      render(<TestToggleWrapper disabled={true} />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toBeDisabled();
     });
 
     it("applies opacity styling when disabled", () => {
-      const { container } = render(
-        <TestToggleWrapper disabled={true} />
-      );
+      const { container } = render(<TestToggleWrapper disabled={true} />);
 
       const label = container.querySelector("label");
       expect(label).toHaveClass("opacity-50");
@@ -188,9 +144,7 @@ describe("Toggle", () => {
 
   describe("Size variants", () => {
     it("renders sm size variant", () => {
-      const { container } = render(
-        <TestToggleWrapper size="sm" />
-      );
+      const { container } = render(<TestToggleWrapper size="sm" />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveClass("h-5");
@@ -198,9 +152,7 @@ describe("Toggle", () => {
     });
 
     it("renders md size variant by default", () => {
-      const { container } = render(
-        <TestToggleWrapper />
-      );
+      const { container } = render(<TestToggleWrapper />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveClass("h-6");
@@ -208,18 +160,14 @@ describe("Toggle", () => {
     });
 
     it("applies correct thumb positioning for sm size", () => {
-      const { container } = render(
-        <TestToggleWrapper size="sm" defaultChecked={true} />
-      );
+      const { container } = render(<TestToggleWrapper size="sm" defaultChecked={true} />);
 
       const thumb = container.querySelector("span.absolute");
       expect(thumb).toHaveClass("translate-x-4");
     });
 
     it("applies correct thumb positioning for md size", () => {
-      const { container } = render(
-        <TestToggleWrapper size="md" defaultChecked={true} />
-      );
+      const { container } = render(<TestToggleWrapper size="md" defaultChecked={true} />);
 
       const thumb = container.querySelector("span.absolute");
       expect(thumb).toHaveClass("translate-x-5");
@@ -228,36 +176,28 @@ describe("Toggle", () => {
 
   describe("Visual states", () => {
     it("applies primary color when checked", () => {
-      const { container } = render(
-        <TestToggleWrapper defaultChecked={true} />
-      );
+      const { container } = render(<TestToggleWrapper defaultChecked={true} />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveClass("bg-primary-600");
     });
 
     it("applies gray color when unchecked", () => {
-      const { container } = render(
-        <TestToggleWrapper defaultChecked={false} />
-      );
+      const { container } = render(<TestToggleWrapper defaultChecked={false} />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveClass("bg-gray-300");
     });
 
     it("thumb translates when checked", () => {
-      const { container } = render(
-        <TestToggleWrapper defaultChecked={true} />
-      );
+      const { container } = render(<TestToggleWrapper defaultChecked={true} />);
 
       const thumb = container.querySelector("span.absolute");
       expect(thumb).toHaveClass("translate-x-5");
     });
 
     it("thumb does not translate when unchecked", () => {
-      const { container } = render(
-        <TestToggleWrapper defaultChecked={false} />
-      );
+      const { container } = render(<TestToggleWrapper defaultChecked={false} />);
 
       const thumb = container.querySelector("span.absolute");
       expect(thumb).not.toHaveClass("translate-x-5");
@@ -266,9 +206,7 @@ describe("Toggle", () => {
 
   describe("Custom className", () => {
     it("applies custom className", () => {
-      const { container } = render(
-        <TestToggleWrapper className="custom-toggle-class" />
-      );
+      const { container } = render(<TestToggleWrapper className="custom-toggle-class" />);
 
       const label = container.querySelector("label");
       expect(label).toHaveClass("custom-toggle-class");
@@ -278,10 +216,7 @@ describe("Toggle", () => {
   describe("Label and description together", () => {
     it("renders both label and description when provided", () => {
       render(
-        <TestToggleWrapper
-          label="Dark Mode"
-          description="Enable dark mode for the interface"
-        />
+        <TestToggleWrapper label="Dark Mode" description="Enable dark mode for the interface" />
       );
 
       expect(screen.getByText("Dark Mode")).toBeInTheDocument();
@@ -289,17 +224,13 @@ describe("Toggle", () => {
     });
 
     it("renders only label when description is not provided", () => {
-      render(
-        <TestToggleWrapper label="Feature Toggle" />
-      );
+      render(<TestToggleWrapper label="Feature Toggle" />);
 
       expect(screen.getByText("Feature Toggle")).toBeInTheDocument();
     });
 
     it("renders only description is not practical without label", () => {
-      const { container } = render(
-        <TestToggleWrapper description="Just a description" />
-      );
+      const { container } = render(<TestToggleWrapper description="Just a description" />);
 
       expect(screen.getByText("Just a description")).toBeInTheDocument();
     });
@@ -307,9 +238,7 @@ describe("Toggle", () => {
 
   describe("Type attribute", () => {
     it("toggle button is of type button", () => {
-      render(
-        <TestToggleWrapper />
-      );
+      render(<TestToggleWrapper />);
 
       const toggleButton = screen.getByRole("switch");
       expect(toggleButton).toHaveAttribute("type", "button");

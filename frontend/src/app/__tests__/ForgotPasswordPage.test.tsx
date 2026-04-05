@@ -64,9 +64,7 @@ describe("ForgotPasswordPage", () => {
     const input = screen.getByPlaceholderText("you@example.com");
     fireEvent.change(input, { target: { value: "not-an-email" } });
     fireEvent.blur(input);
-    expect(
-      screen.getByText("Please enter a valid email address")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
   });
 
   it("calls forgotPassword on form submit", async () => {
@@ -123,7 +121,6 @@ describe("ForgotPasswordPage", () => {
     expect(link.closest("a")).toHaveAttribute("href", "/login");
   });
 
-
   it("shows cooldown timer right after submission", async () => {
     mockForgotPassword.mockResolvedValue(undefined);
     render(<ForgotPasswordPage />);
@@ -142,9 +139,7 @@ describe("ForgotPasswordPage", () => {
     fireEvent.change(input, { target: { value: "bad" } });
     fireEvent.blur(input);
     await waitFor(() => {
-      expect(
-        screen.getByText("Please enter a valid email address")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
     });
   });
 });

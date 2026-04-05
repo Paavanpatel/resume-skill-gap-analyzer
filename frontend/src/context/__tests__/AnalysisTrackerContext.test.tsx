@@ -1,9 +1,6 @@
 import React from "react";
 import { render, screen, act, waitFor } from "@testing-library/react";
-import {
-  AnalysisTrackerProvider,
-  useAnalysisTracker,
-} from "@/context/AnalysisTrackerContext";
+import { AnalysisTrackerProvider, useAnalysisTracker } from "@/context/AnalysisTrackerContext";
 
 // ── Mock API ────────────────────────────────────────────────
 
@@ -17,7 +14,11 @@ jest.mock("@/lib/api", () => ({
 
 // ── Test consumer to expose context values ──────────────────
 
-function TestConsumer({ onRender }: { onRender?: (ctx: ReturnType<typeof useAnalysisTracker>) => void }) {
+function TestConsumer({
+  onRender,
+}: {
+  onRender?: (ctx: ReturnType<typeof useAnalysisTracker>) => void;
+}) {
   const ctx = useAnalysisTracker();
   if (onRender) onRender(ctx);
   return (
@@ -129,7 +130,9 @@ describe("AnalysisTrackerContext", () => {
 
     // Clear call count and advance timer — should NOT poll again
     mockGetAnalysisStatus.mockClear();
-    act(() => { jest.advanceTimersByTime(5000); });
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
 
     // Only the initial poll, no additional calls
     expect(mockGetAnalysisStatus).not.toHaveBeenCalled();

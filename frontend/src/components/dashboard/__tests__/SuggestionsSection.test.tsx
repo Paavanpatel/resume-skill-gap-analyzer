@@ -46,8 +46,22 @@ describe("SuggestionsSection", () => {
 
   it("sorts suggestions by priority (high first)", () => {
     const unsorted: ResumeSuggestion[] = [
-      { section: "a", current: "", suggested: "", reason: "Low priority", priority: "low", source: "rule" },
-      { section: "b", current: "", suggested: "", reason: "High priority", priority: "high", source: "llm" },
+      {
+        section: "a",
+        current: "",
+        suggested: "",
+        reason: "Low priority",
+        priority: "low",
+        source: "rule",
+      },
+      {
+        section: "b",
+        current: "",
+        suggested: "",
+        reason: "High priority",
+        priority: "high",
+        source: "llm",
+      },
     ];
     render(<SuggestionsSection suggestions={unsorted} />);
     const reasons = screen.getAllByText(/priority/i);

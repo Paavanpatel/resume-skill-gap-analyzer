@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   XCircle,
   MinusCircle,
-  ClipboardList,
+  ClipboardPaste,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -73,12 +73,8 @@ function MetricCard({
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             {label}
           </p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {value}
-          </p>
-          {sub && (
-            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{sub}</p>
-          )}
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+          {sub && <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{sub}</p>}
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30">
           <Icon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
@@ -116,12 +112,7 @@ function LogRow({ record }: { record: LogRecord }) {
         onClick={() => record.exc && setExpanded((e) => !e)}
       >
         <span className="shrink-0 text-gray-400 w-20">{ts}</span>
-        <span
-          className={cn(
-            "shrink-0 w-16",
-            LOG_LEVEL_COLORS[record.level] ?? "text-gray-500"
-          )}
-        >
+        <span className={cn("shrink-0 w-16", LOG_LEVEL_COLORS[record.level] ?? "text-gray-500")}>
           {record.level}
         </span>
         <span className="shrink-0 text-gray-400 truncate max-w-[160px]" title={record.logger}>
@@ -137,11 +128,7 @@ function LogRow({ record }: { record: LogRecord }) {
         )}
         {record.exc && (
           <span className="shrink-0 text-gray-400">
-            {expanded ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
+            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </span>
         )}
       </div>
@@ -224,9 +211,7 @@ export default function SystemPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            System Health
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">System Health</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Observability dashboard — health probes, metrics, and recent logs.
           </p>
@@ -251,12 +236,7 @@ export default function SystemPage() {
         <div className="rounded-xl border border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800 p-4">
           {/* Overall banner */}
           <div className="flex items-center gap-3 mb-4">
-            <span
-              className={cn(
-                "relative inline-flex h-3 w-3 rounded-full",
-                statusDotClass
-              )}
-            >
+            <span className={cn("relative inline-flex h-3 w-3 rounded-full", statusDotClass)}>
               {status !== "unknown" && (
                 <span
                   className={cn(
@@ -335,7 +315,7 @@ export default function SystemPage() {
                   ? `${metrics.analyses.by_status["completed"] ?? 0} completed`
                   : undefined
               }
-              icon={ClipboardList}
+              icon={ClipboardPaste}
             />
             <MetricCard
               label="LLM Calls"
@@ -375,9 +355,7 @@ export default function SystemPage() {
                   >
                     {cls}
                   </span>{" "}
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {n.toLocaleString()}
-                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">{n.toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -433,7 +411,7 @@ export default function SystemPage() {
             </div>
           ) : logs.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-gray-400">
-              <ClipboardList className="h-8 w-8" />
+              <ClipboardPaste className="h-8 w-8" />
               <p className="text-sm">No log entries match the current filters.</p>
             </div>
           ) : (

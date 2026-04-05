@@ -21,9 +21,7 @@ export default function NotFound() {
           404
         </p>
 
-        <h1 className="mt-3 text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Page not found
-        </h1>
+        <h1 className="mt-3 text-2xl font-bold text-gray-900 dark:text-gray-100">Page not found</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>

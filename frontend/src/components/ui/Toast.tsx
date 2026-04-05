@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from "lucide-react";
 
@@ -115,9 +109,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               )}
             >
               <Icon className={cn("h-5 w-5 mt-0.5 shrink-0", cfg.text)} />
-              <p className={cn("flex-1 text-sm font-medium", cfg.text)}>
-                {t.message}
-              </p>
+              <p className={cn("flex-1 text-sm font-medium", cfg.text)}>{t.message}</p>
               <button
                 onClick={() => dismiss(t.id)}
                 className={cn(

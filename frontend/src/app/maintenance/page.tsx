@@ -48,8 +48,8 @@ export default function MaintenancePage() {
           Scheduled Maintenance
         </h1>
         <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-          We&apos;re making improvements to Resume Skill Gap Analyzer. We&apos;ll
-          be back online shortly. Thank you for your patience.
+          We&apos;re making improvements to Resume Skill Gap Analyzer. We&apos;ll be back online
+          shortly. Thank you for your patience.
         </p>
 
         {/* Status indicators */}

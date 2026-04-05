@@ -22,9 +22,7 @@ describe("NotFoundPage", () => {
 
   it("renders description", () => {
     render(<NotFound />);
-    expect(
-      screen.getByText(/The page you're looking for doesn't exist/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/The page you're looking for doesn't exist/)).toBeInTheDocument();
   });
 
   it("renders dashboard link", () => {

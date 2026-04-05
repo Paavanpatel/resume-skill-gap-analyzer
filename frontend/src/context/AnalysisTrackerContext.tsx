@@ -18,14 +18,7 @@
  * (connection error, auth failure, or max reconnects exceeded).
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getAnalysisStatus, getErrorMessage, getStoredTokens } from "@/lib/api";
 import type { AnalysisStatusResponse } from "@/types/analysis";
 import type { WsConnectionStatus } from "@/hooks/useAnalysisWebSocket";
@@ -68,16 +61,14 @@ interface AnalysisTrackerContextType {
   completedCount: number;
 }
 
-const AnalysisTrackerContext = createContext<AnalysisTrackerContextType | null>(
-  null
-);
+const AnalysisTrackerContext = createContext<AnalysisTrackerContextType | null>(null);
 
 // ── Constants ───────────────────────────────────────────────
 
-const BASE_POLL_MS = 2500;          // 2.5s -- normal polling cadence
-const MAX_POLL_MS = 30_000;         // 30s -- ceiling for backoff
-const BACKOFF_MULTIPLIER = 2;       // Double interval on each error
-const AUTO_DISMISS_MS = 60_000;     // Auto-dismiss completed after 60s
+const BASE_POLL_MS = 2500; // 2.5s -- normal polling cadence
+const MAX_POLL_MS = 30_000; // 30s -- ceiling for backoff
+const BACKOFF_MULTIPLIER = 2; // Double interval on each error
+const AUTO_DISMISS_MS = 60_000; // Auto-dismiss completed after 60s
 const MAX_WS_RECONNECTS = 3;
 const BASE_WS_RECONNECT_MS = 1000;
 
@@ -107,11 +98,7 @@ function getWsBaseUrl(): string {
 
 // ── Provider ────────────────────────────────────────────────
 
-export function AnalysisTrackerProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AnalysisTrackerProvider({ children }: { children: React.ReactNode }) {
   const [analyses, setAnalyses] = useState<TrackedAnalysis[]>([]);
 
   // Per-analysis tracking state
@@ -133,14 +120,9 @@ export function AnalysisTrackerProvider({
   >(new Map());
 
   // ── Update a single tracked analysis ──
-  const updateAnalysis = useCallback(
-    (jobId: string, updates: Partial<TrackedAnalysis>) => {
-      setAnalyses((prev) =>
-        prev.map((a) => (a.jobId === jobId ? { ...a, ...updates } : a))
-      );
-    },
-    []
-  );
+  const updateAnalysis = useCallback((jobId: string, updates: Partial<TrackedAnalysis>) => {
+    setAnalyses((prev) => prev.map((a) => (a.jobId === jobId ? { ...a, ...updates } : a)));
+  }, []);
 
   // ── Stop tracking (cleanup timers + WS) ──
   const stopTracking = useCallback((jobId: string) => {
@@ -154,10 +136,7 @@ export function AnalysisTrackerProvider({
       state.ws.onmessage = null;
       state.ws.onerror = null;
       state.ws.onclose = null;
-      if (
-        state.ws.readyState === WebSocket.OPEN ||
-        state.ws.readyState === WebSocket.CONNECTING
-      ) {
+      if (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING) {
         state.ws.close(1000);
       }
     }
@@ -333,8 +312,7 @@ export function AnalysisTrackerProvider({
 
           // Abnormal closure -- try reconnecting
           if (state.wsReconnectCount < MAX_WS_RECONNECTS) {
-            const delay =
-              BASE_WS_RECONNECT_MS * Math.pow(2, state.wsReconnectCount);
+            const delay = BASE_WS_RECONNECT_MS * Math.pow(2, state.wsReconnectCount);
             state.wsReconnectCount++;
             updateAnalysis(jobId, { wsStatus: "connecting" });
 
@@ -394,17 +372,14 @@ export function AnalysisTrackerProvider({
 
   // ── Dismiss a single analysis ──
   const dismiss = useCallback((jobId: string) => {
-    setAnalyses((prev) =>
-      prev.map((a) => (a.jobId === jobId ? { ...a, dismissed: true } : a))
-    );
+    setAnalyses((prev) => prev.map((a) => (a.jobId === jobId ? { ...a, dismissed: true } : a)));
   }, []);
 
   // ── Dismiss all completed/failed ──
   const dismissAll = useCallback(() => {
     setAnalyses((prev) =>
       prev.map((a) => {
-        const terminal =
-          a.status?.status === "completed" || a.status?.status === "failed";
+        const terminal = a.status?.status === "completed" || a.status?.status === "failed";
         return terminal ? { ...a, dismissed: true } : a;
       })
     );
@@ -417,8 +392,7 @@ export function AnalysisTrackerProvider({
       setAnalyses((prev) =>
         prev.map((a) => {
           if (a.dismissed) return a;
-          const terminal =
-            a.status?.status === "completed" || a.status?.status === "failed";
+          const terminal = a.status?.status === "completed" || a.status?.status === "failed";
           if (!terminal) return a;
           if (now - a.startedAt > AUTO_DISMISS_MS) {
             return { ...a, dismissed: true };
@@ -448,10 +422,7 @@ export function AnalysisTrackerProvider({
   }, [stopTracking]);
 
   const activeCount = analyses.filter(
-    (a) =>
-      !a.dismissed &&
-      a.status?.status !== "completed" &&
-      a.status?.status !== "failed"
+    (a) => !a.dismissed && a.status?.status !== "completed" && a.status?.status !== "failed"
   ).length;
 
   const completedCount = analyses.filter(
@@ -470,9 +441,7 @@ export function AnalysisTrackerProvider({
 export function useAnalysisTracker() {
   const ctx = useContext(AnalysisTrackerContext);
   if (!ctx) {
-    throw new Error(
-      "useAnalysisTracker must be used within AnalysisTrackerProvider"
-    );
+    throw new Error("useAnalysisTracker must be used within AnalysisTrackerProvider");
   }
   return ctx;
 }
