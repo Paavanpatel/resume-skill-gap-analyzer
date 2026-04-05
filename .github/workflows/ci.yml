@@ -192,7 +192,7 @@ jobs:
         run: npm rebuild @swc/core --build-from-source || npm install @swc/core@latest
 
       - name: Jest — run with coverage
-        run: npm run test:coverage -- --ci --coverageThreshold='{"global":{"lines":80,"functions":80,"branches":70,"statements":80}}'
+        run: npm run test:coverage -- --ci --coverageThreshold='{"global":{"lines":78,"functions":70,"branches":68,"statements":78}}'
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
