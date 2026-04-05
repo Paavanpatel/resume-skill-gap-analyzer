@@ -188,6 +188,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Rebuild @swc/core native bindings
+        run: npm rebuild @swc/core --build-from-source || npm install @swc/core@latest
+
       - name: Jest — run with coverage
         run: npm run test:coverage -- --ci --coverageThreshold='{"global":{"lines":80,"functions":80,"branches":70,"statements":80}}'
 
