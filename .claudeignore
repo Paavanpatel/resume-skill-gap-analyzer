@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.venv/
+backend/.venv/
+
+# Build outputs
+.next/
+frontend/.next/
+out/
+dist/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Caches
+.ruff_cache/
+.pytest_cache/
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Lock files (huge, not useful for Claude)
+package-lock.json
+frontend/package-lock.json
+
+# Binary/doc files
+*.docx
+*.pdf
+*.png
+*.jpg
+*.woff2
+
+# Secrets
+.env
+.env.production
+
+# Docker volumes & TLS
+infrastructure/nginx/ssl/
+postgres_data/
+redis_data/

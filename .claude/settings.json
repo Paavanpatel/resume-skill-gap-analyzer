@@ -1,18 +1,27 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls -la \"c:/Users/patel/Documents/Creative/resume-skill-gap-analyzer/frontend/src/app/\\(dashboard\\)/analysis/\")",
-      "Bash(ls -la \"c:/Users/patel/Documents/Creative/resume-skill-gap-analyzer/frontend/src/app/\\(dashboard\\)/analysis/[id]/\")",
-      "Bash(ls -la \"c:/Users/patel/Documents/Creative/resume-skill-gap-analyzer/frontend/src/app/\\(auth\\)/\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''backend/app/api/v1/websockets.py''\\).read\\(\\)\\); print\\(''websockets.py: OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''backend/app/services/analysis_service.py''\\).read\\(\\)\\); print\\(''analysis_service.py: OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''backend/app/workers/analysis_task.py''\\).read\\(\\)\\); print\\(''analysis_task.py: OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''backend/app/main.py''\\).read\\(\\)\\); print\\(''main.py: OK''\\)\")",
-      "Bash(npx tsc:*)",
-      "Bash(python3 -c \"import structlog; import inspect; print\\(inspect.signature\\(structlog.stdlib.ProcessorFormatter.__init__\\)\\)\")",
-      "Bash(python -c \"from prometheus_client.metrics_core import Sample; help\\(Sample\\)\")",
-      "Bash(find c:/Users/patel/Documents/Creative/resume-skill-gap-analyzer/backend/.venv -path */prometheus_client/*.py -not -path *__pycache__*)",
-      "Read(//dev/**)"
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(cd backend && ruff *)",
+      "Bash(cd backend && .venv/Scripts/activate && pytest *)",
+      "Bash(cd backend && alembic *)",
+      "Bash(cd frontend && npx eslint *)",
+      "Bash(cd frontend && npx prettier *)",
+      "Bash(cd frontend && npx tsc *)",
+      "Bash(cd frontend && npx jest *)",
+      "Bash(cd frontend && npm run *)",
+      "Bash(docker compose *)",
+      "Bash(python -c *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(wc *)",
+      "Bash(curl *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
     ]
   }
 }

@@ -15,7 +15,8 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(npx prettier:*)",
       "Bash(echo \"PRETTIER_EXIT: $?\")",
-      "Bash(echo \"TSC_EXIT: $?\")"
+      "Bash(echo \"TSC_EXIT: $?\")",
+      "Bash(ls -la *.md)"
     ]
   }
 }
