@@ -9,23 +9,21 @@ import { cn } from "@/lib/utils";
  * loses network connectivity, then slides away when it reconnects.
  *
  * Uses the standard `navigator.onLine` + online/offline events.
- * Mounted in the root layout so it covers every route.
+ * Mounted in the root layout so it covers ev ery route.
  */
 export default function OfflineBanner() {
-  const [isOffline, setIsOffline] = useState(false);
+  const [isOffline, setIsOffline] = useState(
+    () => typeof window !== "undefined" && !navigator.onLine
+  );
   const [showReconnected, setShowReconnected] = useState(false);
   // Ref avoids adding wasOffline to the effect dependency array,
   // which would cause event listeners to be torn down and re-added
   // every time the user first goes offline.
-  const wasOfflineRef = useRef(false);
+  const wasOfflineRef = useRef(
+    typeof window !== "undefined" && !navigator.onLine
+  );
 
   useEffect(() => {
-    // Initialise from current browser state
-    if (!navigator.onLine) {
-      setIsOffline(true);
-      wasOfflineRef.current = true;
-    }
-
     function handleOffline() {
       setIsOffline(true);
       wasOfflineRef.current = true;

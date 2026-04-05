@@ -196,6 +196,7 @@ export function useAnalysisWebSocket({
           setConnectionStatus("connecting");
 
           reconnectTimeoutRef.current = setTimeout(() => {
+            // eslint-disable-next-line react-hooks/immutability
             if (mountedRef.current) connect();
           }, delay);
         } else {

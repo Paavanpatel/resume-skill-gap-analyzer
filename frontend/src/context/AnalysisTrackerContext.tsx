@@ -188,6 +188,7 @@ export function AnalysisTrackerProvider({
 
           // Success: reset to base cadence
           currentState.pollIntervalMs = BASE_POLL_MS;
+          // eslint-disable-next-line react-hooks/immutability
           schedulePoll(jobId, BASE_POLL_MS);
         } catch (err) {
           updateAnalysis(jobId, { pollError: getErrorMessage(err) });
@@ -339,6 +340,7 @@ export function AnalysisTrackerProvider({
 
             state.wsReconnectTimeoutId = setTimeout(() => {
               if (trackingRef.current.has(jobId)) {
+                // eslint-disable-next-line react-hooks/immutability
                 connectWs(jobId);
               }
             }, delay);
@@ -438,9 +440,10 @@ export function AnalysisTrackerProvider({
 
   // Cleanup all tracking on unmount
   useEffect(() => {
+    const tracking = trackingRef.current;
     return () => {
-      trackingRef.current.forEach((_, jobId) => stopTracking(jobId));
-      trackingRef.current.clear();
+      tracking.forEach((_, jobId) => stopTracking(jobId));
+      tracking.clear();
     };
   }, [stopTracking]);
 

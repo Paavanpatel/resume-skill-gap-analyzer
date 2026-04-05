@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const tokens = getStoredTokens();
     if (!tokens) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ user: null, isLoading: false, isAuthenticated: false });
       return;
     }

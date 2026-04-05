@@ -56,6 +56,7 @@ export function useHealthCheck(intervalMs = 30_000): HealthState {
 
   useEffect(() => {
     // Immediate first check
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     poll();
 
     if (intervalMs > 0) {

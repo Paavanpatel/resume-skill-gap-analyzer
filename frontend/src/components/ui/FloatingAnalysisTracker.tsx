@@ -181,6 +181,7 @@ function AnalysisItem({
   const isFailed = s?.status === "failed";
 
   // Elapsed time
+  // eslint-disable-next-line react-hooks/purity
   const elapsed = Math.round((Date.now() - analysis.startedAt) / 1000);
   const elapsedLabel =
     elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;

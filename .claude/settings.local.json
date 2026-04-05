@@ -6,7 +6,13 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app/schemas/admin.py''\\).read\\(\\)\\); print\\(''admin schemas OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app/core/dependencies.py''\\).read\\(\\)\\); print\\(''dependencies.py OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app/models/user.py''\\).read\\(\\)\\); print\\(''user model OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/schemas/user.py''\\).read\\(\\)\\); print\\(''user schema OK''\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/schemas/user.py''\\).read\\(\\)\\); print\\(''user schema OK''\\)\")",
+      "Bash(gh pr:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx eslint:*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(echo \"EXIT: $?\")"
     ]
   }
 }

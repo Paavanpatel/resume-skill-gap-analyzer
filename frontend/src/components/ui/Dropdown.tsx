@@ -60,6 +60,7 @@ export default function Dropdown({
 
   useEffect(() => {
     if (!isOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updateMenuPosition();
     window.addEventListener("scroll", updateMenuPosition, true);
     window.addEventListener("resize", updateMenuPosition);

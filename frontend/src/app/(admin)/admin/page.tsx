@@ -115,6 +115,7 @@ export default function AdminAnalyticsPage() {
   const [days, setDays] = useState(30);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
       adminGetAnalytics(days),

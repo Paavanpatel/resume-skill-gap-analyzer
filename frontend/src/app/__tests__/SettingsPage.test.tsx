@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import SettingsPage from "@/app/(dashboard)/settings/page";
 import { ToastProvider } from "@/components/ui/Toast";
 
@@ -227,13 +227,13 @@ describe("SettingsPage", () => {
       mockActiveTab = "billing";
     });
 
-    it("renders current plan section", () => {
-      renderWithProviders(<SettingsPage />);
+    it("renders current plan section", async () => {
+      await act(async () => { renderWithProviders(<SettingsPage />); });
       expect(screen.getByText("Current plan")).toBeInTheDocument();
     });
 
-    it("shows upgrade link for free tier", () => {
-      renderWithProviders(<SettingsPage />);
+    it("shows upgrade link for free tier", async () => {
+      await act(async () => { renderWithProviders(<SettingsPage />); });
       expect(screen.getByText("Upgrade →")).toBeInTheDocument();
     });
 
@@ -244,13 +244,13 @@ describe("SettingsPage", () => {
       });
     });
 
-    it("shows Manage Subscription for pro tier", () => {
+    it("shows Manage Subscription for pro tier", async () => {
       mockUseAuth.mockReturnValue({
         user: { ...mockUser, tier: "pro" },
         updateUser: mockUpdateUser,
         logout: mockLogout,
       });
-      renderWithProviders(<SettingsPage />);
+      await act(async () => { renderWithProviders(<SettingsPage />); });
       expect(screen.getByText("Manage Subscription →")).toBeInTheDocument();
     });
   });

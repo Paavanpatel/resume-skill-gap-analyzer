@@ -45,7 +45,6 @@ export default function DashboardPage() {
         setQuotaReached(true);
       }
     }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Wizard step: 0=upload, 1=describe, 2=review
