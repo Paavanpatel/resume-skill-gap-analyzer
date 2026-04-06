@@ -31,11 +31,13 @@ out/
 !.vscode/settings.json
 !.vscode/extensions.json
 .idea/
+.claude/settings.local.json
 *.swp
 *.swo
 *~
 .DS_Store
 Thumbs.db
+tsconfig.tsbuildinfo
 
 # ── Docker ───────────────────────────────────────────────────
 docker-compose.override.yml
