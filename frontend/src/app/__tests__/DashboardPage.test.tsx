@@ -13,6 +13,8 @@ jest.mock("next/navigation", () => ({
 const mockUploadResume = jest.fn();
 const mockSubmitAnalysis = jest.fn();
 
+const mockGetHealthLive = jest.fn();
+
 jest.mock("@/lib/api", () => ({
   uploadResume: (...args: any[]) => mockUploadResume(...args),
   submitAnalysis: (...args: any[]) => mockSubmitAnalysis(...args),
@@ -21,6 +23,7 @@ jest.mock("@/lib/api", () => ({
     tier: "free",
     analyses: { used: 1, limit: 10, pct: 10 },
   }),
+  getHealthLive: (...args: any[]) => mockGetHealthLive(...args),
   getErrorMessage: (err: any) => err?.message || "Something went wrong",
 }));
 
@@ -81,6 +84,7 @@ const LONG_JD =
 describe("DashboardPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetHealthLive.mockResolvedValue({ status: "ok", timestamp: Date.now() });
     (api.getUsageSummary as jest.Mock).mockResolvedValue({
       period: "monthly",
       tier: "free",
@@ -525,5 +529,27 @@ describe("DashboardPage", () => {
     // Modal should close, still on review step
     expect(screen.queryByText("Start Analysis?")).not.toBeInTheDocument();
     expect(screen.getByText("Review Your Analysis")).toBeInTheDocument();
+  });
+
+  it("shows healthy status when backend is reachable", async () => {
+    mockGetHealthLive.mockResolvedValue({ status: "ok", timestamp: Date.now() });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("All systems operational")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error status when backend is unreachable", async () => {
+    mockGetHealthLive.mockRejectedValue(new Error("Network Error"));
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Backend unavailable — some features may not work")
+      ).toBeInTheDocument();
+    });
   });
 });

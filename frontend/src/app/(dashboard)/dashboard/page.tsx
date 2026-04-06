@@ -19,7 +19,13 @@ import Modal, { ModalFooter } from "@/components/ui/Modal";
 import ResumePicker from "@/components/dashboard/ResumePicker";
 import FileUploadZone from "@/components/dashboard/FileUploadZone";
 import JobDescriptionInput from "@/components/dashboard/JobDescriptionInput";
-import { uploadResume, submitAnalysis, getErrorMessage, getUsageSummary } from "@/lib/api";
+import {
+  uploadResume,
+  submitAnalysis,
+  getErrorMessage,
+  getUsageSummary,
+  getHealthLive,
+} from "@/lib/api";
 import { useAnalysisTracker } from "@/context/AnalysisTrackerContext";
 import UsageWidget from "@/components/dashboard/UsageWidget";
 import WizardTransition from "@/components/ui/WizardTransition";
@@ -37,6 +43,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const { track } = useAnalysisTracker();
   const [quotaReached, setQuotaReached] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<"checking" | "ok" | "error">("checking");
+
+  // Check backend health once on mount
+  useEffect(() => {
+    getHealthLive()
+      .then(() => setHealthStatus("ok"))
+      .catch(() => setHealthStatus("error"));
+  }, []);
 
   // Check quota once on mount
   useEffect(() => {
@@ -188,6 +202,32 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
+      {/* Health check banner */}
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm",
+          healthStatus === "checking" &&
+            "bg-gray-50 dark:bg-surface-800 text-gray-500 dark:text-gray-400",
+          healthStatus === "ok" &&
+            "bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-300",
+          healthStatus === "error" &&
+            "bg-danger-50 dark:bg-danger-900/20 text-danger-700 dark:text-danger-300"
+        )}
+        data-testid="health-check"
+      >
+        <span
+          className={cn(
+            "h-2 w-2 rounded-full",
+            healthStatus === "checking" && "bg-gray-400 animate-pulse",
+            healthStatus === "ok" && "bg-success-500",
+            healthStatus === "error" && "bg-danger-500"
+          )}
+        />
+        {healthStatus === "checking" && "Checking backend status..."}
+        {healthStatus === "ok" && "All systems operational"}
+        {healthStatus === "error" && "Backend unavailable — some features may not work"}
+      </div>
+
       {/* Usage widget */}
       <UsageWidget />
 
