@@ -219,6 +219,82 @@ class TestSkillNormalizerEdgeCases:
         assert result[0].in_taxonomy is True
 
 
+class TestSkillNormalizerFuzzyMatching:
+    """Test the fuzzy matching tier (tier 3, rapidfuzz token_sort_ratio >= 88)."""
+
+    def test_version_suffix_fuzzy(self, normalizer):
+        """'TensorFlow 2' fuzzy-matches 'TensorFlow' via token_sort_ratio."""
+        # Add TensorFlow to the normalizer
+        taxonomy = [
+            TaxonomyEntry(
+                name="TensorFlow",
+                category="ml_framework",
+                weight=2.0,
+                aliases=[],
+            ),
+        ]
+        tf_normalizer = SkillNormalizer(taxonomy)
+        skills = [{"name": "TensorFlow 2", "confidence": 0.9, "category": "ml"}]
+        result = tf_normalizer.normalize(skills)
+
+        assert len(result) == 1
+        assert result[0].name == "TensorFlow"
+        assert result[0].in_taxonomy is True
+        assert result[0].category == "ml_framework"
+
+    def test_abbreviation_below_threshold(self, normalizer):
+        """'ML' does NOT fuzzy-match 'Machine Learning' — ratio is below 88."""
+        taxonomy = [
+            TaxonomyEntry(
+                name="Machine Learning",
+                category="domain",
+                weight=1.5,
+                aliases=[],
+            ),
+        ]
+        ml_normalizer = SkillNormalizer(taxonomy)
+        skills = [{"name": "ML", "confidence": 0.8, "category": "domain"}]
+        result = ml_normalizer.normalize(skills)
+
+        # Short abbreviation vs long phrase scores far below 88; passes through
+        assert result[0].name == "ML"
+        assert result[0].in_taxonomy is False
+
+    def test_exact_still_wins_over_fuzzy(self, normalizer):
+        """Exact match is returned without invoking fuzzy path."""
+        skills = [{"name": "Python", "confidence": 0.95, "category": "lang"}]
+        result = normalizer.normalize(skills)
+
+        assert result[0].name == "Python"
+        assert result[0].in_taxonomy is True
+        assert result[0].weight == 2.5
+
+    def test_alias_still_wins_over_fuzzy(self, normalizer):
+        """Alias match is returned without invoking fuzzy path."""
+        skills = [{"name": "k8s", "confidence": 0.8, "category": "devops"}]
+        result = normalizer.normalize(skills)
+
+        assert result[0].name == "Kubernetes"
+        assert result[0].in_taxonomy is True
+
+    def test_unrelated_short_names_no_false_positive(self, normalizer):
+        """'Go' does not fuzzy-match 'Docker' or 'Python' (completely different)."""
+        taxonomy = [
+            TaxonomyEntry(
+                name="Go", category="programming_language", weight=1.5, aliases=[]
+            ),
+            TaxonomyEntry(
+                name="Rust", category="programming_language", weight=1.5, aliases=[]
+            ),
+        ]
+        small_normalizer = SkillNormalizer(taxonomy)
+        skills = [{"name": "Java", "confidence": 0.9, "category": "lang"}]
+        result = small_normalizer.normalize(skills)
+
+        assert result[0].name == "Java"
+        assert result[0].in_taxonomy is False
+
+
 class TestBuildTaxonomyIndex:
     """Test the taxonomy index builder."""
 

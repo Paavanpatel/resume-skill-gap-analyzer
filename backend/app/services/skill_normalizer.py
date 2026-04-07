@@ -15,11 +15,13 @@ Why not just use the taxonomy names in the LLM prompt? Two reasons:
   implies both Kubernetes and AWS) than a keyword list.
 
 The normalization flow: LLM output -> case-insensitive name match ->
-alias match -> fuzzy match (future) -> pass-through with defaults.
+alias match -> fuzzy match -> pass-through with defaults.
 """
 
 import logging
 from dataclasses import dataclass
+
+from rapidfuzz import fuzz
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,8 @@ class SkillNormalizer:
         normalized = normalizer.normalize(llm_skills)
     """
 
+    _FUZZY_THRESHOLD = 88
+
     def __init__(self, taxonomy: list[TaxonomyEntry]):
         # Build lookup indexes for O(1) matching
         self._by_name: dict[str, TaxonomyEntry] = {}
@@ -77,6 +81,7 @@ class SkillNormalizer:
         Match priority:
         1. Exact name match (case-insensitive)
         2. Alias match (case-insensitive)
+        3. Fuzzy match via token_sort_ratio >= 88 (catches "TensorFlow 2" -> "TensorFlow")
         """
         lower = skill_name.lower().strip()
 
@@ -87,6 +92,17 @@ class SkillNormalizer:
         # 2. Alias match
         if lower in self._by_alias:
             return self._by_alias[lower]
+
+        # 3. Fuzzy match — find the best scoring taxonomy entry above threshold
+        best_score = 0
+        best_entry: TaxonomyEntry | None = None
+        for name, entry in self._by_name.items():
+            score = fuzz.token_sort_ratio(lower, name)
+            if score > best_score:
+                best_score = score
+                best_entry = entry
+        if best_score >= self._FUZZY_THRESHOLD:
+            return best_entry
 
         return None
 

@@ -19,6 +19,8 @@ import re
 import time
 from dataclasses import dataclass
 
+from rapidfuzz import fuzz
+
 from app.core.exceptions import ErrorCode, ParsingError
 from app.services.llm_client import LLMResponse, call_llm
 from app.services.prompts import (
@@ -270,11 +272,13 @@ async def extract_skills(
     job_skills = normalizer.normalize(raw_job_skills, source="job_description")
 
     # Compare: find matches and gaps.
-    # Two-pass matching:
+    # Three-pass matching:
     #   1. Exact (case-insensitive) canonical name match.
-    #   2. Fuzzy suffix match: strip dot-extensions (.js, .ts, …) so that
-    #      off-taxonomy variants like "React.js" / "React" or "Node.js" / "Node"
-    #      are treated as the same skill.
+    #   2. Suffix match: strip dot-extensions (.js, .ts, …) so that
+    #      off-taxonomy variants like "React.js" / "React" are treated as equal.
+    #   3. Fuzzy match: token_sort_ratio >= 88 catches variants like
+    #      "TensorFlow 2" / "TensorFlow" or "ML" / "Machine Learning".
+    _FUZZY_THRESHOLD = 88
     resume_skill_names = {s.name.lower() for s in resume_skills}
     resume_skill_names_stripped = {_strip_tech_suffix(s.name) for s in resume_skills}
 
@@ -285,6 +289,11 @@ async def extract_skills(
         if job_lower in resume_skill_names:
             matched_skills.append(s)
         elif _strip_tech_suffix(s.name) in resume_skill_names_stripped:
+            matched_skills.append(s)
+        elif any(
+            fuzz.token_sort_ratio(job_lower, r) >= _FUZZY_THRESHOLD
+            for r in resume_skill_names
+        ):
             matched_skills.append(s)
         else:
             missing_skills.append(s)
