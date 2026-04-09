@@ -50,26 +50,26 @@ function UpgradePrompt({
   featureName: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-primary-300 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-900/10 py-16 px-8 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 dark:bg-primary-900/40 mb-4">
-        <Lock className="h-7 w-7 text-primary-600 dark:text-primary-400" />
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="relative">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-surface-700 dark:to-surface-800 shadow-soft dark:shadow-dark-sm">
+          <Lock className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+        </div>
+        <div className="absolute -top-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white dark:bg-surface-800 shadow-md border border-gray-100 dark:border-surface-700">
+          <Lock className="h-3.5 w-3.5 text-gray-400" />
+        </div>
       </div>
-      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-        {featureName} is a{" "}
-        <span className="capitalize text-primary-600 dark:text-primary-400">{requiredTier}</span>{" "}
-        feature
-      </h3>
-      <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+      <h3 className="mt-5 text-lg font-semibold text-gray-900 dark:text-gray-100">{featureName}</h3>
+      <p className="mt-2 text-sm text-gray-400 dark:text-gray-500 max-w-sm">
         Upgrade your plan to unlock AI-powered {featureName.toLowerCase()} and more advanced
         capabilities.
       </p>
       <Link
         href="/pricing"
-        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
+        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
       >
         <Sparkles className="h-4 w-4" />
         Upgrade to {requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1)}
-        <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
   );

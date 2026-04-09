@@ -50,7 +50,7 @@ describe("FeatureGate", () => {
         <span>Pro Content</span>
       </FeatureGate>
     );
-    expect(screen.getByText(/Learning Roadmap is a/)).toBeInTheDocument();
+    expect(screen.getByText("Learning Roadmap")).toBeInTheDocument();
     expect(screen.queryByText("Pro Content")).not.toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe("FeatureGate", () => {
         <span>Enterprise Content</span>
       </FeatureGate>
     );
-    expect(screen.getByText(/API Access is a/)).toBeInTheDocument();
+    expect(screen.getByText("API Access")).toBeInTheDocument();
   });
 
   it("shows upgrade prompt for pro user requiring enterprise", () => {
@@ -72,7 +72,7 @@ describe("FeatureGate", () => {
       </FeatureGate>
     );
     expect(screen.queryByText("Enterprise Content")).not.toBeInTheDocument();
-    expect(screen.getByTestId("icon-lock")).toBeInTheDocument();
+    expect(screen.getAllByTestId("icon-lock").length).toBeGreaterThan(0);
   });
 
   it("defaults to free tier when user is null", () => {

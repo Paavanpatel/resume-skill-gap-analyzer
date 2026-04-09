@@ -30,7 +30,7 @@ describe("SuggestionsSection", () => {
 
   it("shows suggestion count", () => {
     render(<SuggestionsSection suggestions={mockSuggestions} />);
-    expect(screen.getByText("2 suggestions")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("shows empty state", () => {

@@ -16,7 +16,14 @@
       "Bash(npx prettier:*)",
       "Bash(echo \"PRETTIER_EXIT: $?\")",
       "Bash(echo \"TSC_EXIT: $?\")",
-      "Bash(ls -la *.md)"
+      "Bash(ls -la *.md)",
+      "Bash(.venv/Scripts/activate)",
+      "Bash(pip install:*)",
+      "Bash(pytest tests/unit/test_skill_normalizer.py tests/unit/test_skill_extractor.py -v)",
+      "Bash(pytest tests/ --cov=app --cov-fail-under=70 -q)",
+      "Bash(python -m json.tool)",
+      "Bash(npx tsc:*)",
+      "Bash(npx jest:*)"
     ]
   }
 }

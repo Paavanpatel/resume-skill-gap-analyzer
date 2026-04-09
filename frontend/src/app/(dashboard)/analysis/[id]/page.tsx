@@ -20,6 +20,9 @@ import {
   MessageSquare,
   Sparkles,
   Lock,
+  Shield,
+  Award,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getAnalysisResult, getAnalysisStatus, retryAnalysis, getErrorMessage } from "@/lib/api";
@@ -29,8 +32,6 @@ import type { WsConnectionStatus } from "@/hooks/useAnalysisWebSocket";
 import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
-import ScoreRing from "@/components/ui/ScoreRing";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import Tabs, { TabPanel } from "@/components/ui/Tabs";
 import SkillsSection from "@/components/dashboard/SkillsSection";
@@ -364,23 +365,50 @@ export default function AnalysisPage() {
 
   const explanation = result.score_explanation;
 
+  const scoreCards = [
+    {
+      score: result.match_score,
+      label: "Skill Match",
+      icon: Target,
+      gradient: "from-primary-500 to-accent-500",
+      bgGlow: "bg-primary-500/10 dark:bg-primary-500/5",
+      delay: 0,
+    },
+    {
+      score: result.ats_score,
+      label: "ATS Score",
+      icon: Shield,
+      gradient: "from-success-500 to-primary-500",
+      bgGlow: "bg-success-500/10 dark:bg-success-500/5",
+      delay: 150,
+    },
+    {
+      score: result.ats_check?.format_score ?? null,
+      label: "Format Score",
+      icon: Award,
+      gradient: "from-accent-500 to-primary-500",
+      bgGlow: "bg-accent-500/10 dark:bg-accent-500/5",
+      delay: 300,
+    },
+  ];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/dashboard")}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="group flex h-10 w-10 items-center justify-center rounded-2xl bg-white dark:bg-surface-800 shadow-soft dark:shadow-dark-sm border border-gray-100 dark:border-surface-700 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl font-bold tracking-tightest text-gray-900 dark:text-gray-50">
               Analysis Results
             </h1>
             {result.processing_time_ms && (
-              <p className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="flex items-center gap-1.5 mt-0.5 text-sm text-gray-400 dark:text-gray-500">
                 <Clock className="h-3.5 w-3.5" />
                 Completed in {(result.processing_time_ms / 1000).toFixed(1)}s
               </p>
@@ -390,13 +418,9 @@ export default function AnalysisPage() {
         <ExportButtonGated analysisId={analysisId} />
       </div>
 
-      {/* ── Animated Score Cards ── */}
-      <div className="grid gap-4 sm:grid-cols-3" data-testid="score-cards">
-        {[
-          { score: result.match_score, label: "Skill Match", delay: 0 },
-          { score: result.ats_score, label: "ATS Score", delay: 150 },
-          { score: result.ats_check?.format_score ?? null, label: "Format Score", delay: 300 },
-        ].map(({ score, label, delay }) => (
+      {/* ── Score Cards ── */}
+      <div className="grid gap-5 sm:grid-cols-3" data-testid="score-cards">
+        {scoreCards.map(({ score, label, icon: Icon, gradient, bgGlow, delay }) => (
           <div
             key={label}
             className={cn(
@@ -405,98 +429,131 @@ export default function AnalysisPage() {
             )}
             style={{ transitionDelay: `${delay}ms` }}
           >
-            <Card
-              className={cn(
-                "flex flex-col items-center py-8 transition-shadow duration-500",
-                scoreRevealed && score != null && score >= 80 && "shadow-glow-success",
-                scoreRevealed && score != null && score >= 60 && score < 80 && "shadow-glow",
-                scoreRevealed &&
-                  score != null &&
-                  score >= 40 &&
-                  score < 60 &&
-                  "shadow-glow-warning",
-                scoreRevealed && score != null && score < 40 && "shadow-glow-danger"
-              )}
-              hoverable
-            >
-              <ScoreRing score={scoreRevealed ? score : 0} label={label} glow={scoreRevealed} />
-              {scoreRevealed && score != null && (
-                <div className="mt-2 animate-fade-in">
-                  <AnimatedCounter
-                    value={score}
-                    suffix="%"
-                    duration={1400}
-                    className="text-sm font-semibold text-gray-600 dark:text-gray-400"
-                  />
+            <div className="group relative rounded-2xl bg-white/80 dark:bg-surface-800/80 backdrop-blur-sm border border-gray-100 dark:border-surface-700 p-6 shadow-soft dark:shadow-dark-sm transition-all duration-500 hover:shadow-lg hover:-translate-y-1">
+              {/* Hover glow */}
+              <div
+                className={`absolute inset-0 rounded-2xl ${bgGlow} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl scale-110`}
+              />
+
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 dark:bg-surface-700/50">
+                  <Icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 </div>
-              )}
-            </Card>
+                <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {label}
+                </span>
+              </div>
+
+              {/* Score */}
+              <div className="flex items-end gap-2 mb-4">
+                {scoreRevealed && score != null ? (
+                  <>
+                    <AnimatedCounter
+                      value={score}
+                      duration={1400}
+                      className="text-5xl font-bold tracking-tightest text-gray-900 dark:text-gray-50 tabular-nums"
+                    />
+                    <span className="text-lg font-semibold text-gray-300 dark:text-gray-600 mb-1">
+                      /100
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-5xl font-bold tracking-tightest text-gray-300 dark:text-gray-600 tabular-nums">
+                    --
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-all duration-1000 ease-out`}
+                  style={{ width: `${scoreRevealed && score != null ? score : 0}%` }}
+                />
+              </div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* ── Verdict Banner ── */}
+      {/* ── Verdict Section ── */}
       {explanation && (
         <div
           className={cn(
-            "rounded-2xl border p-6 transition-all duration-700",
-            scoreRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
-            "border-gray-200 dark:border-surface-700 bg-white dark:bg-surface-800"
+            "rounded-2xl bg-white/80 dark:bg-surface-800/80 backdrop-blur-sm border border-gray-100 dark:border-surface-700 shadow-soft dark:shadow-dark-sm overflow-hidden transition-all duration-700",
+            scoreRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           )}
           style={{ transitionDelay: "500ms" }}
           data-testid="verdict-section"
         >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/30">
-              <Sparkles className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          {/* Verdict Header */}
+          <div className="px-7 pt-7 pb-5 border-b border-gray-100 dark:border-surface-700/50">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 shadow-md">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-50">
+                  Overall Verdict
+                </h2>
+                <VerdictBadge verdict={explanation.overall_verdict} />
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Overall Verdict
-              </h2>
-              <VerdictBadge verdict={explanation.overall_verdict} />
-            </div>
+            {explanation.match_summary && (
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                {explanation.match_summary}
+              </p>
+            )}
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-3">
-              <h3 className="flex items-center gap-1.5 text-sm font-medium text-success-700 dark:text-success-400">
-                <CheckCircle2 className="h-4 w-4" /> Strengths
+          {/* Strengths & Weaknesses */}
+          <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 dark:divide-surface-700/50">
+            <div className="p-7">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-success-50 dark:bg-success-900/20">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-success-500" />
+                </div>
+                Strengths
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {explanation.strengths.map((s, i) => (
                   <li
                     key={i}
                     className={cn(
-                      "flex items-start gap-2 rounded-lg bg-success-50 dark:bg-success-900/10 p-2.5 text-sm text-gray-700 dark:text-gray-300",
-                      "transition-all duration-500",
+                      "flex items-start gap-3 transition-all duration-500",
                       scoreRevealed ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
                     )}
                     style={{ transitionDelay: `${600 + i * 100}ms` }}
                   >
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-success-500 mt-0.5" />
-                    {s}
+                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-success-400 shrink-0" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                      {s}
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="space-y-3">
-              <h3 className="flex items-center gap-1.5 text-sm font-medium text-warning-700 dark:text-warning-400">
-                <AlertTriangle className="h-4 w-4" /> Areas to Improve
+            <div className="p-7">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-warning-50 dark:bg-warning-900/20">
+                  <AlertTriangle className="h-3.5 w-3.5 text-warning-500" />
+                </div>
+                Areas to Improve
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {explanation.weaknesses.map((w, i) => (
                   <li
                     key={i}
                     className={cn(
-                      "flex items-start gap-2 rounded-lg bg-warning-50 dark:bg-warning-900/10 p-2.5 text-sm text-gray-700 dark:text-gray-300",
-                      "transition-all duration-500",
+                      "flex items-start gap-3 transition-all duration-500",
                       scoreRevealed ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
                     )}
                     style={{ transitionDelay: `${600 + i * 100}ms` }}
                   >
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-warning-500 mt-0.5" />
-                    {w}
+                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-warning-400 shrink-0" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                      {w}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -510,7 +567,7 @@ export default function AnalysisPage() {
         tabs={RESULT_TABS}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        variant="underline"
+        variant="pill-filled"
         size="md"
         data-testid="results-tabs"
       >
@@ -582,7 +639,7 @@ function ExportButtonGated({ analysisId }: { analysisId: string }) {
   return (
     <a
       href="/pricing"
-      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-surface-700 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-surface-700 transition-colors"
+      className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-surface-800 shadow-soft dark:shadow-dark-sm border border-gray-100 dark:border-surface-700 px-4 py-2.5 text-sm font-medium text-gray-400 dark:text-gray-500 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
       title="Upgrade to Pro to export PDF"
     >
       <Lock className="h-4 w-4" />
@@ -593,16 +650,28 @@ function ExportButtonGated({ analysisId }: { analysisId: string }) {
 
 function VerdictBadge({ verdict }: { verdict: string }) {
   const v = verdict.toLowerCase();
-  let variant: "success" | "info" | "warning" | "danger" = "info";
-  if (v.includes("strong") || v.includes("excellent")) variant = "success";
-  else if (v.includes("moderate") || v.includes("good")) variant = "info";
-  else if (v.includes("weak") || v.includes("needs")) variant = "warning";
-  else if (v.includes("poor") || v.includes("low")) variant = "danger";
+  let colorClasses =
+    "bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800/50 text-primary-700 dark:text-primary-400";
+  if (v.includes("strong") || v.includes("excellent"))
+    colorClasses =
+      "bg-success-50 dark:bg-success-900/20 border-success-200 dark:border-success-800/50 text-success-700 dark:text-success-400";
+  else if (v.includes("weak") || v.includes("needs"))
+    colorClasses =
+      "bg-warning-50 dark:bg-warning-900/20 border-warning-200 dark:border-warning-800/50 text-warning-700 dark:text-warning-400";
+  else if (v.includes("poor") || v.includes("low"))
+    colorClasses =
+      "bg-danger-50 dark:bg-danger-900/20 border-danger-200 dark:border-danger-800/50 text-danger-700 dark:text-danger-400";
 
   return (
-    <Badge variant={variant} className="text-sm px-3 py-1">
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 mt-1 rounded-full border px-3 py-0.5 text-sm font-semibold",
+        colorClasses
+      )}
+    >
+      <TrendingUp className="h-3.5 w-3.5" />
       {verdict}
-    </Badge>
+    </span>
   );
 }
 
@@ -616,12 +685,12 @@ function EmptyTabState({
   description: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 dark:bg-surface-700/50">
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-surface-700 dark:to-surface-800 shadow-soft dark:shadow-dark-sm">
         {icon}
       </div>
-      <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">{description}</p>
+      <h3 className="mt-5 text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+      <p className="mt-2 text-sm text-gray-400 dark:text-gray-500 max-w-sm">{description}</p>
     </div>
   );
 }

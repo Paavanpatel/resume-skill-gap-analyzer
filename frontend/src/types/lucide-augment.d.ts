@@ -67,4 +67,8 @@ declare module "lucide-react" {
   export const Trophy: LucideIcon;
   export const Calendar: LucideIcon;
   export const ClipboardPaste: LucideIcon;
+
+  // Preview page
+  export const Download: LucideIcon;
+  export const Award: LucideIcon;
 }

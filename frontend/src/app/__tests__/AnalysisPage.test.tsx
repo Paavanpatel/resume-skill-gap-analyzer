@@ -74,6 +74,10 @@ jest.mock("lucide-react", () => {
     "ArrowRight",
     "Plus",
     "Lock",
+    "Shield",
+    "Award",
+    "Download",
+    "Zap",
   ];
   const mocks: Record<string, any> = {};
   icons.forEach((name) => {

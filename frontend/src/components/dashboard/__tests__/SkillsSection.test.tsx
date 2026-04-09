@@ -19,13 +19,13 @@ describe("SkillsSection", () => {
   it("renders matched and missing skills headers", () => {
     render(<SkillsSection matchedSkills={mockMatchedSkills} missingSkills={mockMissingSkills} />);
     expect(screen.getByText("Matched Skills")).toBeInTheDocument();
-    expect(screen.getByText("Missing Skills")).toBeInTheDocument();
+    expect(screen.getByText("Skill Gaps")).toBeInTheDocument();
   });
 
   it("shows skill counts", () => {
     render(<SkillsSection matchedSkills={mockMatchedSkills} missingSkills={mockMissingSkills} />);
-    expect(screen.getByText("3 found")).toBeInTheDocument();
-    expect(screen.getByText("3 gaps")).toBeInTheDocument();
+    const countBadges = screen.getAllByText("3");
+    expect(countBadges).toHaveLength(2);
   });
 
   it("renders skill names", () => {

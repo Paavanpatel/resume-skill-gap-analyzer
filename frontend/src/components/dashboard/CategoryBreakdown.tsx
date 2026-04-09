@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
-import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import { BarChart3, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { CategoryBreakdown as CategoryBreakdownType } from "@/types/analysis";
 
 interface CategoryBreakdownProps {
@@ -19,78 +17,84 @@ export default function CategoryBreakdown({ breakdowns }: CategoryBreakdownProps
   });
 
   return (
-    <Card>
-      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
-        <BarChart3 className="h-5 w-5 text-primary-500" />
+    <div>
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/20">
+          <BarChart3 className="h-4 w-4 text-primary-500" />
+        </div>
         Skill Categories
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {sorted.map((cat) => {
           const isExpanded = expandedCategory === cat.category;
           const pct = Math.round(cat.match_percentage);
-          const barColor =
-            pct >= 80
-              ? "bg-green-500"
-              : pct >= 60
-                ? "bg-blue-500"
-                : pct >= 40
-                  ? "bg-amber-500"
-                  : "bg-red-500";
 
           return (
             <div
               key={cat.category}
-              className="rounded-lg border border-gray-200 transition-colors hover:border-gray-300"
+              className="rounded-2xl bg-white/80 dark:bg-surface-800/80 backdrop-blur-sm border border-gray-100 dark:border-surface-700 shadow-soft dark:shadow-dark-sm overflow-hidden transition-all duration-300 hover:shadow-md"
             >
               <button
                 onClick={() => setExpandedCategory(isExpanded ? null : cat.category)}
-                className="flex w-full items-center gap-4 px-4 py-3 text-left"
+                className="flex w-full items-center gap-5 px-6 py-5 text-left"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-800">{cat.display_name}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {cat.display_name}
+                    </span>
                     <PriorityLabel priority={cat.priority} />
                   </div>
 
-                  <div className="mt-1.5 flex items-center gap-3">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+                  {/* Progress bar */}
+                  <div className="flex items-center gap-4">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-surface-700">
                       <div
-                        className={`h-full rounded-full ${barColor} transition-all duration-500`}
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${
+                          pct >= 80
+                            ? "bg-gradient-to-r from-success-400 to-success-500"
+                            : pct >= 60
+                              ? "bg-gradient-to-r from-primary-400 to-primary-500"
+                              : pct >= 40
+                                ? "bg-gradient-to-r from-warning-400 to-warning-500"
+                                : "bg-gradient-to-r from-danger-400 to-danger-500"
+                        }`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="w-12 text-right text-sm font-semibold text-gray-700">
+                    <span className="text-sm font-bold tabular-nums text-gray-900 dark:text-gray-100 w-12 text-right">
                       {pct}%
                     </span>
                   </div>
 
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                     {cat.matched_count} of {cat.total_job_skills} skills matched
                   </p>
                 </div>
 
                 {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 shrink-0 text-gray-400" />
+                  <ChevronUp className="h-5 w-5 shrink-0 text-gray-300 dark:text-gray-600" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+                  <ChevronDown className="h-5 w-5 shrink-0 text-gray-300 dark:text-gray-600" />
                 )}
               </button>
 
               {isExpanded && (
-                <div className="border-t border-gray-100 px-4 py-3">
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <div className="border-t border-gray-50 dark:border-surface-700/50 px-6 py-5 animate-fade-in">
+                  <div className="grid gap-6 sm:grid-cols-2">
                     {cat.matched_skills.length > 0 && (
                       <div>
-                        <p className="mb-2 text-xs font-semibold uppercase text-green-700">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-success-600 dark:text-success-400">
                           Matched ({cat.matched_skills.length})
                         </p>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {cat.matched_skills.map((s) => (
                             <span
                               key={s}
-                              className="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-success-50 dark:bg-success-900/15 border border-success-100 dark:border-success-800/30 px-3 py-1.5 text-xs font-medium text-success-700 dark:text-success-300"
                             >
+                              <CheckCircle2 className="h-3 w-3" />
                               {s}
                             </span>
                           ))}
@@ -99,15 +103,16 @@ export default function CategoryBreakdown({ breakdowns }: CategoryBreakdownProps
                     )}
                     {cat.missing_skills.length > 0 && (
                       <div>
-                        <p className="mb-2 text-xs font-semibold uppercase text-red-700">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-danger-600 dark:text-danger-400">
                           Missing ({cat.missing_skills.length})
                         </p>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {cat.missing_skills.map((s) => (
                             <span
                               key={s}
-                              className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-danger-50 dark:bg-danger-900/15 border border-danger-100 dark:border-danger-800/30 px-3 py-1.5 text-xs font-medium text-danger-700 dark:text-danger-300"
                             >
+                              <AlertTriangle className="h-3 w-3" />
                               {s}
                             </span>
                           ))}
@@ -121,20 +126,28 @@ export default function CategoryBreakdown({ breakdowns }: CategoryBreakdownProps
           );
         })}
       </div>
-    </Card>
+    </div>
   );
 }
 
 function PriorityLabel({ priority }: { priority: "critical" | "important" | "nice_to_have" }) {
-  const config = {
-    critical: { variant: "danger" as const, label: "Critical" },
-    important: { variant: "warning" as const, label: "Important" },
-    nice_to_have: { variant: "info" as const, label: "Nice to have" },
-  };
-  const { variant, label } = config[priority];
+  const classes =
+    priority === "critical"
+      ? "bg-danger-50 dark:bg-danger-900/20 text-danger-600 dark:text-danger-400"
+      : priority === "important"
+        ? "bg-warning-50 dark:bg-warning-900/20 text-warning-600 dark:text-warning-400"
+        : "bg-gray-100 dark:bg-surface-700 text-gray-500 dark:text-gray-400";
+
+  const label =
+    priority === "nice_to_have"
+      ? "Nice to have"
+      : priority.charAt(0).toUpperCase() + priority.slice(1);
+
   return (
-    <Badge variant={variant} className="text-xs">
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${classes}`}
+    >
       {label}
-    </Badge>
+    </span>
   );
 }
