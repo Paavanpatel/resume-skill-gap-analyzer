@@ -32,6 +32,7 @@ from app.models.analysis import Analysis
 from app.repositories.analysis_repo import AnalysisRepository
 from app.repositories.resume_repo import ResumeRepository
 from app.repositories.skill_repo import SkillRepository
+from app.repositories.user_repo import UserRepository
 from app.services.ats_checker import check_ats_compatibility
 from app.services.gap_analyzer import analyze_gap
 from app.services.section_parser import ParsedResume, parse_sections
@@ -308,6 +309,11 @@ async def run_analysis(
         )
 
         # 8. Generate improvement suggestions (Phase 6)
+        # Gate LLM suggestions behind paid tiers to avoid token spend on free users
+        user_repo = UserRepository(session)
+        user = await user_repo.get_by_id(analysis.user_id)
+        include_llm = user is not None and user.tier != "free"
+
         suggestions = await generate_suggestions(
             parsed_resume=parsed_resume,
             job_description=analysis.job_description,
@@ -315,7 +321,7 @@ async def run_analysis(
             extraction=extraction,
             gap_analysis=gap_result,
             ats_check=ats_result,
-            include_llm=True,
+            include_llm=include_llm,
         )
 
         elapsed_ms = int((time.perf_counter() - start_time) * 1000)

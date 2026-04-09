@@ -416,6 +416,49 @@ class TestSuggestionPromptBuilder:
         assert "Python" in prompt  # matched
         assert "AWS" in prompt  # missing
 
+    def test_contains_category_breakdowns(self):
+        """Category breakdowns are included when gap_analysis is provided."""
+        breakdown = CategoryBreakdown(
+            category="devops",
+            display_name="DevOps & Cloud",
+            total_job_skills=3,
+            matched_count=1,
+            missing_count=2,
+            match_percentage=33.3,
+            matched_skills=["Docker"],
+            missing_skills=["AWS", "Kubernetes"],
+            priority="critical",
+        )
+        gap = _gap_result([breakdown])
+        parsed_resume = _make_parsed_resume([("skills", "Docker")], raw_text="test")
+        prompt = build_suggestion_prompt(
+            parsed_resume=parsed_resume,
+            job_description="test",
+            match_score=33.0,
+            matched_skills=[_skill("Docker", "devops")],
+            missing_skills=[_skill("AWS", "devops"), _skill("Kubernetes", "devops")],
+            gap_analysis=gap,
+        )
+        assert "DevOps & Cloud" in prompt
+        assert "critical" in prompt
+        assert "1/3 matched" in prompt
+        assert "AWS" in prompt
+        assert "Kubernetes" in prompt
+        assert "<category_breakdowns>" in prompt
+
+    def test_no_gap_analysis_shows_fallback(self):
+        """Prompt works without gap_analysis (backward compat)."""
+        parsed_resume = _make_parsed_resume([("skills", "Python")], raw_text="test")
+        prompt = build_suggestion_prompt(
+            parsed_resume=parsed_resume,
+            job_description="test",
+            match_score=50.0,
+            matched_skills=[_skill("Python")],
+            missing_skills=[],
+            gap_analysis=None,
+        )
+        assert "No category breakdowns available" in prompt
+
     def test_experience_truncated_skills_preserved(self):
         """Long experience is capped at 2,000 chars; skills section is always included."""
         long_experience = "Lead developer. " * 500  # ~8,000 chars

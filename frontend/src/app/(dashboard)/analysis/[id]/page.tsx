@@ -534,7 +534,10 @@ export default function AnalysisPage() {
         {/* Suggestions Tab */}
         <TabPanel id="suggestions" activeTab={activeTab}>
           {result.suggestions.length > 0 ? (
-            <SuggestionsSection suggestions={result.suggestions} />
+            <SuggestionsSection
+              suggestions={result.suggestions}
+              suggestionsLimited={result.suggestions_limited}
+            />
           ) : (
             <EmptyTabState
               icon={<Lightbulb className="h-8 w-8 text-gray-300 dark:text-gray-600" />}

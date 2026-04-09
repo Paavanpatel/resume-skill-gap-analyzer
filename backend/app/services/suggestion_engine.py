@@ -255,7 +255,11 @@ Matched skills: {matched_skills}
 Missing skills: {missing_skills}
 </gap_summary>
 
-For each suggestion, provide:
+<category_breakdowns>
+{category_breakdowns}
+</category_breakdowns>
+
+Prioritize suggestions for categories marked "critical" first, then "important". For each suggestion, provide:
 - "section": which resume section to modify (e.g., "experience", "skills", "summary", "education")
 - "current": what's currently in the resume (quote a brief snippet or say "missing")
 - "suggested": the specific change to make
@@ -305,16 +309,38 @@ def _build_condensed_resume(parsed_resume: ParsedResume) -> str:
     return "\n\n".join(parts)
 
 
+def _build_category_breakdowns_text(gap_analysis: GapAnalysisResult) -> str:
+    """Format category breakdowns as a concise text block for the LLM prompt."""
+    if not gap_analysis.category_breakdowns:
+        return "No category breakdowns available."
+
+    lines = []
+    for b in gap_analysis.category_breakdowns:
+        missing_str = ", ".join(b.missing_skills[:5]) if b.missing_skills else "none"
+        lines.append(
+            f"- {b.display_name} [{b.priority}]: "
+            f"{b.matched_count}/{b.total_job_skills} matched "
+            f"({b.match_percentage:.0f}%), missing: {missing_str}"
+        )
+    return "\n".join(lines)
+
+
 def build_suggestion_prompt(
     parsed_resume: ParsedResume,
     job_description: str,
     match_score: float,
     matched_skills: list[NormalizedSkill],
     missing_skills: list[NormalizedSkill],
+    gap_analysis: GapAnalysisResult | None = None,
 ) -> str:
     """Build the LLM prompt for generating resume suggestions."""
     matched_str = ", ".join(s.name for s in matched_skills[:15])
     missing_str = ", ".join(s.name for s in missing_skills[:15])
+
+    if gap_analysis is not None:
+        breakdowns_text = _build_category_breakdowns_text(gap_analysis)
+    else:
+        breakdowns_text = "No category breakdowns available."
 
     return SUGGESTION_PROMPT.format(
         resume_sections=_build_condensed_resume(parsed_resume),
@@ -322,6 +348,7 @@ def build_suggestion_prompt(
         match_score=f"{match_score:.0f}",
         matched_skills=matched_str or "None",
         missing_skills=missing_str or "None",
+        category_breakdowns=breakdowns_text,
     )
 
 
@@ -330,6 +357,7 @@ async def generate_llm_suggestions(
     job_description: str,
     match_score: float,
     extraction: ExtractionResult,
+    gap_analysis: GapAnalysisResult | None = None,
 ) -> list[Suggestion]:
     """
     Generate contextual suggestions using an LLM.
@@ -351,6 +379,7 @@ async def generate_llm_suggestions(
             match_score=match_score,
             matched_skills=extraction.matched_skills,
             missing_skills=extraction.missing_skills,
+            gap_analysis=gap_analysis,
         )
 
         response = await call_llm(
@@ -434,6 +463,7 @@ async def generate_suggestions(
             job_description=job_description,
             match_score=match_score,
             extraction=extraction,
+            gap_analysis=gap_analysis,
         )
 
     # Combine: rule-based first (higher confidence), then LLM

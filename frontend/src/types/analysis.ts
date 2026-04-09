@@ -94,6 +94,7 @@ export interface AnalysisResult {
   ai_provider: string | null;
   ai_model: string | null;
   ai_tokens_used: number | null;
+  suggestions_limited?: boolean;
   created_at: string;
 }
 
