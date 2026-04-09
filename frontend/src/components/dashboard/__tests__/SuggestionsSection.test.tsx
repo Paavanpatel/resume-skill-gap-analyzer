@@ -101,4 +101,22 @@ describe("SuggestionsSection", () => {
     expect(screen.getByText("summary")).toBeInTheDocument();
     expect(screen.getByText("experience")).toBeInTheDocument();
   });
+
+  it("shows upgrade CTA when suggestionsLimited is true", () => {
+    render(<SuggestionsSection suggestions={mockSuggestions} suggestionsLimited={true} />);
+    expect(screen.getByText("Upgrade to Pro")).toBeInTheDocument();
+    expect(screen.getByText(/AI-powered suggestions/)).toBeInTheDocument();
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/pricing");
+  });
+
+  it("does not show upgrade CTA when suggestionsLimited is false", () => {
+    render(<SuggestionsSection suggestions={mockSuggestions} suggestionsLimited={false} />);
+    expect(screen.queryByText("Upgrade to Pro")).not.toBeInTheDocument();
+  });
+
+  it("does not show upgrade CTA when suggestionsLimited is undefined", () => {
+    render(<SuggestionsSection suggestions={mockSuggestions} />);
+    expect(screen.queryByText("Upgrade to Pro")).not.toBeInTheDocument();
+  });
 });

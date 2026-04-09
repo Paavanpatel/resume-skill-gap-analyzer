@@ -30,6 +30,7 @@ from app.core.tier_guard import enforce_analysis_quota
 from app.db.session import get_db_session, get_read_db_session
 from app.repositories.analysis_repo import AnalysisRepository
 from app.repositories.resume_repo import ResumeRepository
+from app.repositories.user_repo import UserRepository
 from app.schemas.analysis import (
     AnalysisHistoryItem,
     AnalysisHistoryResponse,
@@ -253,6 +254,11 @@ async def get_analysis(
             resource_type="analysis",
         )
 
+    # Check if this user is on the free tier (LLM suggestions were skipped)
+    user_repo = UserRepository(session)
+    owner = await user_repo.get_by_id(analysis.user_id)
+    suggestions_limited = owner is not None and owner.tier == "free"
+
     return AnalysisResponse(
         id=analysis.id,
         status=analysis.status,
@@ -270,6 +276,7 @@ async def get_analysis(
         ai_provider=analysis.ai_provider,
         ai_model=analysis.ai_model,
         ai_tokens_used=analysis.ai_tokens_used,
+        suggestions_limited=suggestions_limited,
         created_at=analysis.created_at,
     )
 

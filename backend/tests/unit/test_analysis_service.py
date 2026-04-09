@@ -442,6 +442,7 @@ class TestRunAnalysis:
 
         mock_analysis = MagicMock()
         mock_analysis.resume_id = uuid4()
+        mock_analysis.user_id = uuid4()
         mock_analysis.job_description = "Need Python developer with 5 years experience"
 
         mock_resume = MagicMock()
@@ -464,6 +465,9 @@ class TestRunAnalysis:
 
         mock_parsed_resume = MagicMock()
 
+        mock_user = MagicMock()
+        mock_user.tier = "pro"
+
         updated_analysis = MagicMock()
 
         with (
@@ -471,6 +475,7 @@ class TestRunAnalysis:
                 "app.services.analysis_service.AnalysisRepository"
             ) as MockAnalysisRepo,
             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch("app.services.analysis_service.UserRepository") as MockUserRepo,
             patch(
                 "app.services.analysis_service._load_taxonomy",
                 new_callable=AsyncMock,
@@ -505,6 +510,9 @@ class TestRunAnalysis:
 
             resume_repo = MockResumeRepo.return_value
             resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
+
+            user_repo = MockUserRepo.return_value
+            user_repo.get_by_id = AsyncMock(return_value=mock_user)
 
             result = await run_analysis(analysis_id, mock_session)
 
@@ -612,6 +620,7 @@ class TestRunAnalysis:
 
         mock_analysis = MagicMock()
         mock_analysis.resume_id = uuid4()
+        mock_analysis.user_id = uuid4()
         mock_analysis.job_description = "Python developer needed"
 
         mock_resume = MagicMock()
@@ -632,11 +641,15 @@ class TestRunAnalysis:
         mock_ats_result.format_score = 80.0
         mock_ats_result.to_dict.return_value = {}
 
+        mock_user = MagicMock()
+        mock_user.tier = "pro"
+
         with (
             patch(
                 "app.services.analysis_service.AnalysisRepository"
             ) as MockAnalysisRepo,
             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch("app.services.analysis_service.UserRepository") as MockUserRepo,
             patch(
                 "app.services.analysis_service._load_taxonomy",
                 new_callable=AsyncMock,
@@ -671,6 +684,9 @@ class TestRunAnalysis:
             resume_repo = MockResumeRepo.return_value
             resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
 
+            user_repo = MockUserRepo.return_value
+            user_repo.get_by_id = AsyncMock(return_value=mock_user)
+
             await run_analysis(analysis_id, mock_session, redis_client=mock_redis)
 
         mock_load.assert_called_once_with(mock_session, mock_redis)
@@ -684,6 +700,7 @@ class TestRunAnalysis:
 
         mock_analysis = MagicMock()
         mock_analysis.resume_id = uuid4()
+        mock_analysis.user_id = uuid4()
         mock_analysis.job_description = "Python developer needed"
 
         mock_resume = MagicMock()
@@ -714,11 +731,15 @@ class TestRunAnalysis:
         mock_ats_result.format_score = 80.0
         mock_ats_result.to_dict.return_value = {}
 
+        mock_user = MagicMock()
+        mock_user.tier = "pro"
+
         with (
             patch(
                 "app.services.analysis_service.AnalysisRepository"
             ) as MockAnalysisRepo,
             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch("app.services.analysis_service.UserRepository") as MockUserRepo,
             patch(
                 "app.services.analysis_service._load_taxonomy",
                 new_callable=AsyncMock,
@@ -751,6 +772,9 @@ class TestRunAnalysis:
             resume_repo = MockResumeRepo.return_value
             resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
 
+            user_repo = MockUserRepo.return_value
+            user_repo.get_by_id = AsyncMock(return_value=mock_user)
+
             await run_analysis(analysis_id, mock_session)
 
         mock_parse.assert_not_called()
@@ -764,6 +788,7 @@ class TestRunAnalysis:
 
         mock_analysis = MagicMock()
         mock_analysis.resume_id = uuid4()
+        mock_analysis.user_id = uuid4()
         mock_analysis.job_description = "Python developer needed"
 
         mock_resume = MagicMock()
@@ -782,11 +807,15 @@ class TestRunAnalysis:
         mock_ats_result.format_score = 80.0
         mock_ats_result.to_dict.return_value = {}
 
+        mock_user = MagicMock()
+        mock_user.tier = "pro"
+
         with (
             patch(
                 "app.services.analysis_service.AnalysisRepository"
             ) as MockAnalysisRepo,
             patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch("app.services.analysis_service.UserRepository") as MockUserRepo,
             patch(
                 "app.services.analysis_service._load_taxonomy",
                 new_callable=AsyncMock,
@@ -821,6 +850,121 @@ class TestRunAnalysis:
             resume_repo = MockResumeRepo.return_value
             resume_repo.get_by_id = AsyncMock(return_value=mock_resume)
 
+            user_repo = MockUserRepo.return_value
+            user_repo.get_by_id = AsyncMock(return_value=mock_user)
+
             await run_analysis(analysis_id, mock_session)
 
         mock_parse.assert_called_once_with(mock_resume.raw_text)
+
+
+class TestLlmTierGate:
+    """Tests for the LLM tier gate in run_analysis."""
+
+    def _make_mock_extraction(self):
+        """Create a mock ExtractionResult."""
+        extraction = MagicMock(spec=ExtractionResult)
+        extraction.job_skills = [_make_skill("Python")]
+        extraction.matched_skills = [_make_skill("Python")]
+        extraction.resume_skills = [_make_skill("Python")]
+        extraction.missing_skills = []
+        extraction.provider = "openai"
+        extraction.model = "gpt-4o"
+        extraction.total_tokens = 500
+        extraction.to_dict.return_value = {
+            "resume_skills": [{"name": "Python"}],
+            "job_skills": [{"name": "Python"}],
+            "matched_skills": [{"name": "Python"}],
+            "missing_skills": [],
+        }
+        return extraction
+
+    async def _run_pipeline_with_tier(self, tier: str):
+        """Run the analysis pipeline with a user of the given tier and return include_llm."""
+        mock_session = AsyncMock()
+        mock_session.flush = AsyncMock()
+        analysis_id = uuid4()
+
+        mock_analysis = MagicMock()
+        mock_analysis.resume_id = uuid4()
+        mock_analysis.user_id = uuid4()
+        mock_analysis.job_description = "Python developer needed"
+
+        mock_resume = MagicMock()
+        mock_resume.raw_text = "Python developer with extensive experience. " * 5
+        mock_resume.parsed_sections = None
+
+        extraction = self._make_mock_extraction()
+        mock_gap_result = MagicMock()
+        mock_gap_result.category_breakdowns = []
+        mock_gap_result.score_explanation = MagicMock()
+        mock_gap_result.score_explanation.to_dict.return_value = {}
+        mock_ats_result = MagicMock()
+        mock_ats_result.format_score = 80.0
+        mock_ats_result.to_dict.return_value = {}
+
+        mock_user = MagicMock()
+        mock_user.tier = tier
+
+        with (
+            patch(
+                "app.services.analysis_service.AnalysisRepository"
+            ) as MockAnalysisRepo,
+            patch("app.services.analysis_service.ResumeRepository") as MockResumeRepo,
+            patch("app.services.analysis_service.UserRepository") as MockUserRepo,
+            patch(
+                "app.services.analysis_service._load_taxonomy",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "app.services.analysis_service.extract_skills",
+                new_callable=AsyncMock,
+                return_value=extraction,
+            ),
+            patch(
+                "app.services.analysis_service.analyze_gap",
+                return_value=mock_gap_result,
+            ),
+            patch(
+                "app.services.analysis_service.parse_sections", return_value=MagicMock()
+            ),
+            patch(
+                "app.services.analysis_service.check_ats_compatibility",
+                return_value=mock_ats_result,
+            ),
+            patch(
+                "app.services.analysis_service.generate_suggestions",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_gen,
+        ):
+            MockAnalysisRepo.return_value.get_by_id = AsyncMock(
+                return_value=mock_analysis
+            )
+            MockAnalysisRepo.return_value.update = AsyncMock(return_value=MagicMock())
+            MockResumeRepo.return_value.get_by_id = AsyncMock(return_value=mock_resume)
+            MockUserRepo.return_value.get_by_id = AsyncMock(return_value=mock_user)
+
+            await run_analysis(analysis_id, mock_session)
+
+            # Return the include_llm kwarg passed to generate_suggestions
+            return mock_gen.call_args.kwargs["include_llm"]
+
+    @pytest.mark.asyncio
+    async def test_free_tier_disables_llm(self):
+        """Free-tier users get include_llm=False."""
+        include_llm = await self._run_pipeline_with_tier("free")
+        assert include_llm is False
+
+    @pytest.mark.asyncio
+    async def test_pro_tier_enables_llm(self):
+        """Pro-tier users get include_llm=True."""
+        include_llm = await self._run_pipeline_with_tier("pro")
+        assert include_llm is True
+
+    @pytest.mark.asyncio
+    async def test_enterprise_tier_enables_llm(self):
+        """Enterprise-tier users get include_llm=True."""
+        include_llm = await self._run_pipeline_with_tier("enterprise")
+        assert include_llm is True

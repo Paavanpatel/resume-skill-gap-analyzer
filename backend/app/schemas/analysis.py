@@ -117,6 +117,7 @@ class AnalysisResponse(BaseModel):
     ai_provider: str | None = None
     ai_model: str | None = None
     ai_tokens_used: int | None = None
+    suggestions_limited: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

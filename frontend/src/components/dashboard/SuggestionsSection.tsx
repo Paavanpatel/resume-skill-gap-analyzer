@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
+import { Lightbulb, ChevronDown, ChevronUp, Sparkles, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import type { ResumeSuggestion } from "@/types/analysis";
 
 interface SuggestionsSectionProps {
   suggestions: ResumeSuggestion[];
+  suggestionsLimited?: boolean;
 }
 
-export default function SuggestionsSection({ suggestions }: SuggestionsSectionProps) {
+export default function SuggestionsSection({
+  suggestions,
+  suggestionsLimited,
+}: SuggestionsSectionProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const sortedSuggestions = [...suggestions].sort((a, b) => {
@@ -27,6 +32,22 @@ export default function SuggestionsSection({ suggestions }: SuggestionsSectionPr
         </h2>
         <span className="text-sm text-gray-500">{suggestions.length} suggestions</span>
       </div>
+
+      {suggestionsLimited && (
+        <Link
+          href="/pricing"
+          className="mb-4 flex items-center gap-3 rounded-lg border border-primary-200 dark:border-primary-700/50 bg-primary-50 dark:bg-primary-900/10 px-4 py-3 transition-colors hover:bg-primary-100 dark:hover:bg-primary-900/20"
+        >
+          <Sparkles className="h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold text-primary-700 dark:text-primary-300">
+              Upgrade to Pro
+            </span>{" "}
+            for AI-powered suggestions tailored to your resume
+          </span>
+          <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-primary-500" />
+        </Link>
+      )}
 
       {sortedSuggestions.length === 0 ? (
         <p className="text-sm text-gray-400">No suggestions at this time.</p>
