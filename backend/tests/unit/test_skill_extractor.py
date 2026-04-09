@@ -589,6 +589,70 @@ class TestFuzzyVariantMatching:
         assert missing_names == {"Go", "Rust"}
 
     @pytest.mark.asyncio
+    async def test_tensorflow_version_fuzzy_match(self, sample_taxonomy):
+        """'TensorFlow 2' on resume fuzzy-matches 'TensorFlow' in job via tier 3."""
+        taxonomy_with_tf = sample_taxonomy + [
+            TaxonomyEntry(
+                name="TensorFlow",
+                category="ml_framework",
+                weight=2.0,
+                aliases=[],
+            )
+        ]
+        resume_response = _make_llm_response(
+            [{"name": "TensorFlow 2", "confidence": 0.9, "category": "ml_framework"}]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "TensorFlow",
+                    "confidence": 0.9,
+                    "category": "ml_framework",
+                    "required": True,
+                }
+            ]
+        )
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Used TensorFlow 2 for model training.",
+                job_description="Requires TensorFlow.",
+                taxonomy=taxonomy_with_tf,
+            )
+
+        assert len(result.matched_skills) == 1
+        assert len(result.missing_skills) == 0
+
+    @pytest.mark.asyncio
+    async def test_off_taxonomy_fuzzy_match(self, sample_taxonomy):
+        """Off-taxonomy 'Postgres 14' fuzzy-matches off-taxonomy 'Postgres 15' via tier 3."""
+        resume_response = _make_llm_response(
+            [{"name": "Postgres 14", "confidence": 0.8, "category": "database"}]
+        )
+        job_response = _make_llm_response(
+            [
+                {
+                    "name": "Postgres 15",
+                    "confidence": 0.8,
+                    "category": "database",
+                    "required": True,
+                }
+            ]
+        )
+
+        with patch("app.services.skill_extractor.call_llm") as mock_llm:
+            mock_llm.side_effect = [resume_response, job_response]
+            result = await extract_skills(
+                resume_text="Managed Postgres 14 databases.",
+                job_description="Requires Postgres 15.",
+                taxonomy=sample_taxonomy,
+            )
+
+        assert len(result.matched_skills) == 1
+        assert len(result.missing_skills) == 0
+
+    @pytest.mark.asyncio
     async def test_vue_js_vs_vue(self, sample_taxonomy):
         """Off-taxonomy 'Vue' matches off-taxonomy 'Vue.js' via fuzzy matching."""
         resume_response = _make_llm_response(
